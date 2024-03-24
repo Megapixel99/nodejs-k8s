@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { namespace } = require('../database/models.js');
 
-router.get('/apis', (req, res, next) => {
+router.get(['/api/v1', '/apis'], (req, res, next) => {
   res.json({
     "kind": "APIResourceList",
     "groupVersion": "v1",
