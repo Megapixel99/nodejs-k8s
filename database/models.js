@@ -21,15 +21,206 @@ const metadata = {
 };
 
 const labelSelector = {
-  matchExpressions: {
-    key: String,
-    operator: String,
-    values: [String]
-  },
+  matchExpressions: [{
+    key: { type: String },
+    operator: { type: String },
+    values: { type: [String], default: undefined },
+  }],
   matchLabels: {
     type: Map,
-    of: String
+    of: String,
   },
+}
+
+const objectFieldSelector = {
+  fieldPath: String,
+  apiVersion: String,
+}
+
+const resourceFieldSelector = {
+  resource: String,
+  containerName: String,
+  divisor: String,
+}
+
+const lifecycleHandler = {
+  exec: {
+    command: { type: [String], default: undefined },
+    httpGet : {
+      port: Schema.Types.Mixed,
+      host: String,
+      httpHeaders: {
+        name: String,
+        value: String,
+      },
+      path: String,
+      scheme: String,
+    },
+    tcpSocket: {
+      port: Schema.Types.Mixed,
+      host: String,
+    }
+  }
+}
+
+const probe = {
+  ...lifecycleHandler,
+  initialDelaySeconds: Number,
+  terminationGracePeriodSeconds: Number,
+  periodSeconds: Number,
+  timeoutSeconds: Number,
+  failureThreshol: Number,
+  dsuccessThreshold: Number,
+  grpc: {
+    port: Schema.Types.Mixed,
+    service: String,
+  }
+}
+
+const container = {
+  name: String,
+  image: String,
+  ports: [{
+    containerPort: Number,
+    protocol: String,
+    hostIP: String,
+    hostPort: Number,
+    name: String,
+  }],
+  env: [{
+    name: String,
+    value: String,
+    valueFrom: {
+      configMapKeyRef: {
+        key: String,
+        name: String,
+        optional: Boolean,
+      },
+      fieldRef: objectFieldSelector,
+      resourceFieldRef: resourceFieldSelector,
+      secretKeyRef: {
+        key: String,
+        name: String,
+        optional: Boolean,
+      }
+    }
+  }],
+  envFrom: [{
+    configMapRef: {
+      name: String,
+      optional: Boolean,
+    },
+    prefix: String,
+    secretRef: {
+      name: String,
+      optional: Boolean,
+    }
+  }],
+  volumeMounts: [{
+    mountPath: String,
+    name: String,
+    mountPropagation: String,
+    readOnly: Boolean,
+    subPath: String,
+    subPathExpr: String,
+  }],
+  volumeDevices: [{
+    devicePath: String,
+    name: String,
+  }],
+  resources: {
+    claims: [{
+      name: String,
+    }],
+    limits: {
+      type: Map,
+      of: String
+    },
+    requests: {
+      type: Map,
+      of: String
+    },
+  },
+  resizePolicy: [{
+    resourceName: String,
+    restartPolicy: String,
+  }],
+  lifecycle: {
+    postStart: lifecycleHandler,
+    preStop: lifecycleHandler,
+  },
+  terminationMessagePath: String,
+  terminationMessagePolicy: String,
+  livenessProbe: probe,
+  readinessProbe: probe,
+  startupProbe: probe,
+  restartPolicy: String,
+  securityContext: {
+    runAsUser: Number,
+    runAsNonRoot: Boolean,
+    runAsGroup: Number,
+    readOnlyRootFilesystem: Boolean,
+    procMount: String,
+    privileged: Boolean,
+    allowPrivilegeEscalation: Boolean,
+    capabilities: {
+      add: { type: [String], default: undefined },
+      drop: { type: [String], default: undefined },
+    },
+    seccompProfile: {
+      type: String,
+      localhostProfile: String,
+    },
+    seLinuxOptions: {
+      level: String,
+      role: String,
+      type: String,
+      user: String,
+    },
+    windowsOptions: {
+      gmsaCredentialSpec: String,
+      hostProcess: Boolean,
+      runAsUserName: String,
+    }
+  },
+  stdin: Boolean,
+  stdinOnce: Boolean,
+  tty: Boolean,
+  command: String,
+  args: String,
+  workingDir: String,
+  terminationMessagePath: String,
+  terminationMessagePolicy: String,
+  imagePullPolicy: String,
+};
+
+const ephemeralContainer = {
+  name: String,
+  targetContainerName: String,
+}
+
+const pod = {
+  metadata,
+  initContainers: { type: [container], default: undefined },
+  containers: { type: [container], default: undefined },
+  ephemeralContainers: { type: [ephemeralContainer], default: undefined },
+  imagePullSecrets: {
+    name: String,
+  },
+  enableServiceLinks: Boolean,
+  os: {
+    name: String,
+  },
+  restartPolicy: String,
+  terminationGracePeriodSeconds: Number,
+  dnsPolicy: String,
+  securityContext: {},
+  schedulerName: String,
+}
+
+const podTemplate = {
+  metadata,
+  spec: pod,
 }
 
 const namespaceSchema = Schema({
@@ -59,25 +250,25 @@ const deploymentSchema = Schema({
   spec: {
     selector: labelSelector,
     template: podTemplate,
-    replicas: Int32,
-    minReadySeconds: Int32,
+    replicas: Number,
+    minReadySeconds: Number,
     strategy: {
-      type: String,
+      type: { type: String },
       rollingUpdate: {
         maxSurge: Schema.Types.Mixed,
         maxUnavailable: Schema.Types.Mixed
       }
     },
-    revisionHistoryLimit: Int32,
-    progressDeadlineSeconds: Int32,
+    revisionHistoryLimit: Number,
+    progressDeadlineSeconds: Number,
     paused: Boolean,
   },
   status: {
-    replicas: Int32,
-    availableReplicas: Int32,
-    unavailableReplicas: Int32,
-    updatedReplicas: Int32,
-    collisionCount: Int32,
+    replicas: { type: Number, default: 0 },
+    availableReplicas: { type: Number, default: 0 },
+    unavailableReplicas: { type: Number, default: 0 },
+    updatedReplicas: { type: Number, default: 0 },
+    collisionCount: Number,
     conditions: {
       status: String,
       type: String,
@@ -86,13 +277,13 @@ const deploymentSchema = Schema({
       message: String,
       reason: String,
     },
-    observedGeneration: Int64,
+    observedGeneration: Number,
   },
 });
 
 deploymentSchema.loadClass(Deployments);
 
 module.exports = {
-  Namespace: model('NameSpace', namespaceSchema),
-  Deployment: model('Deployment', deploymentSchema)
+  Namespace: model('Namespace', namespaceSchema),
+  Deployment: model('Deployment', deploymentSchema),
 };

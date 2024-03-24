@@ -17,5 +17,6 @@ app.use((req, res, next) => {
 app.use('/api/v1', apiV1);
 app.use('/', api);
 app.use('/api/v1/namespaces', namespace);
+app.use(['/api/v1/namespaces/:namespace/deployment', '/apis/apps/v1/namespaces/:namespace/deployments'], deployments);
 
 app.listen(8080);
