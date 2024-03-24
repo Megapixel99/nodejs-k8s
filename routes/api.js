@@ -20,6 +20,23 @@ router.get('/apis', (req, res, next) => {
         "watch"
       ],
       "shortNames": [ "ns" ],
+    }, {
+      "name": "deployment",
+      "singularName": "",
+      "namespaced": true,
+      "kind": "Deployment",
+      "verbs": [
+        "create",
+        "delete",
+        "deletecollection",
+        "get",
+        "list",
+        "patch",
+        "update",
+        "watch"
+      ],
+      "shortNames": [ "deploy" ],
+      "categories": [ "all" ],
     }]
   });
 });
