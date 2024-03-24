@@ -37,6 +37,22 @@ router.get(['/api/v1', '/apis'], (req, res, next) => {
       ],
       "shortNames": [ "deploy" ],
       "categories": [ "all" ],
+    }, {
+      "name": "pods",
+      "singularName": "pod",
+      "namespaced": true,
+      "kind": "Pod",
+      "verbs": [
+        "create",
+        "delete",
+        "get",
+        "list",
+        "patch",
+        "update",
+        "watch"
+      ],
+      "shortNames": [ "pod" ],
+      "categories": [ "all" ],
     }]
   });
 });

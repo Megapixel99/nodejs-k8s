@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const db = require('./database/connection.js');
-const { api, namespace, deployments } = require('./routes/index.js');
+const { api, namespace, deployment, pod, openapi, tables } = require('./routes/index.js');
 
 db.connect(process.env.DB_URL);
 
@@ -17,5 +17,8 @@ app.use((req, res, next) => {
 app.use('/', api);
 app.use('/api/v1/namespaces', namespace);
 app.use(['/api/v1/namespaces/:namespace/deployment', '/apis/apps/v1/namespaces/:namespace/deployments'], deployments);
+
+app.use('/apis/apps/v1/namespaces/:namespace/pods', pod);
+app.use('/api/v1/namespaces/:namespace/pods', tables.pod);
 
 app.listen(8080);

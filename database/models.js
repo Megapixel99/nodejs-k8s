@@ -3,6 +3,7 @@ const { v4: uuid } = require('uuid');
 const {
   Namespace,
   Deployments,
+  Pod,
 } = require('../objects/index.js');
 
 const metadata = {
@@ -202,27 +203,77 @@ const ephemeralContainer = {
 }
 
 const pod = {
+  apiVersion: String,
+  kind: String,
   metadata,
-  initContainers: { type: [container], default: undefined },
-  containers: { type: [container], default: undefined },
-  ephemeralContainers: { type: [ephemeralContainer], default: undefined },
-  imagePullSecrets: {
-    name: String,
+  spec: {
+    initContainers: { type: [container], default: undefined },
+    containers: { type: [container], default: undefined },
+    ephemeralContainers: { type: [ephemeralContainer], default: undefined },
+    imagePullSecrets: {
+      name: String,
+    },
+    enableServiceLinks: Boolean,
+    os: {
+      name: String,
+    },
+    restartPolicy: String,
+    activeDeadlineSeconds: Number,
+    readinessGates: {
+      conditionType: String,
+    },
+    terminationGracePeriodSeconds: Number,
+    dnsPolicy: String,
+    securityContext: {},
+    schedulerName: String,
   },
-  enableServiceLinks: Boolean,
-  os: {
-    name: String,
-  },
-  restartPolicy: String,
-  terminationGracePeriodSeconds: Number,
-  dnsPolicy: String,
-  securityContext: {},
-  schedulerName: String,
+  status: {
+    nominatedNodeName: String,
+    phase: {
+      type: String,
+      enum: [ 'Pending', 'Running', 'Succeeded', 'Failed', 'Unknown' ],
+      default: 'Pending'
+    },
+    conditions: [{
+      type: String,
+      status: {
+        type: String,
+        enum: [ 'True', 'False', 'Unknown' ],
+        default: 'False'
+      },
+      lastProbeTime: Date,
+      reason: String,
+      message: String,
+      lastTransitionTime: Date
+    }],
+    hostIP: String,
+    podIP: String,
+    podIPs: [{
+      ip: String
+    }],
+    startTime: Date,
+    containerStatuses: [{
+      restartCount: { type: Number, default: 0 },
+      started: Boolean,
+      ready: Boolean,
+      name: String,
+      state: {
+        running: {
+          startedAt: String
+        }
+      },
+      imageID: String,
+      image: String,
+      lastState: {},
+      containerID: String
+    }],
+    qosClass: String
+  }
 }
 
 const podTemplate = {
   metadata,
-  spec: pod,
+  spec: pod.spec,
 }
 
 const namespaceSchema = Schema({
@@ -285,7 +336,12 @@ const deploymentSchema = Schema({
 
 deploymentSchema.loadClass(Deployments);
 
+const podSchema = Schema(pod);
+
+podSchema.loadClass(Pod);
+
 module.exports = {
   Namespace: model('Namespace', namespaceSchema),
   Deployment: model('Deployment', deploymentSchema),
+  Pod: model('Pod', podSchema),
 };
