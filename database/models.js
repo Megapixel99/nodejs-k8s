@@ -9,6 +9,8 @@ const metadata = {
   creationTimestamp: { type: Date, default: new Date() },
   uid: { type: String, default: uuid() },
   name: String,
+  generateName: String,
+  resourceVersion: String,
   namespace: String,
   labels: {
     type: Map,
