@@ -15,10 +15,16 @@ app.use((req, res, next) => {
 })
 
 app.use('/', api);
+
 app.use('/api/v1/namespaces', namespace);
-app.use(['/api/v1/namespaces/:namespace/deployment', '/apis/apps/v1/namespaces/:namespace/deployments'], deployments);
+app.use('/api/v1/namespaces', tables.namespace);
 
 app.use('/apis/apps/v1/namespaces/:namespace/pods', pod);
 app.use('/api/v1/namespaces/:namespace/pods', tables.pod);
+
+app.use('/apis/apps/v1/namespaces/:namespace/deployments', deployment);
+app.use('/api/v1/namespaces/:namespace/deployments', tables.deployment);
+
+app.use('/', openapi.router);
 
 app.listen(8080);

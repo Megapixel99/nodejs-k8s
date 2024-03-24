@@ -7,7 +7,7 @@ router.get(['/api/v1', '/apis'], (req, res, next) => {
     "groupVersion": "v1",
     "resources": [{
       "name": "namespaces",
-      "singularName": "",
+      "singularName": "namespace",
       "namespaced": false,
       "kind": "Namespace",
       "verbs": [
@@ -21,8 +21,8 @@ router.get(['/api/v1', '/apis'], (req, res, next) => {
       ],
       "shortNames": [ "ns" ],
     }, {
-      "name": "deployment",
-      "singularName": "",
+      "name": "deployments",
+      "singularName": "deployment",
       "namespaced": true,
       "kind": "Deployment",
       "verbs": [
