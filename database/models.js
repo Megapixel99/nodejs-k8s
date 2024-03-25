@@ -1,17 +1,12 @@
 const { Schema, model } = require('mongoose');
 const { v4: uuid } = require('uuid');
-const {
-  Namespace,
-  Deployments,
-  Pod,
-} = require('../objects/index.js');
 
 const metadata = {
   creationTimestamp: { type: Date, default: new Date() },
   uid: { type: String, default: uuid() },
   name: String,
   generateName: String,
-  resourceVersion: String,
+  resourceVersion: { type: String, default: "1" },
   namespace: String,
   labels: {
     type: Map,
@@ -235,7 +230,7 @@ const pod = {
       default: 'Pending'
     },
     conditions: [{
-      type: String,
+      type: { type: String },
       status: {
         type: String,
         enum: [ 'True', 'False', 'Unknown' ],
@@ -271,10 +266,10 @@ const pod = {
   }
 }
 
-const podTemplate = {
-  metadata,
-  spec: pod.spec,
-}
+// const podTemplate = {
+//   metadata,
+//   spec: pod.spec,
+// }
 
 const namespaceSchema = Schema({
   apiVersion: String,
@@ -294,31 +289,31 @@ const namespaceSchema = Schema({
   },
 });
 
-namespaceSchema.loadClass(Namespace);
-
 const deploymentSchema = Schema({
   apiVersion: String,
   kind: String,
   metadata,
   spec: {
     selector: labelSelector,
-    template: podTemplate,
-    replicas: Number,
-    minReadySeconds: Number,
+    template: pod,
+    replicas: { type: Number, default: 1 },
+    minReadySeconds: { type: Number, default: 30 },
     strategy: {
-      type: { type: String },
+      type: { type: String, default: "RollingUpdate"},
       rollingUpdate: {
-        maxSurge: Schema.Types.Mixed,
-        maxUnavailable: Schema.Types.Mixed
+        maxSurge: { type: Schema.Types.Mixed, default: "25%" },
+        maxUnavailable: { type: Schema.Types.Mixed, default: "25%" },
       }
     },
     revisionHistoryLimit: Number,
     progressDeadlineSeconds: Number,
-    paused: Boolean,
+    paused: { type: Boolean, default: false },
   },
   status: {
+    observedGeneration: { type: Number, default: 0 },
     replicas: { type: Number, default: 0 },
     availableReplicas: { type: Number, default: 0 },
+    readyReplicas: { type: Number, default: 0 },
     unavailableReplicas: { type: Number, default: 0 },
     updatedReplicas: { type: Number, default: 0 },
     collisionCount: Number,
@@ -334,11 +329,7 @@ const deploymentSchema = Schema({
   },
 });
 
-deploymentSchema.loadClass(Deployments);
-
 const podSchema = Schema(pod);
-
-podSchema.loadClass(Pod);
 
 module.exports = {
   Namespace: model('Namespace', namespaceSchema),
