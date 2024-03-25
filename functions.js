@@ -101,7 +101,7 @@ module.exports = {
   runImage,
   stopContainer,
   deletePod,
-  createPod: async (newPod, deployment = '') => {
+  createPod: async (newPod, deployment = undefined) => {
     let otherPod = undefined;
     do {
       newPod.metadata.generateName = `${newPod.metadata.name}-${randomBytes(6).toString('hex')}`;

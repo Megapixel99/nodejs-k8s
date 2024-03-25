@@ -10,10 +10,17 @@ router.get('/:name', (req, res, next) => {
 });
 
 router.patch('/:name', (req, res, next) => {
-  Deployment.findOne({ 'metadata.name': req.params.name }).then((deployment) => {
-    new Deployments(deployment).rollout();
-    res.send(deployment);
-  }).catch(next);
+  if (Object.keys(req.body).length > 0) {
+    Deployment.findOneAndUpdate({ 'metadata.name': req.params.name }, req.body).then((deployment) => {
+      new Deployments(deployment).rollout();
+      res.send(deployment);
+    }).catch(next);
+  } else {
+    Deployment.findOne({ 'metadata.name': req.params.name }).then((deployment) => {
+      new Deployments(deployment).rollout();
+      res.send(deployment);
+    }).catch(next);
+  }
 });
 
 router.get('/:name/status', (req, res, next) => {
