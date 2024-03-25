@@ -40,6 +40,20 @@ class Deployment extends Object {
           })
         );
       } while (newPods < this.spec.replicas);
+    } else if (this.spec.strategy.type === "Recreate") {
+      Promise.all(
+        new Array(this.spec.replicas)
+        .fill(0)
+        .map(() => {
+          return this.deletePod();
+        })
+      ).then(() =>
+        new Array(this.spec.replicas)
+        .fill(0)
+        .map(() => {
+          return this.createPod();
+        })
+      )
     }
   }
 }

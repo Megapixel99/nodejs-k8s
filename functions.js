@@ -68,23 +68,29 @@ const deletePod = (name) => {
     }]
   }, {}, { sort: { 'created_at' : 1 } })
   .then((pods) => {
-    return Pod.findOneAndDelete({
-      'metadata.uid': pods[0].metadata.uid,
-    });
+    if (pods[0]) {
+      return Pod.findOneAndDelete({
+        'metadata.uid': pods[0].metadata.uid,
+      });
+    }
+    return Promise.resolve();
   })
   .then((pod) => {
-    return Promise.all([
-      stopContainer(pod.metadata.generateName),
-      Deployment.findOneAndUpdate({
-        'metadata.name': pod.metadata.labels.get("app"),
-      }, {
-        $inc: {
-          'status.readyReplicas': -1,
-          'status.replicas': -1,
-          'status.availableReplicas': -1,
-        },
-      }),
-    ]);
+    if (pod) {
+      return Promise.all([
+        stopContainer(pod.metadata.generateName),
+        Deployment.findOneAndUpdate({
+          'metadata.name': pod.metadata.labels.get("app"),
+        }, {
+          $inc: {
+            'status.readyReplicas': -1,
+            'status.replicas': -1,
+            'status.availableReplicas': -1,
+          },
+        }),
+      ]);
+    }
+    return Promise.resolve();
   });
 };
 
