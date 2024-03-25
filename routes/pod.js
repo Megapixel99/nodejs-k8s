@@ -23,7 +23,7 @@ async (req, res, next) => {
     req.body.metadata.creationTimestamp = new Date();
   }
   if (!req.body?.metadata?.namespace) {
-    req.body.metadata.namespace = req.params.namespace;
+    req.body.metadata.namespace = (req.params.namespace || "default");
   }
   res.status(202).send(req.body);
   createPod(req.body);
