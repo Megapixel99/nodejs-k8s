@@ -4,13 +4,13 @@ const { Namespace } = require('../database/models.js');
 const { duration } = require('../functions.js');
 
 router.get('/:name', (req, res, next) => {
-  Namespace.find({ metadata: { name: req.query.name } }).then((namespace) => {
+  Namespace.find({ 'metadata.name': req.query.name }).then((namespace) => {
     res.send(namespace);
   }).catch(next);
 });
 
 router.get('/:name/status', (req, res, next) => {
-  Namespace.find({ metadata: { name: req.query.name } }).then((namespace) => {
+  Namespace.find({ 'metadata.name': req.query.name }).then((namespace) => {
     res.send(namespace.status);
   }).catch(next);
 });
