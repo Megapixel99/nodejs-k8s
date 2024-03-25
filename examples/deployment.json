@@ -1,0 +1,65 @@
+{
+  "kind": "Deployment",
+  "apiVersion": "apps/v1",
+  "metadata": {
+    "name": "mongo",
+    "labels": {
+      "app": "mongo",
+      "namespace": "test"
+    }
+  },
+  "spec": {
+    "selector": {
+      "matchLabels": {
+        "app": "mongo"
+      }
+    },
+    "replicas": 3,
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "mongo"
+        }
+      },
+      "spec": {
+        "volumes": [
+          {
+            "name": "mongo-disk",
+            "gcePersistentDisk": {
+              "pdName": "mongo-disk",
+              "fsType": "ext4"
+            }
+          }
+        ],
+        "containers": [
+          {
+            "name": "mongo",
+            "image": "mongo:latest",
+            "ports": [
+              {
+                "name": "mongo",
+                "containerPort": 27017
+              }
+            ],
+            "volumeMounts": [
+              {
+                "name": "mongo-disk",
+                "mountPath": "/data/db"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "strategy": {
+      "type": "RollingUpdate",
+      "rollingUpdate": {
+        "maxUnavailable": "25%",
+        "maxSurge": "25%"
+      }
+    },
+    "revisionHistoryLimit": 10,
+    "progressDeadlineSeconds": 600
+  },
+  "status": {}
+}
