@@ -2,14 +2,17 @@ const router = require('express').Router();
 const { parse, stringify } = require('yaml');
 const { Deployment } = require('../database/models.js');
 const { Deployments } = require('../objects');
+const { apiAppsV1OpenApiV3, validSchema } = require('./openapi.js');
 
-router.get('/:name', (req, res, next) => {
+let routes = ['/apis/apps/v1/namespaces/:namespace/deployments', '/api/v1/namespaces/:namespace/deployments'];
+
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
   Deployment.findOne({ 'metadata.name': req.params.name }).then((deployment) => {
     res.send(deployment);
   }).catch(next);
 });
 
-router.patch('/:name', (req, res, next) => {
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
   if (Object.keys(req.body).length > 0) {
     Deployment.findOneAndUpdate({ 'metadata.name': req.params.name }, req.body).then((deployment) => {
       new Deployments(deployment).rollout();
@@ -23,13 +26,13 @@ router.patch('/:name', (req, res, next) => {
   }
 });
 
-router.get('/:name/status', (req, res, next) => {
+router.get(routes.map((e) => `${e}/:name/status`), validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
   Deployment.findOne({ 'metadata.name': req.params.name }).then((deployment) => {
     res.send(deployment.status);
   }).catch(next);
 });
 
-router.post('/', (req, res, next) => {
+router.post(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
   if (!req.body?.metadata?.creationTimestamp) {
     req.body.metadata.creationTimestamp = new Date();
   }

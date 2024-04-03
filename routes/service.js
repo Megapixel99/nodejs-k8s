@@ -3,14 +3,17 @@ const { parse, stringify } = require('yaml');
 const { Service } = require('../database/models.js');
 const { Services } = require('../objects');
 const { createService } = require('../functions.js');
+const { apiV1OpenapiV3, validSchema } = require('./openapi.js');
 
-router.get('/:name', (req, res, next) => {
+let routes = ['/apis/apps/v1/namespaces/:namespace/services', '/api/v1/namespaces/:namespace/services'];
+
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req, res, next) => {
   Service.findOne({ 'metadata.name': req.params.name }).then((deployment) => {
     res.send(deployment);
   }).catch(next);
 });
 
-router.patch('/:name', (req, res, next) => {
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req, res, next) => {
   if (Object.keys(req.body).length > 0) {
     Service.findOneAndUpdate({ 'metadata.name': req.params.name }, req.body).then((deployment) => {
       new Services(deployment).rollout();
@@ -24,13 +27,13 @@ router.patch('/:name', (req, res, next) => {
   }
 });
 
-router.get('/:name/status', (req, res, next) => {
+router.get(routes.map((e) => `${e}/:name/status`), validSchema(apiV1OpenapiV3), (req, res, next) => {
   Service.findOne({ 'metadata.name': req.params.name }).then((deployment) => {
     res.send(deployment.status);
   }).catch(next);
 });
 
-router.post('/', (req, res, next) => {
+router.post(routes, validSchema(apiV1OpenapiV3), (req, res, next) => {
   if (!req.body?.metadata?.creationTimestamp) {
     req.body.metadata.creationTimestamp = new Date();
   }

@@ -18,18 +18,33 @@ app.use((req, res, next) => {
 
 app.use('/', api);
 
-app.use('/api/v1/namespaces', namespace);
+app.use(namespace);
 app.use('/api/v1/namespaces', tables.namespace);
 
-app.use(['/apis/apps/v1/namespaces/:namespace/pods', '/api/v1/namespaces/:namespace/pods'], pod);
+app.use(pod);
 app.use('/api/v1/namespaces/:namespace/pods', tables.pod);
 
-app.use(['/apis/apps/v1/namespaces/:namespace/services', '/api/v1/namespaces/:namespace/services'], service);
+app.use(service);
 app.use('/api/v1/namespaces/:namespace/services', tables.service);
 
-app.use(['/apis/apps/v1/namespaces/:namespace/deployments', '/api/v1/namespaces/:namespace/deployments'], deployment);
+app.use(deployment);
 app.use('/api/v1/namespaces/:namespace/deployments', tables.deployment);
 
 app.use('/', openapi.router);
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  console.log(err);
+  let errRes = {
+    status: 'ERROR',
+    message: {
+      code: err?.status || 500,
+      reason: err.cause || 'An unknown error occured. Please see the logs.',
+      err: err?.response?.data || err?.message,
+    },
+  };
+  res.status(err?.status || 500).send(errRes);
+  return next();
+});
 
 app.listen(8080);

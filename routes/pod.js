@@ -1,24 +1,24 @@
 const router = require('express').Router();
 const emitter = require('../eventHandlers/emitter.js');
 const { Pod } = require('../database/models.js');
-const { apiV1OpenapiV3 } = require('./openapi.js');
+const { apiV1OpenapiV3, validSchema } = require('./openapi.js');
 const { duration, createPod } = require('../functions.js');
 
-router.get('/:name', (req, res, next) => {
+let routes = ['/apis/apps/v1/namespaces/:namespace/pods', '/api/v1/namespaces/:namespace/pods'];
+
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req, res, next) => {
   Pod.find({ 'metadata.name': req.query.name }).then((pod) => {
     res.send(pod);
   }).catch(next);
 });
 
-router.get('/:name/status', (req, res, next) => {
+router.get(routes.map((e) => `${e}/:name/status`), validSchema(apiV1OpenapiV3), (req, res, next) => {
   Pod.find({ 'metadata.name': req.query.name }).then((pod) => {
     res.send(pod.status);
   }).catch(next);
 });
 
-router.post('/',
-(req, res, next) => apiV1OpenapiV3.validPath(req.baseUrl[req.method.toLowerCase()])(req, res, next),
-async (req, res, next) => {
+router.post(routes, validSchema(apiV1OpenapiV3), (req, res, next) => {
   if (!req.body?.metadata?.creationTimestamp) {
     req.body.metadata.creationTimestamp = new Date();
   }
