@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "docker image rm loadbalancer & docker build -t loadbalancer -f loadBalancer/Dockerfile . & node ./index.js"
   },
   "author": "",
   "license": "ISC",
