@@ -2,35 +2,35 @@
   "kind": "Pod",
   "apiVersion": "v1",
   "metadata": {
-    "name": "mongo",
+    "name": "hello-world",
     "labels": {
-      "name": "mongo",
-      "role": "mongo"
+      "name": "hello-world",
+      "role": "hello-world"
     }
   },
   "spec": {
     "volumes": [
       {
-        "name": "mongo-disk",
+        "name": "hello-world-disk",
         "gcePersistentDisk": {
-          "pdName": "mongo-disk",
+          "pdName": "hello-world-disk",
           "fsType": "ext4"
         }
       }
     ],
     "containers": [
       {
-        "name": "mongo",
-        "image": "mongo:latest",
+        "name": "hello-world",
+        "image": "crccheck/hello-world:latest",
         "ports": [
           {
-            "name": "mongo",
-            "containerPort": 27017
+            "name": "hello-world",
+            "containerPort": 8000
           }
         ],
         "volumeMounts": [
           {
-            "name": "mongo-disk",
+            "name": "hello-world-disk",
             "mountPath": "/data/db"
           }
         ]
