@@ -6,19 +6,15 @@ const { duration, createPod } = require('../functions.js');
 
 const routes = ['/apis/networking.k8s.io/v1/namespaces/:namespace/ingresses', '/api/v1/namespaces/:namespace/ingresses'];
 
-router.get(routes.map((e) => `${e}/:name`),
-validSchema(apiNetworkingK8sIoV1OpenApiV3),
-(req, res, next) => {
-  Pod.find({ 'metadata.name': req.query.name }).then((pod) => {
-    res.send(pod);
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiNetworkingK8sIoV1OpenApiV3), (req, res, next) => {
+  Ingress.find({ 'metadata.name': req.query.name }).then((ingress) => {
+    res.send(ingress);
   }).catch(next);
 });
 
-router.get(routes.map((e) => `${e}/:name/status`),
-validSchema(apiNetworkingK8sIoV1OpenApiV3),
-(req, res, next) => {
-  Pod.find({ 'metadata.name': req.query.name }).then((pod) => {
-    res.send(pod.status);
+router.get(routes.map((e) => `${e}/:name/status`), validSchema(apiNetworkingK8sIoV1OpenApiV3), (req, res, next) => {
+  Ingress.find({ 'metadata.name': req.query.name }).then((ingress) => {
+    res.send(ingress.status);
   }).catch(next);
 });
 
