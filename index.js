@@ -2,7 +2,7 @@ require('dotenv').config();
 require('./eventHandlers');
 const express = require('express');
 const db = require('./database/connection.js');
-const { api, namespace, deployment, pod, service, openapi, tables } = require('./routes/index.js');
+const { api, namespace, deployment, pod, service, ingress, openapi, tables } = require('./routes/index.js');
 const { buildImage } = require('./functions.js');
 
 db.connect(process.env.DB_URL);
@@ -26,6 +26,9 @@ app.use('/api/v1/namespaces/:namespace/pods', tables.pod);
 
 app.use(service);
 app.use('/api/v1/namespaces/:namespace/services', tables.service);
+
+app.use(ingress);
+app.use('/api/v1/namespaces/:namespace/ingresses', tables.ingress);
 
 app.use(deployment);
 app.use('/api/v1/namespaces/:namespace/deployments', tables.deployment);

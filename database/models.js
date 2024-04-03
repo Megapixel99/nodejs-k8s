@@ -359,6 +359,18 @@ const deploymentSchema = Schema({
 
 const podSchema = Schema(pod);
 
+const ingressLoadBalancerStatus = {
+  ingress: [{
+    hostname: String,
+    ip: String,
+    ports: [{
+      error: String,
+      port: Number,
+      protocol: String,
+    }],
+  }]
+};
+
 const serviceSchema = Schema({
   apiVersion: String,
   kind: String,
@@ -407,17 +419,54 @@ const serviceSchema = Schema({
       status: String,
       type: String,
     },
-    loadBalancer: {
-      ingress: {
-        hostname: String,
-        ip: String,
-        ports: {
-          error: String,
-          port: Number,
-          protocol: String,
-        },
+    loadBalancer: ingressLoadBalancerStatus,
+  },
+});
+
+const typedLocalObjectReference = {
+  apiGroup: String,
+  kind: String,
+  name: String,
+}
+
+const ingressServiceBackend = {
+  name: String,
+  port: {
+    name: String,
+    number: Number,
+  }
+};
+
+const ingressSchema = Schema({
+  apiVersion: String,
+  kind: String,
+  metadata,
+  spec: {
+    defaultBackend: {
+      resource: typedLocalObjectReference,
+      service: ingressServiceBackend,
+    },
+    ingressClassName: String,
+    rules: {
+      host: String,
+      http: {
+        paths: [{
+          path: String,
+          pathType: { type: String, required: true },
+          backend: {
+            resource: typedLocalObjectReference,
+            service: ingressServiceBackend,
+          },
+        }]
       }
     },
+    tls: {
+      hosts: [String],
+      secretName: String,
+    }
+  },
+  status: {
+    loadBalancer: ingressLoadBalancerStatus,
   },
 });
 
@@ -426,4 +475,5 @@ module.exports = {
   Deployment: model('Deployment', deploymentSchema),
   Pod: model('Pod', podSchema),
   Service: model('Service', serviceSchema),
+  Ingress: model('Ingress', ingressSchema),
 };

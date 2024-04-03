@@ -114,19 +114,19 @@ router.get('/apis', (req, res, next) => {
       //     "version": "v1"
       //   }
       // },
-      // {
-      //   "name": "networking.k8s.io",
-      //   "versions": [
-      //     {
-      //       "groupVersion": "networking.k8s.io/v1",
-      //       "version": "v1"
-      //     }
-      //   ],
-      //   "preferredVersion": {
-      //     "groupVersion": "networking.k8s.io/v1",
-      //     "version": "v1"
-      //   }
-      // },
+      {
+        "name": "networking.k8s.io",
+        "versions": [
+          {
+            "groupVersion": "networking.k8s.io/v1",
+            "version": "v1"
+          }
+        ],
+        "preferredVersion": {
+          "groupVersion": "networking.k8s.io/v1",
+          "version": "v1"
+        }
+      },
       // {
       //   "name": "policy",
       //   "versions": [
