@@ -331,8 +331,71 @@ const deploymentSchema = Schema({
 
 const podSchema = Schema(pod);
 
+const serviceSchema = Schema({
+  apiVersion: String,
+  kind: String,
+  metadata,
+  spec: {
+    allocateLoadBalancerNodePorts: Boolean,
+    clusterIP: String,
+    clusterIPs: [ String ],
+    externalIPs: [ String ],
+    externalName: String,
+    externalTrafficPolicy: String,
+    healthCheckNodePort: String,
+    internalTrafficPolicy: { type: String, default: "Cluster" },
+    ipFamilies: { type: [ String ], default: [ "IPv4" ] },
+    ipFamilyPolicy: String,
+    loadBalancerClass: String,
+    loadBalancerIP: String,
+    loadBalancerSourceRanges: [ String ],
+    ports: [{
+      appProtocol: String,
+      name: String,
+      nodePort: Number,
+      port: { type: Number, required: true },
+      protocol: String,
+      targetPort: Schema.Types.Mixed,
+    }],
+    publishNotReadyAddresses: Boolean,
+    selector: {
+      type: Map,
+      of: String
+    },
+    sessionAffinity: { type: String, default: "None" },
+    sessionAffinityConfig: {
+      clientIP: {
+        timeoutSeconds: Number,
+      }
+    },
+    type: { type: String },
+  },
+  status: {
+    conditions: {
+      lastTransitionTime: String,
+      message: String,
+      observedGeneration: Number,
+      reason: String,
+      status: String,
+      type: String,
+    },
+    loadBalancer: {
+      ingress: {
+        hostname: String,
+        ip: String,
+        ports: {
+          error: String,
+          port: Number,
+          protocol: String,
+        },
+      }
+    },
+  },
+});
+
 module.exports = {
   Namespace: model('Namespace', namespaceSchema),
   Deployment: model('Deployment', deploymentSchema),
   Pod: model('Pod', podSchema),
+  Service: model('Service', serviceSchema),
 };

@@ -1,0 +1,25 @@
+{
+  "kind": "Service",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "hello-world",
+    "labels": {
+      "app": "hello-world",
+      "namespace": "test"
+    }
+  },
+  "spec": {
+    "ports": [
+      {
+        "name": "80-tcp",
+        "protocol": "TCP",
+        "port": 80,
+        "targetPort": 8000
+      }
+    ],
+    "selector": {
+      "app": "hello-world",
+      "deploymentconfig": "hello-world"
+    }
+  }
+}
