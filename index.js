@@ -1,5 +1,4 @@
 require('dotenv').config();
-require('./eventHandlers');
 const express = require('express');
 const db = require('./database/connection.js');
 const { api, namespace, deployment, pod, service, ingress, openapi, tables } = require('./routes/index.js');
