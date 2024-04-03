@@ -4,10 +4,38 @@ const { v4: uuid } = require('uuid');
 const metadata = {
   creationTimestamp: { type: Date, default: new Date() },
   uid: { type: String, default: uuid() },
-  name: String,
+  name: { type: String, required: true },
   generateName: String,
   resourceVersion: { type: String, default: "1" },
+  annotations: {
+    type: Map,
+    of: String
+  },
+  deletionGracePeriodSeconds: Number,
+  deletionTimestamp: Number,
+  finalizers: [ String ],
+  generateName: String,
+  generation: Number,
   namespace: String,
+  managedFields: {
+    apiVersion: String,
+    fieldsType: String,
+    fieldsV1: String,
+    manager: String,
+    operation: String,
+    subresource: String,
+    time: String,
+  },
+  ownerReferences: {
+    apiVersion: String,
+    blockOwnerDeletion: Boolean,
+    controller: Boolean,
+    kind: String,
+    name: String,
+    uid: String,
+  },
+  resourceVersion: String,
+  selfLink: String,
   labels: {
     type: Map,
     of: String
@@ -22,7 +50,7 @@ const labelSelector = {
   matchExpressions: [{
     key: { type: String },
     operator: { type: String },
-    values: { type: [String], default: undefined },
+    values: { type: [ String ], default: undefined },
   }],
   matchLabels: {
     type: Map,
@@ -43,7 +71,7 @@ const resourceFieldSelector = {
 
 const lifecycleHandler = {
   exec: {
-    command: { type: [String], default: undefined },
+    command: { type: [ String ], default: undefined },
     httpGet : {
       port: Schema.Types.Mixed,
       host: String,
@@ -162,8 +190,8 @@ const container = {
     privileged: Boolean,
     allowPrivilegeEscalation: Boolean,
     capabilities: {
-      add: { type: [String], default: undefined },
-      drop: { type: [String], default: undefined },
+      add: { type: [ String ], default: undefined },
+      drop: { type: [ String ], default: undefined },
     },
     seccompProfile: {
       type: String,
@@ -242,7 +270,7 @@ const pod = {
       lastTransitionTime: Date
     }],
     hostIP: String,
-    podIP: String,
+    podIP: { type: String, default: null },
     podIPs: [{
       ip: String
     }],
@@ -276,7 +304,7 @@ const namespaceSchema = Schema({
   kind: String,
   metadata,
   spec: {
-    finalizers: [String],
+    finalizers: [ String ],
   },
   status: {
     conditions: {
