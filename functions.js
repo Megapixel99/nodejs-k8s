@@ -157,14 +157,30 @@ const createService = async (service) => {
           name: 'PORTS',
           value: service.spec.ports.map((e) => `${e.port}:${e.targetPort}`).join(' '),
         }, {
+          name: 'DNS_SERVER',
+          value: process.env.DNS_SERVER,
+        }, {
           name: 'PODS',
           value: pods.map((e) => e.status.podIP).join(' '),
         }]
       }
       return runImage('loadbalancer', service.metadata.generateName, options)
-        .then(() => pods);
     })
-    .then(() => newService);
+    .then(() => getContainerIP(service.metadata.generateName))
+    .then((data) => JSON.parse(data.raw)[0]?.NetworkSettings.Networks.bridge.IPAddress)
+    .then((serviceIP) => {
+      return Service.findOneAndUpdate({
+        'metadata.generateName': service.metadata.generateName
+      }, {
+        $set: {
+          'spec.clusterIP': serviceIP,
+          'spec.clusterIPs': [serviceIP],
+        }
+      }, {
+        new: true,
+      });
+    })
+    .then((updatedService) => updatedService);
 }
 
 module.exports = {

@@ -1,0 +1,25 @@
+{
+  "apiVersion": "networking.k8s.io/v1",
+  "kind": "Ingress",
+  "metadata": {
+    "name": "hello-world",
+    "namespace": "test"
+  },
+  "spec": {
+    "rules": [
+      {
+        "host": "thisrouteshouldnotexsist.com",
+        "http": {
+          "paths": [
+            {
+              "backend": {
+                "serviceName": "hello-world",
+                "servicePort": 80
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

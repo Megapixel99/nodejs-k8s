@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { parse, stringify } = require('yaml');
-const { Service } = require('../database/models.js');
+const { Service, DNS } = require('../database/models.js');
 const { Services } = require('../objects');
 const { createService } = require('../functions.js');
 const { apiV1OpenapiV3, validSchema } = require('./openapi.js');
@@ -40,7 +40,18 @@ router.post(routes, validSchema(apiV1OpenapiV3), (req, res, next) => {
   if (!req.body?.metadata?.namespace) {
     req.body.metadata.namespace = (req.params.namespace || "default");
   }
-  createService(req.body).then((service) => {
+  createService(req.body)
+  .then(async (service) => {
+    await new DNS({
+      name: `${req.body.metadata.name}.${req.body.metadata.namespace}.cluster.local`,
+      type: 'A',
+      class: 'IN',
+      ttl: 300,
+      address: service.spec.clusterIP,
+    }).save()
+    return service;
+  })
+  .then((service) => {
     res.status(201).send(service);
   }).catch(next);
 });

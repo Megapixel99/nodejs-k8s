@@ -5,6 +5,8 @@ const dns = require('dns');
 const https = require('https');
 const http = require('http');
 const { pipeline } = require("stream/promises");
+const CacheableLookup = require('cacheable-lookup');
+const cacheable = new CacheableLookup();
 
 let pods = [];
 let cur = 0;
@@ -14,38 +16,12 @@ let running = true;
 
 let instance;
 
+cacheable.servers = ['1.1.1.1', '8.8.8.8'];
+
 // TODO: Look into https://iximiuz.com/en/posts/multiple-containers-same-port-reverse-proxy/
 
-if (process.env.DNS_SERVER?.trim() !== '') {
-  let dnsServers = [
-    process.env.DNS_SERVER?.trim(),
-    '8.8.8.8', // Google
-    '1.1.1.1', // Cloudflare
-  ];
-
-  const resolver = new dns.Resolver();
-  resolver.setServers(dnsServers);
-
-  const staticLookup = () => async (hostname, _ = null, cb) => {
-    const ips = await dns.resolve(hostname);
-
-    if (ips.length === 0) {
-      throw new Error(`Unable to resolve ${hostname}`);
-    }
-
-    cb(null, ips[0], 4);
-  };
-
-  instance = axios.create({
-    httpsAgent: new https.Agent({
-      lookup: staticLookup,
-    }),
-    httpAgent: new http.Agent({
-      lookup: staticLookup,
-    }),
-  });
-} else {
-  instance = axios;
+if ((process.env.DNS_SERVER || '').trim() !== '') {
+  cacheable.servers.unshift(process.env.DNS_SERVER.trim());
 }
 
 const handler = (port) => {
@@ -54,7 +30,12 @@ const handler = (port) => {
       let url = `http://${pods[cur]}:${port}${req.originalUrl}`
       console.log(`Forwarding to: ${url}`);
       req.params = {};
-      const { data } = await instance[req.method.toLowerCase()](url, req, { responseType: 'stream' });
+      const { data } = await axios[req.method.toLowerCase()](url, {
+        ...req,
+        lookup: cacheable.lookup
+      }, {
+        responseType: 'stream',
+      });
       await pipeline(data, res);
     } catch (e) {
       if (e.response) {

@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { Ingress } = require('../database/models.js');
+const { Ingress, Service, DNS } = require('../database/models.js');
 const { apiNetworkingK8sIoV1OpenApiV3, validSchema } = require('./openapi.js');
 const { duration, createPod } = require('../functions.js');
 
@@ -24,8 +24,34 @@ router.post(routes, validSchema(apiNetworkingK8sIoV1OpenApiV3), (req, res, next)
   if (!req.body?.metadata?.namespace) {
     req.body.metadata.namespace = (req.params.namespace || "default");
   }
-  res.status(202).send(req.body);
-  new Ingress(req.body).save();
+  new Ingress(req.body).save()
+    .then(() => Promise.all(
+      req.body.spec.rules.map((rule) => {
+        return rule.http.paths.map((path) => {
+          return Service.findOne({ 'metadata.name': path.backend.serviceName })
+            .then((service) => {
+              let arr = []
+              if (service?.externalIPs?.length > 0) {
+                arr.push(
+                  ...service.externalIPs.map((e) => {
+                    new DNS({
+                      name: rule.host,
+                      type: 'A',
+                      class: 'IN',
+                      ttl: 300,
+                      address: e,
+                    }).save()
+                  })
+                );
+              }
+            })
+        })
+        .flat()
+        .filter((e) => e);
+      }))
+      .flat()
+    )
+  .then(() => res.status(201).send(req.body))
 });
 
 module.exports = router;

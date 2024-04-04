@@ -4,6 +4,16 @@ const db = require('./database/connection.js');
 const { api, namespace, deployment, pod, service, ingress, openapi, tables } = require('./routes/index.js');
 const { buildImage } = require('./functions.js');
 
+let dnsServerIndex = process.argv.indexOf('-dnsServer');
+
+if (dnsServerIndex === -1) {
+  console.error('Could not find local DNS server!');
+  console.error('Did you run npm start?');
+  process.exit(1);
+}
+
+process.env.DNS_SERVER = process.argv[dnsServerIndex + 1];
+
 db.connect(process.env.DB_URL);
 
 const app = express();

@@ -470,10 +470,68 @@ const ingressSchema = Schema({
   },
 });
 
+const dns = Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  type: {
+    type: String,
+    enum: [
+      'A',
+      'NS',
+      'MD',
+      'MF',
+      'CNAME',
+      'SOA',
+      'MB',
+      'MG',
+      'MR',
+      'NULL',
+      'WKS',
+      'PTR',
+      'HINFO',
+      'MINFO',
+      'MX',
+      'TXT',
+      'AAAA',
+      'SRV',
+      'EDNS',
+      'SPF',
+      'AXFR',
+      'MAILB',
+      'MAILA',
+      'ANY',
+      'CAA',
+    ],
+    required: true
+  },
+  class: {
+    type: String,
+    enum: [
+      'IN',
+      'CS',
+      'CH',
+      'HS',
+      'ANY',
+    ],
+    required: true
+  },
+  ttl: {
+    type: Number,
+    required: true
+  },
+  address: {
+    type: String,
+    required: true
+  },
+});
+
 module.exports = {
   Namespace: model('Namespace', namespaceSchema),
   Deployment: model('Deployment', deploymentSchema),
   Pod: model('Pod', podSchema),
   Service: model('Service', serviceSchema),
   Ingress: model('Ingress', ingressSchema),
+  DNS: model('DNS', dns),
 };
