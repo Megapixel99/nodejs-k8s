@@ -378,8 +378,8 @@ const serviceSchema = Schema({
   spec: {
     allocateLoadBalancerNodePorts: Boolean,
     clusterIP: String,
-    clusterIPs: [ String ],
-    externalIPs: [ String ],
+    clusterIPs: { type: [ String ], default: [ ] },
+    externalIPs: { type: [ String ], default: [ ] },
     externalName: String,
     externalTrafficPolicy: String,
     healthCheckNodePort: String,
