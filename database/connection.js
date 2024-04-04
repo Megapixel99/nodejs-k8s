@@ -3,8 +3,7 @@ const mongoose = require('mongoose');
 function connect(mongoConnectString, logger = console) {
   mongoose.connect(mongoConnectString);
   const mongoDB = mongoose.connection;
-  const options = { upsert: true, new: true, setDefaultsOnInsert: true };
-
+  
   mongoDB.on('error', (err) => {
     logger.error(`MongoDB error: \n${err}`);
     throw err;
