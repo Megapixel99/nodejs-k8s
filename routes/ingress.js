@@ -1,5 +1,4 @@
 const router = require('express').Router();
-const emitter = require('../eventHandlers/emitter.js');
 const { Ingress } = require('../database/models.js');
 const { apiNetworkingK8sIoV1OpenApiV3, validSchema } = require('./openapi.js');
 const { duration, createPod } = require('../functions.js');

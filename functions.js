@@ -2,7 +2,6 @@ const { dockerCommand } = require('docker-cli-js');
 const { randomBytes } = require("crypto");
 const { Pod, Deployment, Service } = require('./database/models.js');
 const portfinder = require('portfinder');
-const emitter = require('./eventHandlers/emitter.js');
 
 let duration = (timeDiff, loop = true) => {
   let y = 365 * 24 * 60 * 60 * 1000;
@@ -257,7 +256,6 @@ module.exports = {
       })
     })
     .then(() => {
-      // emitter.emit('podReady', [newPod.metadata.generateName, deployment]);
       return Pod.findOneAndUpdate({
         'metadata.generateName': newPod.metadata.generateName
       }, {

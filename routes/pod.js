@@ -1,5 +1,4 @@
 const router = require('express').Router();
-const emitter = require('../eventHandlers/emitter.js');
 const { Pod } = require('../database/models.js');
 const { apiV1OpenapiV3, validSchema } = require('./openapi.js');
 const { duration, createPod } = require('../functions.js');
