@@ -194,7 +194,7 @@ module.exports = {
   runImage,
   stopContainer,
   deletePod,
-  createPod: async (newPod, deployment = undefined) => {
+  createPod: async (newPod, deploymentName = undefined) => {
     let otherPod = undefined;
     do {
       newPod.metadata.generateName = `${newPod.metadata.name}-${randomBytes(6).toString('hex')}`;
@@ -209,11 +209,11 @@ module.exports = {
     if (!newPod.status.conditions) {
       newPod.status.conditions = [];
     }
-    if (deployment) {
+    if (deploymentName) {
       if (!newPod?.metadata?.labels) {
         newPod.metadata.labels = new Map();
       }
-      newPod.metadata.labels.set('app', deployment);
+      newPod.metadata.labels.set('app', deploymentName);
     }
     newPod.status.conditions.push({
       type: "Initialized",
@@ -288,7 +288,6 @@ module.exports = {
     }).then((pod) => {
       return Promise.all([
         Deployment.findOneAndUpdate({
-          'metadata.name': deployment
         }, {
           $inc: {
             'status.replicas': 1,
@@ -301,6 +300,7 @@ module.exports = {
               "status": "True",
               "lastUpdateTime": new Date(),
               "lastTransitionTime": new Date(),
+            'metadata.name': deploymentName
             },
             {
               "type": "Available",
