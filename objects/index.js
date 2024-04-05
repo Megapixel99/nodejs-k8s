@@ -1,8 +1,9 @@
 module.exports = {
-  Deployments: require('./deployment.js'),
+  Deployment: require('./deployment.js'),
   Namespace: require('./namespace.js'),
   Object: require('./object.js'),
-  Services: require('./service.js'),
+  Service: require('./service.js'),
+  Ingress: require('./ingress.js'),
   Pod: require('./pod.js'),
   ReplicationController: require('./replicationcontroller.js'),
 };

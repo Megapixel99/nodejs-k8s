@@ -1,7 +1,5 @@
 const router = require('express').Router();
-const { parse, stringify } = require('yaml');
-const { Deployment } = require('../database/models.js');
-const { Deployments } = require('../objects');
+const { Deployment } = require('../objects');
 const { apiAppsV1OpenApiV3, validSchema } = require('./openapi.js');
 
 let routes = ['/apis/apps/v1/namespaces/:namespace/deployments', '/api/v1/namespaces/:namespace/deployments'];
@@ -14,14 +12,16 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), (re
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
   if (Object.keys(req.body).length > 0) {
-    Deployment.findOneAndUpdate({ 'metadata.name': req.params.name }, req.body).then((deployment) => {
-      new Deployments(deployment).rollout();
+    Deployment.findOne({ 'metadata.name': req.params.name })
+    .then((deployment) => deployment.update(req.body))
+    .then((deployment) => {
       res.send(deployment);
+      deployment.rollout();
     }).catch(next);
   } else {
     Deployment.findOne({ 'metadata.name': req.params.name }).then((deployment) => {
-      new Deployments(deployment).rollout();
       res.send(deployment);
+      deployment.rollout();
     }).catch(next);
   }
 });
@@ -39,12 +39,9 @@ router.post(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
   if (!req.body?.metadata?.namespace) {
     req.body.metadata.namespace = (req.params.namespace || "default");
   }
-  new Deployment(req.body).save().then((deployment) => {
-    res.status(201).send(deployment);
-    if (deployment.spec.paused !== true) {
-      new Deployments(deployment).rollout();
-    }
-  }).catch(next);
+  Deployment.create(req.body)
+  .then((deployment) => res.status(201).send(deployment))
+  .catch(next);
 });
 
 module.exports = router;

@@ -32,7 +32,7 @@
                 "name": "hello-world",
                 "containerPort": 8000
               }
-            ],
+            ]
           }
         ]
       }

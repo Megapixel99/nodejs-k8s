@@ -9,15 +9,6 @@
     }
   },
   "spec": {
-    "volumes": [
-      {
-        "name": "hello-world-disk",
-        "gcePersistentDisk": {
-          "pdName": "hello-world-disk",
-          "fsType": "ext4"
-        }
-      }
-    ],
     "containers": [
       {
         "name": "hello-world",
@@ -28,12 +19,6 @@
             "containerPort": 8000
           }
         ],
-        "volumeMounts": [
-          {
-            "name": "hello-world-disk",
-            "mountPath": "/data/db"
-          }
-        ]
       }
     ]
   }
