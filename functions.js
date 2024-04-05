@@ -116,7 +116,7 @@ const deletePod = (name) => {
         })
         .then((service) => {
           if (service) {
-            return removePodFromService(service.metadata.generateName);
+            return removePodFromService(service.metadata.generateName, pod.status.podIP);
           }
         }),
         Deployment.findOneAndUpdate({
