@@ -97,6 +97,8 @@ const deletePod = (name) => {
   return Pod.find({
     $or: [{
       'metadata.name': name,
+    }, {
+      'metadata.generateName': name,
     }]
   }, {}, { sort: { 'created_at' : 1 } })
   .then((pods) => {
