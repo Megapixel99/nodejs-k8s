@@ -286,33 +286,45 @@ module.exports = {
         new: true,
       });
     }).then((pod) => {
-      return Promise.all([
-        Deployment.findOneAndUpdate({
-        }, {
-          $inc: {
-            'status.replicas': 1,
-            'status.readyReplicas': 1,
-            'status.availableReplicas': 1,
-          },
-          $set: {
-            conditions: [{
-              "type": "Progressing",
-              "status": "True",
-              "lastUpdateTime": new Date(),
-              "lastTransitionTime": new Date(),
+      if (deploymentName) {
+        return Promise.all([
+          Deployment.findOneAndUpdate({
             'metadata.name': deploymentName
+          }, {
+            $inc: {
+              'status.replicas': 1,
+              'status.readyReplicas': 1,
+              'status.availableReplicas': 1,
             },
-            {
-              "type": "Available",
-              "status": "True",
-              "lastUpdateTime": new Date(),
-              "lastTransitionTime": new Date(),
-            }]
-          }
-        }, {
-          new: true,
-        }),
-      ]);
+            $set: {
+              conditions: [{
+                "type": "Progressing",
+                "status": "True",
+                "lastUpdateTime": new Date(),
+                "lastTransitionTime": new Date(),
+              },
+              {
+                "type": "Available",
+                "status": "True",
+                "lastUpdateTime": new Date(),
+                "lastTransitionTime": new Date(),
+              }]
+            }
+          }, {
+            new: true,
+          }),
+          Service.findOne({
+            'metadata.name': deploymentName
+          })
+          .then((service) => {
+            if (service) {
+              return addPodToService(service.metadata.generateName, pod.status.podIP);
+            }
+          })
+        ])
+        .then((p) => p[0]);
+      }
+      return Promise.resolve();
     })
     .then((deploymentInfo) => {
       if (deploymentInfo?.status?.replicas > deploymentInfo?.spec?.replicas) {
