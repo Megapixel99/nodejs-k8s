@@ -47,6 +47,26 @@ class Deployment extends Object {
       if (newDeployment.spec.paused !== true) {
         newDeployment.rollout();
       }
+      setInterval(() => {
+        if (newDeployment.rollingOut === false) {
+          Promise.all(
+            newDeployment.spec.template.spec.containers
+              .map((e) => getAllContainersWithName(newDeployment.spec.template.metadata.name, e.image))
+          )
+          .then((containers) => containers.map((e) => e.raw))
+          .then((raw) => raw.toString().split('\n').filter((e) => e !== ''))
+          .then((arr) => {
+            if (newDeployment.rollingOut === false) {
+              if (newDeployment.spec.replicas > arr.length) {
+                newDeployment.rollout(newDeployment.spec.replicas - arr.length);
+              } else if (newDeployment.spec.replicas < arr.length) {
+                new Array(arr.length - newDeployment.spec.replicas)
+                  .fill(0).forEach(() => newDeployment.deletePod());
+              }
+            }
+          })
+        }
+      }, 1000);
       return newDeployment;
     })
   }

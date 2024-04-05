@@ -54,14 +54,8 @@ class Pod extends Object {
     });
     return new Model(config).save()
     .then((pod) => {
-      let newPod = this.setConfig(pod);
-      let p = newPod.spec.containers.map((e) => {
-        let options = {
-          expose: e.ports.map((a) => a.containerPort),
-        }
-        return runImage(e.image, newPod.metadata.generateName, options);
-      });
-      return Promise.all(p)
+      let newPod = new Pod(pod);
+      return newPod.start()
       .then(() => getContainerIP(config.metadata.generateName))
       .then((data) => JSON.parse(data.raw)[0]?.NetworkSettings.Networks.bridge.IPAddress)
       .then((podIP) => {
@@ -152,7 +146,7 @@ class Pod extends Object {
       let options = {
         expose: e.ports.map((a) => a.containerPort),
       }
-      return runImage(e.image, newPod.metadata.generateName, options);
+      return runImage(e.image, this.metadata.generateName, options);
     });
     return Promise.all(p);
   }

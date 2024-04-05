@@ -48,7 +48,7 @@ class Service extends Object {
       return new Model(config).save()
     })
     .then((service) => {
-      let newService = this.setConfig(service);
+      let newService = new Service(service);
       return pullImage('node')
         .then(() => imageExists('loadbalancer'))
         .catch((err) => buildImage('loadbalancer', 'loadBalancer/Dockerfile'))
