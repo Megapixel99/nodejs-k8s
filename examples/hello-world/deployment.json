@@ -32,6 +32,19 @@
                 "name": "hello-world",
                 "containerPort": 8000
               }
+            ],
+            "env": [
+              {
+                "name": "TEST",
+                "value": "temp"
+              }
+            ],
+            "envFrom": [
+              {
+                "secretRef": {
+                  "name": "hello-world"
+                }
+              }
             ]
           }
         ]
