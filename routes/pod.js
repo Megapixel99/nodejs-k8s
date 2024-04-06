@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { Pod } = require('../database/models.js');
+const { Pod } = require('../objects');
 const { apiV1OpenapiV3, validSchema } = require('./openapi.js');
 
 let routes = ['/apis/apps/v1/namespaces/:namespace/pods', '/api/v1/namespaces/:namespace/pods'];
