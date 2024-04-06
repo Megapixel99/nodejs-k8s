@@ -527,11 +527,41 @@ const dns = Schema({
   },
 });
 
+const secretSchema = Schema({
+  apiVersion: String,
+  kind: String,
+  metadata,
+  data: {
+    type: Map,
+    of: String
+  },
+  immutable: Boolean,
+  stringData: {
+    type: Map,
+    of: String
+  },
+  type: {
+    type: String,
+    default: "Opaque",
+    enum: [
+      'Opaque',
+      'kubernetes.io/service-account-token',
+      'kubernetes.io/dockercfg',
+      'kubernetes.io/dockerconfigjson',
+      'kubernetes.io/basic-auth',
+      'kubernetes.io/ssh-auth',
+      'kubernetes.io/tls',
+      'bootstrap.kubernetes.io/token',
+    ]
+  },
+})
+
 module.exports = {
   Namespace: model('Namespace', namespaceSchema),
   Deployment: model('Deployment', deploymentSchema),
   Pod: model('Pod', podSchema),
   Service: model('Service', serviceSchema),
+  Secret: model('Secret', secretSchema),
   Ingress: model('Ingress', ingressSchema),
   DNS: model('DNS', dns),
 };

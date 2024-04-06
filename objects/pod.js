@@ -1,4 +1,5 @@
 const Object = require('./object.js');
+const Secret = require('./secret.js');
 const { Pod: Model } = require('../database/models.js');
 const {
   runImage,
@@ -141,10 +142,31 @@ class Pod extends Object {
     return stopContainer(this.metadata.generateName);
   }
 
+  getEnvVarsFromSecret(secretName) {
+    return Secret.findOne({ 'metadata.name': secretName, 'metadata.namespace': this.metadata.namespace })
+      .then((secret) => secret.mapVariables());
+  }
+
   start() {
-    let p = this.spec.containers.map((e) => {
+    let p = this.spec.containers.map(async (e) => {
       let options = {
         expose: e.ports.map((a) => a.containerPort),
+      }
+      if (e.env || e.envFrom) {
+        options['env'] = [];
+        if (e.env) {
+          options['env'].push(...e.env);
+        }
+        if (e.envFrom) {
+          await Promise.all(e.envFrom.map(async (e) => {
+            if (e.secretRef) {
+              return this.getEnvVarsFromSecret(e.secretRef.name);
+            }
+            return null;
+          }))
+          .then((variables) => variables.flat().filter((e) => e))
+          .then((variables) => options['env'].push(...variables));
+        }
       }
       return runImage(e.image, this.metadata.generateName, options);
     });
