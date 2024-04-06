@@ -155,6 +155,9 @@ class Deployment extends Object {
       config.metadata.labels = new Map();
     }
     config.metadata.labels.set('app', this.metadata.name);
+    if (!config?.metadata?.namespace) {
+      config.metadata.namespace = this.metadata.namespace
+    }
     return Pod.create(config)
     .then((newPod) => {
       return Promise.all([
