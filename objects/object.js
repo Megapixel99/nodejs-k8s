@@ -1,3 +1,5 @@
+const Status = require('./status.js');
+
 class Object {
   constructor(config) {
     this.apiVersion = config.apiVersion;
@@ -15,6 +17,29 @@ class Object {
 
   getApiVersion() {
     return this.apiVersion;
+  }
+
+  successfulStatus() {
+    return new Status({
+      status: 'Success',
+      details: {
+        name: this.metadata.name,
+        kind: this.kind.toLowerCase(),
+        uid: this.metadata.uid
+      }
+    });
+  }
+
+  static notFoundStatus(objectKind = '', objectName = '') {
+    return new Status({
+      status: 'Failure',
+      reason: 'NotFound',
+      message: `${objectKind.toLowerCase()} "${objectName}" not found`,
+      details: {
+        name: objectName,
+        kind: objectKind.toLowerCase(),
+      }
+    });
   }
 }
 
