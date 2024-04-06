@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { Ingress } = require('../database/models.js');
+const { Ingress } = require('../objects');
 const { apiNetworkingK8sIoV1OpenApiV3, validSchema } = require('./openapi.js');
 
 const routes = ['/apis/networking.k8s.io/v1/namespaces/:namespace/ingresses', '/api/v1/namespaces/:namespace/ingresses'];

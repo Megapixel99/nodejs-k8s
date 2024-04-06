@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { Namespace } = require('../database/models.js');
+const { Namespace } = require('../objects');
 const { apiAppsV1OpenApiV3, validSchema } = require('./openapi.js');
 
 router.get('/api/v1/namespaces/:name', validSchema(apiAppsV1OpenApiV3), (req, res, next) => {

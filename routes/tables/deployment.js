@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { parse, stringify } = require('yaml');
-const { Deployment } = require('../../database/models.js');
+const { Deployment } = require('../../objects');
 const { duration } = require('../../functions.js');
 
 router.get('/', (req, res, next) => {
