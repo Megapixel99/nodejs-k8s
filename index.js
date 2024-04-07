@@ -44,11 +44,11 @@ app.use((req, res) => {
 })
 
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  console.log(err);
   if (err instanceof Status) {
     res.status(err.code).send(err);
   } else {
+    console.error(err.stack);
+    console.log(err);
     res.status(500).send(Object.internalServerErrorStatus());
   }
   return next();
