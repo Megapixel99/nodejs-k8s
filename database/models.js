@@ -34,7 +34,6 @@ const metadata = {
     name: String,
     uid: String,
   },
-  resourceVersion: String,
   selfLink: String,
   labels: {
     type: Map,
