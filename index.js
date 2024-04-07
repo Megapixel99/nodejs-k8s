@@ -21,7 +21,8 @@ const app = express();
 app.use(express.json());
 
 app.use((req, res, next) => {
-  console.log(req.url);
+  console.log(req.headers, req.url);
+  console.log('------------------');
   next();
 })
 
