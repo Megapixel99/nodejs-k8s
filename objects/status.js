@@ -1,6 +1,4 @@
-const Object = require('./object.js');
-
-class Secret {
+class Status {
   constructor(config) {
     this.kind = "Status";
     this.apiVersion = "v1";
@@ -50,4 +48,4 @@ class Secret {
   }
 }
 
-module.exports = Secret;
+module.exports = Status;
