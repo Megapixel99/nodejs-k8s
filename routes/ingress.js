@@ -32,7 +32,7 @@ router.get(routes, validSchema(apiNetworkingK8sIoV1OpenApiV3), (req, res, next) 
     .catch(next);
 })
 
-router.get('/api/v1/ingresses', validSchema(apiV1OpenapiV3), (req, res, next) => {
+router.get('/api/v1/ingress', validSchema(apiV1OpenapiV3), (req, res, next) => {
   if (req.headers?.accept?.split(';').find((e) => e === 'as=Table')) {
     return Ingress.table(req.query)
       .then((ingressList) => res.status(200).send(ingressList))
