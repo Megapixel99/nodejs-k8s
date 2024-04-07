@@ -30,6 +30,22 @@ class Object {
     });
   }
 
+  static arrayBufferTo53bitNumber(buffer) {
+    const view = new DataView(buffer);
+    const first32bits = view.getUint32(0, true);
+    const next21bits = view.getUint32(4, true) & 0b111111111111111111111;
+    return first32bits * 0x200000 + next21bits;
+  }
+
+  static digest256(input) {
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  }
+
+  static async hash(input) {
+    const sha256 = await this.digest256(input);
+    return this.arrayBufferTo53bitNumber(sha256);
+  }
+
   static notFoundStatus(objectKind = '', objectName = '') {
     return new Status({
       status: 'Failure',
