@@ -1,3 +1,4 @@
+const EventEmitter = require('events');
 const K8Object = require('./object.js');
 const Secret = require('./secret.js');
 const ConfigMap = require('./configMap.js');
@@ -8,6 +9,7 @@ const {
   stopContainer,
   getContainerIP,
   randomBytes,
+  isContainerRunning,
 } = require('../functions.js');
 
 class Pod extends K8Object {
@@ -15,6 +17,7 @@ class Pod extends K8Object {
     super(config);
     this.spec = config.spec;
     this.status = config.status;
+    this.eventEmitter = new EventEmitter();
   }
 
   static apiVersion = 'v1';
@@ -62,20 +65,46 @@ class Pod extends K8Object {
     .then((pod) => {
       let newPod = new Pod(pod);
       return newPod.start()
-      .then(() => getContainerIP(config.metadata.generateName))
-      .then((data) => JSON.parse(data.raw)[0]?.NetworkSettings.Networks.bridge.IPAddress)
+      .then(() => new Promise((resolve, reject) => {
+        let podIP = getContainerIP(newPod.metadata.generateName)
+          .then((data) => JSON.parse(data.raw)[0]?.NetworkSettings.Networks.bridge.IPAddress)
+          .then((ip) => {
+            newPod.eventEmitter.emit('NewContainer', {
+              ip,
+              nodeName: '',
+              targetRef: {
+                kind: this.kind,
+                namespace: newPod.metadata.namespace,
+                name: newPod.metadata.generateName,
+                uid: newPod.metadata.uid
+              }
+            });
+            return ip;
+          })
+        let inter = setInterval(async () => {
+          try {
+            if ((await isContainerRunning(newPod.metadata.generateName)).object === true) {
+              clearInterval(inter);
+              newPod.eventEmitter.emit('ContainersReady', newPod);
+              newPod.update({
+                $push: {
+                  'status.conditions': [{
+                    type: "ContainersReady",
+                    status: 'True',
+                    lastTransitionTime: new Date(),
+                  }]
+                }
+              })
+              .then(() => podIP.then((ip) => resolve(ip)));
+            }
+          } catch (e) {
+            reject(e);
+          }
+        }, 1000);
+      }))
       .then((podIP) => {
         return newPod.update({
           $push: {
-            'status.conditions': [{
-              type: "Ready",
-              status: 'True',
-              lastTransitionTime: new Date(),
-            }, {
-              type: "ContainersReady",
-              status: 'True',
-              lastTransitionTime: new Date(),
-            }],
             'status.containerStatuses': {
               "restartCount": 0,
               "started": true,
@@ -101,10 +130,16 @@ class Pod extends K8Object {
           }
         })
       })
-      .then(() => {
-        return newPod.update({
+      .then((updatedPod) => {
+        newPod.eventEmitter.emit('Ready', updatedPod);
+        newPod.eventEmitter.emit('PodScheduled', updatedPod);
+        return updatedPod.update({
           $push: {
             'status.conditions': [{
+              type: "Ready",
+              status: 'True',
+              lastTransitionTime: new Date(),
+            }, {
               type: "PodScheduled",
               status: 'True',
               lastTransitionTime: new Date(),
@@ -113,6 +148,10 @@ class Pod extends K8Object {
         });
       });
     })
+  }
+
+  events() {
+    return this.eventEmitter;
   }
 
   setConfig(config) {
@@ -125,6 +164,7 @@ class Pod extends K8Object {
     return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
     .then((pod) => {
       if (pod) {
+        this.eventEmitter.emit('Delete', pod);
         return this.setConfig(pod);
       }
     });

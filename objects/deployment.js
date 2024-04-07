@@ -269,7 +269,7 @@ class Deployment extends K8Object {
           })
           .then((service) => {
             if (service) {
-              service.removePod(pod[0].status.podIP)
+              service.removePod(pod[0])
             }
           })
         ])
@@ -321,7 +321,7 @@ class Deployment extends K8Object {
         Service.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
         .then((service) => {
           if (service) {
-            return service.addPod(newPod.status.podIP);
+            return service.addPod(newPod);
           }
         })
       ])

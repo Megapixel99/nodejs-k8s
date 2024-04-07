@@ -7,6 +7,7 @@ module.exports = {
   Secret: require('./secret.js'),
   Ingress: require('./ingress.js'),
   ConfigMap: require('./configMap.js'),
+  Endpoints: require('./endpoints.js'),
   Pod: require('./pod.js'),
   ReplicationController: require('./replicationcontroller.js'),
 };

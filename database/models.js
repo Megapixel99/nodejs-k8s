@@ -570,6 +570,39 @@ const configMapSchema = Schema({
   }
 })
 
+const endpointsSchema = Schema({
+  apiVersion: String,
+  kind: String,
+  metadata,
+  subsets: [{
+    addresses: [{
+      ip: String,
+      nodeName: String,
+      targetRef: {
+        kind: String,
+        namespace: String,
+        name: String,
+        uid: String
+      }
+    }],
+    notReadyAddresses: [{
+      ip: String,
+      nodeName: String,
+      targetRef: {
+        kind: String,
+        namespace: String,
+        name: String,
+        uid: String
+      }
+    }],
+    ports: [{
+      name: String,
+      port: Number,
+      protocol: String
+    }]
+  }]
+})
+
 module.exports = {
   Namespace: model('Namespace', namespaceSchema),
   Deployment: model('Deployment', deploymentSchema),
@@ -578,5 +611,6 @@ module.exports = {
   Secret: model('Secret', secretSchema),
   ConfigMap: model('ConfigMap', configMapSchema),
   Ingress: model('Ingress', ingressSchema),
+  Endpoints: model('Endpoints', endpointsSchema),
   DNS: model('DNS', dns),
 };

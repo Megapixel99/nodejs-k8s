@@ -1,5 +1,6 @@
 const K8Object = require('./object.js');
 const Pod = require('./pod.js');
+const Endpoints = require('./endpoints.js');
 const { Service: Model, DNS } = require('../database/models.js');
 const {
   addPortsToService,
@@ -20,6 +21,7 @@ class Service extends K8Object {
     super(config);
     this.spec = config.spec;
     this.status = config.status;
+    this.endpoints = null;
   }
 
   static apiVersion = 'v1';
@@ -29,7 +31,13 @@ class Service extends K8Object {
     return Model.findOne(params)
       .then((service) => {
         if (service) {
-          return new Service(service);
+          Endpoints.findOne(params)
+          .then((endpoints) => {
+            return new Service({
+              ...service,
+              endpoints,
+            });
+          })
         }
       });
   }
@@ -38,9 +46,43 @@ class Service extends K8Object {
     return Model.find(params)
       .then((services) => {
         if (services) {
-          return services.map((service) => new Service(service));
+          Endpoints.find(params)
+          .then((endpoints) => {
+            return services.map((service) => new Service({
+              ...service,
+              endpoints: endpoints.find((e) => e.metadata.name === service.metadata.name),
+            }));
+          })
         }
       });
+  }
+
+  convertToSubsets(pods) {
+    let mappedIPs = []
+    return [{
+      notReadyAddresses: pods.map((p) => {
+        return p.status.podIPs.map((podIP) => {
+          if (!mappedIPs.includes(podIP.ip)) {
+            mappedIPs.push(podIP.ip)
+            return {
+              ip: podIP.ip,
+              nodeName: '',
+              targetRef: {
+                kind: 'Pod',
+                namespace: this.metadata.namespace,
+                name: p.metadata.generateName,
+                uid: p.metadata.uid,
+              }
+            };
+          }
+        })
+      }).flat().filter((e) => e),
+      ports: this.spec.ports.map((p) => ({
+        name: p.name,
+        port: p.targetPort,
+        protocol: p.protocol,
+      }))
+    }];
   }
 
   static create(config) {
@@ -53,48 +95,39 @@ class Service extends K8Object {
     })
     .then((service) => {
       let newService = new Service(service);
-      return pullImage('node')
-        .then(() => imageExists('loadbalancer'))
-        .catch((err) => buildImage('loadbalancer', 'loadBalancer/Dockerfile'))
-        .then(() => Pod.find({ 'metadata.name': service.metadata.name }))
+      return Pod.find({ 'metadata.name': config.metadata.name })
         .then((pods) => {
-          let options = {
-            ports: service.spec.ports.map((e) => `${e.port}:${e.port}`),
-            env: [{
-              name: 'PORTS',
-              value: service.spec.ports.map((e) => `${e.port}:${e.targetPort}`).join(' '),
-            }, {
-              name: 'DNS_SERVER',
-              value: process.env.DNS_SERVER,
-            }, {
-              name: 'PODS',
-              value: pods.map((e) => e.status.podIP).join(' '),
-            }]
-          }
-          return runImage('loadbalancer', service.metadata.generateName, options)
-        })
-        .then(() => getContainerIP(service.metadata.generateName))
-        .then((ipInfo) => JSON.parse(ipInfo?.raw)[0]?.NetworkSettings?.Networks?.bridge?.IPAddress)
-        .then((serviceIP) => {
-          if (serviceIP) {
-            return this.update({
-              $set: {
-                'spec.clusterIP': serviceIP,
-                'spec.clusterIPs': [serviceIP],
+          return Endpoints.create({
+            metadata: newService.metadata,
+            subsets: newService.convertToSubsets(pods),
+            ports: newService.spec.ports.map((e) => `${e.port}:${e.targetPort}`).join(' '),
+          })
+            .then((newEndpoints) => {
+              newService.endpoints = newEndpoints;
+              return getContainerIP(`${newService.endpoints.metadata.name}-loadBalancer`);
+            })
+            .then((ipInfo) => JSON.parse(ipInfo?.raw)[0]?.NetworkSettings?.Networks?.bridge?.IPAddress)
+            .then((serviceIP) => {
+              if (serviceIP) {
+                return newService.update({
+                  $set: {
+                    'spec.clusterIP': serviceIP,
+                    'spec.clusterIPs': [serviceIP],
+                  }
+                });
               }
+            })
+            .then(async () => {
+              await new DNS({
+                name: `${newService.metadata.name}.${newService.metadata.namespace}.cluster.local`,
+                type: 'A',
+                class: 'IN',
+                ttl: 300,
+                address: newService.spec.clusterIP,
+              }).save()
+              return newService;
             });
-          }
         })
-        .then(async () => {
-          await new DNS({
-            name: `${req.body.metadata.name}.${req.body.metadata.namespace}.cluster.local`,
-            type: 'A',
-            class: 'IN',
-            ttl: 300,
-            address: newService.spec.clusterIP,
-          }).save()
-          return newService;
-        });
     });
   }
 
@@ -259,23 +292,23 @@ class Service extends K8Object {
   }
 
   removePort(port) {
-    return removePortFromService(this.metadata.generateName, port);
+    return removePortFromService(`${this.endpoints.metadata.generateName}-loadBalancer`, port);
   }
 
   addPorts(ports) {
-    return addPortsToService(this.metadata.generateName, ports);
+    return addPortsToService(`${this.endpoints.metadata.generateName}-loadBalancer`, ports);
   }
 
   addPort(port) {
-    return addPortToService(this.metadata.generateName, port);
+    return addPortToService(`${this.endpoints.metadata.generateName}-loadBalancer`, port);
   }
 
-  removePod(podIP) {
-    return removePodFromService(this.metadata.generateName, podIP);
+  removePod(pod) {
+    return this.endpoints.removePod(pod);
   }
 
-  addPod(podIP) {
-    return addPodToService(this.metadata.generateName, podIP);
+  addPod(pod) {
+    return this.endpoints.addPod(pod);
   }
 }
 

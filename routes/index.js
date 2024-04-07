@@ -4,6 +4,7 @@ module.exports = {
   ingress: require('./ingress.js'),
   namespace: require('./namespace.js'),
   pod: require('./pod.js'),
+  endpoints: require('./endpoints.js'),
   namespaceCheck: require('./namespaceCheck.js'),
   configMap: require('./configMap.js'),
   secret: require('./secret.js'),
