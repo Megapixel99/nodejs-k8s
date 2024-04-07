@@ -9,5 +9,4 @@ module.exports = {
   ConfigMap: require('./configMap.js'),
   Endpoints: require('./endpoints.js'),
   Pod: require('./pod.js'),
-  ReplicationController: require('./replicationcontroller.js'),
 };
