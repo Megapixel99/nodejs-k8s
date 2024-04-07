@@ -51,10 +51,10 @@ class Object {
       status: 'Failure',
       reason: 'NotFound',
       code: 404,
-      message: `${objectKind.toLowerCase()} "${objectName}" not found`,
+      message: objectKind && objectName ? `${objectKind.toLowerCase()} "${objectName}" not found` : undefined,
       details: {
-        name: objectName,
-        kind: objectKind.toLowerCase(),
+        name: objectName ? objectName : undefined,
+        kind: objectKind ? objectKind.toLowerCase() : undefined,
       }
     });
   }
@@ -64,11 +64,11 @@ class Object {
       status: 'Failure',
       reason: 'Forbidden',
       code: 403,
-      message: `${objectKind.toLowerCase()} "${objectName}" is forbidden: User "" cannot get resource "${objectName}" in API group "${apiGroup}" in the ${objectKind.toLowerCase()} "${objectName}"`,
+      message: objectKind && objectName ? `${objectKind.toLowerCase()} "${objectName}" is forbidden: User "" cannot get resource "${objectName}" in API group "${apiGroup}" in the ${objectKind.toLowerCase()} "${objectName}"` : undefined,
       details: {
-        name: objectName,
+        name: objectName ? objectName : undefined,
         group: apiGroup ? apiGroup : undefined,
-        kind: objectKind.toLowerCase(),
+        kind: objectKind ? objectKind.toLowerCase() : undefined,
       }
     });
   }
