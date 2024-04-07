@@ -135,6 +135,10 @@ class Namespace extends K8Object {
     return super.notFoundStatus('Namespace', objectName);
   }
 
+  static forbiddenStatus(objectName = '', apiGroup = '') {
+    return super.forbiddenStatus('Namespace', objectName, apiGroup);
+  }
+
   update(updateObj, options = {}) {
     if (this?.immutable === true) {
       throw new Error(`Namespace ${config.metadata.name} is immutable`);

@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const db = require('./database/connection.js');
-const { api, namespace, deployment, pod, service, ingress, secret, configMap, openapi } = require('./routes/index.js');
+const { api, namespace, namespaceCheck, deployment, pod, service, ingress, secret, configMap, openapi } = require('./routes/index.js');
 const { buildImage } = require('./functions.js');
 
 let dnsServerIndex = process.argv.indexOf('-dnsServer');
@@ -29,6 +29,7 @@ app.use((req, res, next) => {
 app.use('/', api);
 
 app.use(namespace);
+app.use(namespaceCheck);
 app.use(pod);
 app.use(service);
 app.use(ingress);

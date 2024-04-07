@@ -58,6 +58,20 @@ class Object {
       }
     });
   }
+
+  static forbiddenStatus(objectKind = '', objectName = '', apiGroup = '') {
+    return new Status({
+      status: 'Failure',
+      reason: 'Forbidden',
+      code: 403,
+      message: `${objectKind.toLowerCase()} "${objectName}" is forbidden: User "" cannot get resource "${objectName}" in API group "${apiGroup}" in the ${objectKind.toLowerCase()} "${objectName}"`,
+      details: {
+        name: objectName,
+        group: apiGroup ? apiGroup : undefined,
+        kind: objectKind.toLowerCase(),
+      }
+    });
+  }
 }
 
 module.exports = Object;
