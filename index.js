@@ -3,6 +3,7 @@ const express = require('express');
 const db = require('./database/connection.js');
 const { api, namespace, namespaceCheck, deployment, pod, service, ingress, secret, configMap, openapi } = require('./routes/index.js');
 const { buildImage } = require('./functions.js');
+const { Object } = require('./objects');
 
 let dnsServerIndex = process.argv.indexOf('-dnsServer');
 
@@ -38,6 +39,9 @@ app.use(deployment);
 app.use(secret);
 app.use(configMap);
 
+app.use((req, res) => {
+  res.status(404).send(Object.notFoundStatus());
+})
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
