@@ -47,7 +47,7 @@ class Service extends K8Object {
     return this.findOne({ 'metadata.name': config.metadata.name })
     .then((existingService) => {
       if (existingService) {
-        throw new Error(`Service ${config.metadata.name} already exists`);
+        throw this.alreadyExistsStatus(config.metadata.name);
       }
       return new Model(config).save()
     })
@@ -118,6 +118,22 @@ class Service extends K8Object {
         return this.setConfig(service);
       }
     });
+  }
+
+  static notFoundStatus(objectName = '') {
+    return super.notFoundStatus(this.kind, objectName);
+  }
+
+  static forbiddenStatus(objectName = '') {
+    return super.forbiddenStatus(this.kind, objectName);
+  }
+
+  static alreadyExistsStatus(objectName = '') {
+    return super.alreadyExistsStatus(this.kind, objectName);
+  }
+
+  static unprocessableContentStatus(objectName, message) {
+    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
   }
 
   static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {

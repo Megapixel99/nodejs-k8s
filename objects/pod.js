@@ -267,6 +267,22 @@ class Pod extends K8Object {
       }));
   }
 
+  static notFoundStatus(objectName = '') {
+    return super.notFoundStatus(this.kind, objectName);
+  }
+
+  static forbiddenStatus(objectName = '') {
+    return super.forbiddenStatus(this.kind, objectName);
+  }
+
+  static alreadyExistsStatus(objectName = '') {
+    return super.alreadyExistsStatus(this.kind, objectName);
+  }
+
+  static unprocessableContentStatus(objectName, message) {
+    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
+  }
+
   stop() {
     return stopContainer(this.metadata.generateName);
   }

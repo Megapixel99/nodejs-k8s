@@ -38,7 +38,7 @@ class Namespace extends K8Object {
     return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
     .then((existingNamespace) => {
       if (existingNamespace) {
-        throw new Error(`Namespace ${config.metadata.name} already exists`);
+        throw this.alreadyExistsStatus(config.metadata.name);
       }
       if (config.data) {
         Object.entries(config.data).forEach(([key, value]) => {
@@ -132,11 +132,19 @@ class Namespace extends K8Object {
   }
 
   static notFoundStatus(objectName = '') {
-    return super.notFoundStatus('Namespace', objectName);
+    return super.notFoundStatus(this.kind, objectName);
   }
 
-  static forbiddenStatus(objectName = '', apiGroup = '') {
-    return super.forbiddenStatus('Namespace', objectName, apiGroup);
+  static forbiddenStatus(objectName = '') {
+    return super.forbiddenStatus(this.kind, objectName);
+  }
+
+  static alreadyExistsStatus(objectName = '') {
+    return super.alreadyExistsStatus(this.kind, objectName);
+  }
+
+  static unprocessableContentStatus(objectName, message) {
+    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
   }
 
   update(updateObj, options = {}) {

@@ -3,7 +3,7 @@ const express = require('express');
 const db = require('./database/connection.js');
 const { api, namespace, namespaceCheck, deployment, pod, service, ingress, secret, configMap, openapi } = require('./routes/index.js');
 const { buildImage } = require('./functions.js');
-const { Object } = require('./objects');
+const { Object, Status } = require('./objects');
 
 let dnsServerIndex = process.argv.indexOf('-dnsServer');
 
@@ -46,7 +46,11 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error(err.stack);
   console.log(err);
-  res.status(500).send(Object.internalServerErrorStatus());
+  if (err instanceof Status) {
+    res.status(err.code).send(err);
+  } else {
+    res.status(500).send(Object.internalServerErrorStatus());
+  }
   return next();
 });
 

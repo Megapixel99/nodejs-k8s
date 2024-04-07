@@ -38,19 +38,19 @@ class ConfigMap extends K8Object {
     return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
     .then((existingConfigMap) => {
       if (existingConfigMap) {
-        throw new Error(`ConfigMap ${config.metadata.name} already exists`);
+        throw this.alreadyExistsStatus(config.metadata.name);
       }
       if (config.data) {
         Object.entries(config.data).forEach(([key, value]) => {
           if (!isText(null, Buffer.from(value))) {
-            throw new Error(`Value for ${key} is not UTF-8`);
+            throw this.unprocessableContentStatus(undefined, `Value for ${key} is not UTF-8`);
           }
         });
       }
       if (config.binaryData) {
         Object.entries(config.binaryData).forEach(([key, value]) => {
           if (!isBinary(null, Buffer.from(Buffer.from(value, 'base64').toString('binary'), 'base64'))) {
-            throw new Error(`Value for ${key} is not Binary`);
+            throw this.unprocessableContentStatus(undefined, `Value for ${key} is not Binary`);
           }
         });
       }
@@ -161,7 +161,19 @@ class ConfigMap extends K8Object {
   }
 
   static notFoundStatus(objectName = '') {
-    return super.notFoundStatus('ConfigMap', objectName);
+    return super.notFoundStatus(this.kind, objectName);
+  }
+
+  static forbiddenStatus(objectName = '') {
+    return super.forbiddenStatus(this.kind, objectName);
+  }
+
+  static alreadyExistsStatus(objectName = '') {
+    return super.alreadyExistsStatus(this.kind, objectName);
+  }
+
+  static unprocessableContentStatus(objectName, message) {
+    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
   }
 
   update(updateObj, options = {}) {

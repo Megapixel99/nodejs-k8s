@@ -73,6 +73,34 @@ class Object {
     });
   }
 
+  static unprocessableContentStatus(objectKind = '', objectName = '', apiGroup = '', message = '') {
+    return new Status({
+      status: 'Failure',
+      reason: 'UnprocessableContent',
+      code: 422,
+      message: message ? message : undefined,
+      details: {
+        name: objectName ? objectName : undefined,
+        group: apiGroup ? apiGroup : undefined,
+        kind: objectKind ? objectKind.toLowerCase() : undefined,
+      }
+    });
+  }
+
+  static alreadyExistsStatus(objectKind = '', objectName = '', apiGroup = '') {
+    return new Status({
+      status: 'Failure',
+      reason: 'AlreadyExists',
+      code: 409,
+      message: objectKind && objectName ? `${objectKind.toLowerCase()} "${objectName}" already exists` : undefined,
+      details: {
+        name: objectName ? objectName : undefined,
+        group: apiGroup ? apiGroup : undefined,
+        kind: objectKind ? objectKind.toLowerCase() : undefined,
+      }
+    });
+  }
+
   static internalServerErrorStatus(objectKind = '', objectName = '', apiGroup = '') {
     return new Status({
       status: 'Failure',

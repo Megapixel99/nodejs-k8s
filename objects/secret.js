@@ -40,7 +40,7 @@ class Secret extends K8Object {
     return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
     .then((existingSecret) => {
       if (existingSecret) {
-        throw new Error(`Secret ${config.metadata.name} already exists`);
+        throw this.alreadyExistsStatus(config.metadata.name);
       }
       if (config.data) {
         Object.entries(config.data).forEach(([key, value]) => {
@@ -150,7 +150,19 @@ class Secret extends K8Object {
   }
 
   static notFoundStatus(objectName = '') {
-    return super.notFoundStatus('Secret', objectName);
+    return super.notFoundStatus(this.kind, objectName);
+  }
+
+  static forbiddenStatus(objectName = '') {
+    return super.forbiddenStatus(this.kind, objectName);
+  }
+
+  static alreadyExistsStatus(objectName = '') {
+    return super.alreadyExistsStatus(this.kind, objectName);
+  }
+
+  static unprocessableContentStatus(objectName, message) {
+    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
   }
 
   update(updateObj, options = {}) {

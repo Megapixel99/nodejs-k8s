@@ -11,7 +11,8 @@ class Ingress extends K8Object {
     this.status = config.status;
   }
 
-  static apiVersion = 'networking.k8s.io/v1';
+  static apiGroup = 'networking.k8s.io';
+  static apiVersion = `${this.apiGroup}/v1`;
   static kind = 'Ingress';
 
   static findOne(params) {
@@ -36,7 +37,7 @@ class Ingress extends K8Object {
     return this.findOne({ 'metadata.name': config.metadata.name })
     .then((existingIngress) => {
       if (existingIngress) {
-        throw new Error(`Ingress ${config.metadata.name} already exists`);
+        throw new Error(this.alreadyExistsStatus(config.metadata.name, this.apiGroup));
       }
       return new Model(config).save()
     })
@@ -197,6 +198,22 @@ class Ingress extends K8Object {
           }
         })),
       }));
+  }
+
+  static notFoundStatus(objectName = '') {
+    return super.notFoundStatus(this.kind, objectName, this.apiGroup);
+  }
+
+  static forbiddenStatus(objectName = '') {
+    return super.forbiddenStatus(this.kind, objectName, this.apiGroup);
+  }
+
+  static alreadyExistsStatus(objectName = '') {
+    return super.alreadyExistsStatus(this.kind, objectName);
+  }
+
+  static unprocessableContentStatus(objectName, message) {
+    return super.unprocessableContentStatus(this.kind, objectName, this.apiGroup, message);
   }
 
   setConfig(config) {

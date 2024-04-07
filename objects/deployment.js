@@ -42,7 +42,7 @@ class Deployment extends K8Object {
     return this.findOne({ 'metadata.name': config.metadata.name })
     .then((existingDeployment) => {
       if (existingDeployment) {
-        throw new Error(`Deployment ${config.metadata.name} already exists`);
+        throw this.alreadyExistsStatus(config.metadata.name);
       }
       return new Model(config).save()
     })
@@ -217,6 +217,22 @@ class Deployment extends K8Object {
           }
         })),
       }));
+  }
+
+  static notFoundStatus(objectName = '') {
+    return super.notFoundStatus(this.kind, objectName);
+  }
+
+  static forbiddenStatus(objectName = '') {
+    return super.forbiddenStatus(this.kind, objectName);
+  }
+
+  static alreadyExistsStatus(objectName = '') {
+    return super.alreadyExistsStatus(this.kind, objectName);
+  }
+
+  static unprocessableContentStatus(objectName, message) {
+    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
   }
 
   setConfig(config) {
