@@ -50,6 +50,7 @@ class Object {
     return new Status({
       status: 'Failure',
       reason: 'NotFound',
+      code: 404,
       message: `${objectKind.toLowerCase()} "${objectName}" not found`,
       details: {
         name: objectName,
