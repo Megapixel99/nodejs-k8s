@@ -28,7 +28,7 @@ app.use((req, res, next) => {
 })
 
 app.use(api);
-app.use(openapi.router);
+app.use(openapi);
 
 app.use(namespace);
 app.use(namespaceCheck);
