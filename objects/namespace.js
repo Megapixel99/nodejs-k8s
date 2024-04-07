@@ -32,22 +32,10 @@ class Namespace extends K8Object {
   }
 
   static create(config) {
-    const base64RegExp = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
-    const isBase64 = (str) => base64RegExp.test(str);
-
     return this.findOne({ 'metadata.name': this.metadata.name })
     .then((existingNamespace) => {
       if (existingNamespace) {
         throw this.alreadyExistsStatus(config.metadata.name);
-      }
-      if (config.data) {
-        Object.entries(config.data).forEach(([key, value]) => {
-          if (isBase64(value)) {
-            config.data[key] = value;
-            return;
-          }
-          config.data[key] = Buffer.from(value).toString('base64');
-        });
       }
       return new Model(config).save();
     })
@@ -148,9 +136,6 @@ class Namespace extends K8Object {
   }
 
   update(updateObj, options = {}) {
-    if (this?.immutable === true) {
-      throw new Error(`Namespace ${config.metadata.name} is immutable`);
-    }
     return Model.findOneAndUpdate(
       { 'metadata.name': this.metadata.name },
       updateObj,
