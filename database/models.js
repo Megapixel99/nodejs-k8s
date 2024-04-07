@@ -555,12 +555,28 @@ const secretSchema = Schema({
   },
 })
 
+const configMapSchema = Schema({
+  apiVersion: String,
+  kind: String,
+  metadata,
+  data: {
+    type: Map,
+    of: String
+  },
+  immutable: Boolean,
+  binaryData: {
+    type: Map,
+    of: model.Binary
+  }
+})
+
 module.exports = {
   Namespace: model('Namespace', namespaceSchema),
   Deployment: model('Deployment', deploymentSchema),
   Pod: model('Pod', podSchema),
   Service: model('Service', serviceSchema),
   Secret: model('Secret', secretSchema),
+  ConfigMap: model('ConfigMap', configMapSchema),
   Ingress: model('Ingress', ingressSchema),
   DNS: model('DNS', dns),
 };

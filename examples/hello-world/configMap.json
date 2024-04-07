@@ -1,0 +1,20 @@
+{
+  "apiVersion": "v1",
+  "kind": "ConfigMap",
+  "metadata": {
+    "name": "hello-world"
+  },
+  "data": {
+    "string-value": "Hello, world!",
+    "number-value": "42",
+    "boolean-value": "true",
+    "multiline-value": "This is a multiline value\nthat spans multiple lines\n",
+    "list-value": "- item1\n- item2\n- item3\n",
+    "object-value": "key1: value1\nkey2: value2\n",
+    "json-value": "{\n  \"key\": \"value\",\n  \"array\": [1, 2, 3],\n  \"nested\": {\n    \"innerKey\": \"innerValue\"\n  }\n}",
+    "yaml-value": "key: value\narray:\n  - 1\n  - 2\n  - 3\nnested:\n  innerKey: innerValue"
+  },
+  "binaryData": {
+    "binary-value": "MDEwMTAxMDAwMTEwMTAwMDAxMTAxMDAxMDExMTAwMTEwMDEwMDAwMDAxMTAxMDAxMDExMTAwMTEwMDEwMDAwMDAxMTAwMDAxMDAxMDAwMDAwMTExMDEwMDAxMTAwMTAxMDExMTAwMTEwMTExMDEwMA=="
+  }
+}

@@ -1,6 +1,7 @@
 const { dockerCommand } = require('docker-cli-js');
 const { randomBytes } = require("crypto");
 const portfinder = require('portfinder');
+const { isText, isBinary } = require('istextorbinary');
 
 let duration = (timeDiff, loop = true) => {
   let y = 365 * 24 * 60 * 60 * 1000;
@@ -94,6 +95,8 @@ const removePodFromService = (containerName, podIP) => {
 }
 
 module.exports = {
+  isText,
+  isBinary,
   duration,
   getAllContainersWithName,
   randomBytes,

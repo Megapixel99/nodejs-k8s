@@ -1,5 +1,6 @@
 const Object = require('./object.js');
 const Secret = require('./secret.js');
+const ConfigMap = require('./configMap.js');
 const { Pod: Model } = require('../database/models.js');
 const {
   runImage,
@@ -147,6 +148,22 @@ class Pod extends Object {
       .then((secret) => (secret?.mapVariables() || []));
   }
 
+  getEnvVarsFromConfigMaps(configNames) {
+    return ConfigMap.find({
+      'metadata.namespace': this.metadata.namespace,
+      $or: configNames.map((e) => ({ 'metadata.name': e })),
+     })
+      .then((configMaps) => {
+        if (configMaps) {
+          return configMaps.map((e) => ({
+            name: e.metadata.name,
+            variables: e.mapVariables(),
+          }));
+        }
+        return [];
+      });
+  }
+
   start() {
     let p = this.spec.containers.map(async (e) => {
       let options = {
@@ -155,7 +172,27 @@ class Pod extends Object {
       if (e.env || e.envFrom) {
         options['env'] = [];
         if (e.env) {
-          options['env'].push(...e.env);
+          options['env'].push(...e.env.filter((v) => v?.value));
+          if (e.env.find((v) => v?.valueFrom?.configMapKeyRef)) {
+            let configMaps = (await this.getEnvVarsFromConfigMaps(
+              e.env.map((v) => v.valueFrom.configMapKeyRef.name)
+            ));
+            e.env
+              .filter((v) => v.valueFrom?.configMapKeyRef)
+              .forEach((e) => {
+                let value = configMaps
+                  ?.find((v) => v.name === e.valueFrom.configMapKeyRef.name)
+                  ?.variables
+                  ?.find((v) => v.name === e.valueFrom.configMapKeyRef.key)
+                  ?.value
+                  if (value) {
+                    options['env'].push({
+                      name: e.name,
+                      value,
+                    });
+                  }
+              });
+          }
         }
         if (e.envFrom) {
           await Promise.all(e.envFrom.map(async (e) => {
