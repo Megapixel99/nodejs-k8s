@@ -66,6 +66,7 @@ const getContainerIP = (containerName) => dockerCommand(`inspect ${containerName
 
 const getAllContainersWithName = (containerName, imageName) => dockerCommand(`ps -q -f name=${containerName} -f ancestor=${imageName}`, { echo: false });
 
+// TODO: figure out why `bin/bash` commands don't work
 const addPodsToService = (containerName, pods) => {
   let ips = pods.map((e) => e.status.podIP);
   return dockerExec(containerName, `bin/bash -c '${ips.map((e) => `echo "pod add ${e}" > /proc/1/fd/0`).join(' ; ')}'`)

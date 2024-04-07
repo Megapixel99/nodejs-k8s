@@ -186,6 +186,7 @@ class Secret extends K8Object {
   }
 
   mapVariables() {
+    // TODO: add other types
     if (this.type === 'Opaque') {
       return [
         [...this.data]
