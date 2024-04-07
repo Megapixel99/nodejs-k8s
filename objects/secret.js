@@ -19,7 +19,7 @@ class Secret extends K8Object {
     return Model.findOne(params, options)
       .then((secret) => {
         if (secret) {
-          return new Secret(secret);
+          return new Secret(secret).setResourceVersion();
         }
       });
   }
@@ -28,7 +28,7 @@ class Secret extends K8Object {
     return Model.find(params, options)
       .then((secrets) => {
         if (secrets) {
-          return secrets.map((secret) => new Secret(secret));
+          return Promise.all(secrets.map((secret) => new Secret(secret).setResourceVersion()));
         }
       });
   }
@@ -179,8 +179,7 @@ class Secret extends K8Object {
     )
     .then((secret) => {
       if (secret) {
-        let newSecret = this.setConfig(secret);
-        return newSecret;
+        return this.setConfig(secret);
       }
     });
   }
@@ -204,7 +203,13 @@ class Secret extends K8Object {
     return null;
   }
 
-  setConfig(config) {
+  async setResourceVersion() {
+    await super.setResourceVersion();
+    return this;
+  }
+
+  async setConfig(config) {
+    await super.setResourceVersion();
     this.data = config.data;
     return this;
   }

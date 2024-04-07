@@ -27,7 +27,7 @@ class Pod extends K8Object {
     return Model.findOne(params)
       .then((pod) => {
         if (pod) {
-          return new Pod(pod);
+          return new Pod(pod).setResourceVersion();
         }
       });
   }
@@ -36,7 +36,7 @@ class Pod extends K8Object {
     return Model.find(params)
       .then((pods) => {
         if (pods) {
-          return pods.map((pod) => new Pod(pod));
+          return Promise.all(pods.map((pod) => new Pod(pod).setResourceVersion()));
         }
       });
   }
@@ -154,9 +154,15 @@ class Pod extends K8Object {
     return this.eventEmitter;
   }
 
-  setConfig(config) {
+  async setConfig(config) {
+    await super.setResourceVersion();
     this.spec = config.spec;
     this.status = config.status;
+    return this;
+  }
+
+  async setResourceVersion() {
+    await super.setResourceVersion();
     return this;
   }
 

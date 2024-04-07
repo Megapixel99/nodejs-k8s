@@ -36,7 +36,7 @@ class Service extends K8Object {
             return new Service({
               ...service,
               endpoints,
-            });
+            }).setResourceVersion();
           })
         }
       });
@@ -48,10 +48,10 @@ class Service extends K8Object {
         if (services) {
           Endpoints.find(params)
           .then((endpoints) => {
-            return services.map((service) => new Service({
+            return Promise.all(services.map((service) => new Service({
               ...service,
               endpoints: endpoints.find((e) => e.metadata.name === service.metadata.name),
-            }));
+            }).setResourceVersion()));
           })
         }
       });
@@ -277,9 +277,15 @@ class Service extends K8Object {
       }));
   }
 
-  setConfig(config) {
+  async setConfig(config) {
+    await super.setResourceVersion();
     this.spec = config.spec;
     this.status = config.status;
+    return this;
+  }
+
+  async setResourceVersion() {
+    await super.setResourceVersion();
     return this;
   }
 

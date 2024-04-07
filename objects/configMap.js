@@ -17,7 +17,7 @@ class ConfigMap extends K8Object {
     return Model.findOne(params, projection, options)
       .then((configMap) => {
         if (configMap) {
-          return new ConfigMap(configMap);
+          return new ConfigMap(configMap).setResourceVersion();
         }
       });
   }
@@ -26,7 +26,7 @@ class ConfigMap extends K8Object {
     return Model.find(params, projection, options)
       .then((configMaps) => {
         if (configMaps) {
-          return configMaps.map((configMap) => new ConfigMap(configMap));
+          return Promise.all(configMaps.map((configMap) => new ConfigMap(configMap).setResourceVersion()));
         }
       });
   }
@@ -190,10 +190,14 @@ class ConfigMap extends K8Object {
     )
     .then((configMap) => {
       if (configMap) {
-        let newConfigMap = this.setConfig(configMap);
-        return newConfigMap;
+        return this.setConfig(configMap);
       }
     });
+  }
+
+  async setResourceVersion() {
+    await super.setResourceVersion();
+    return this;
   }
 
   mapVariables() {
@@ -211,7 +215,8 @@ class ConfigMap extends K8Object {
     ].flat();
   }
 
-  setConfig(config) {
+  async setConfig(config) {
+    await super.setResourceVersion();
     this.data = config.data;
     return this;
   }

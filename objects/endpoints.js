@@ -28,7 +28,7 @@ class Endpoints extends K8Object {
     return Model.findOne(params)
       .then((endpoints) => {
         if (endpoints) {
-          return new Endpoints(endpoints);
+          return new Endpoints(endpoints).setResourceVersion();
         }
       });
   }
@@ -37,7 +37,7 @@ class Endpoints extends K8Object {
     return Model.find(params)
       .then((endpointses) => {
         if (endpointses) {
-          return endpointses.map((endpoints) => new Endpoints(endpoints));
+          return Promise.all(endpointses.map((endpoints) => new Endpoints(endpoints).setResourceVersion()));
         }
       });
   }
@@ -251,8 +251,14 @@ class Endpoints extends K8Object {
       }));
   }
 
-  setConfig(config) {
+  async setConfig(config) {
+    await super.setResourceVersion();
     this.subsets = config.subsets;
+    return this;
+  }
+
+  async setResourceVersion() {
+    await super.setResourceVersion();
     return this;
   }
 

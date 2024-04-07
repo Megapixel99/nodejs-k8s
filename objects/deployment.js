@@ -24,7 +24,7 @@ class Deployment extends K8Object {
     return Model.findOne(params)
       .then((deployment) => {
         if (deployment) {
-          return new Deployment(deployment);
+          return new Deployment(deployment).setResourceVersion();
         }
       });
   }
@@ -33,7 +33,7 @@ class Deployment extends K8Object {
     return Model.find(params)
       .then((deployments) => {
         if (deployments) {
-          return deployments.map((deployment) => new Deployment(deployment));
+          return Promise.all(deployments.map((deployment) => new Deployment(deployment).setResourceVersion()));
         }
       });
   }
@@ -235,7 +235,8 @@ class Deployment extends K8Object {
     return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
   }
 
-  setConfig(config) {
+  async setConfig(config) {
+    await super.setResourceVersion();
     this.spec = config.spec;
     this.status = config.status;
     return this;
@@ -331,6 +332,11 @@ class Deployment extends K8Object {
         return this.deletePod();
       }
     })
+  }
+
+  async setResourceVersion() {
+    await super.setResourceVersion();
+    return this;
   }
 
   async rollout(numPods = this.spec.replicas) {

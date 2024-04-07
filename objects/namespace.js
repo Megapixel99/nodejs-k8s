@@ -17,7 +17,7 @@ class Namespace extends K8Object {
     return Model.findOne(params, options)
       .then((namespace) => {
         if (namespace) {
-          return new Namespace(namespace);
+          return new Namespace(namespace).setResourceVersion();
         }
       });
   }
@@ -26,7 +26,7 @@ class Namespace extends K8Object {
     return Model.find(params, options)
       .then((namespaces) => {
         if (namespaces) {
-          return namespaces.map((namespace) => new Namespace(namespace));
+          return Promise.all(namespaces.map((namespace) => new Namespace(namespace).setResourceVersion()));
         }
       });
   }
@@ -146,13 +146,18 @@ class Namespace extends K8Object {
     )
     .then((namespace) => {
       if (namespace) {
-        let newNamespace = this.setConfig(namespace);
-        return newNamespace;
+        return this.setConfig(namespace);
       }
     });
   }
 
-  setConfig(config) {
+  async setResourceVersion() {
+    await super.setResourceVersion();
+    return this;
+  }
+
+  async setConfig(config) {
+    await super.setResourceVersion();
     this.data = config.data;
     return this;
   }

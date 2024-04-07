@@ -19,7 +19,7 @@ class Ingress extends K8Object {
     return Model.findOne(params)
       .then((ingress) => {
         if (ingress) {
-          return new Ingress(ingress);
+          return new Ingress(ingress).setResourceVersion();
         }
       });
   }
@@ -28,7 +28,7 @@ class Ingress extends K8Object {
     return Model.find(params)
       .then((ingresses) => {
         if (ingresses) {
-          return ingresses.map((ingress) => new Ingress(ingress));
+          return Promise.all(ingresses.map((ingress) => new Ingress(ingress).setResourceVersion()));
         }
       });
   }
@@ -216,9 +216,15 @@ class Ingress extends K8Object {
     return super.unprocessableContentStatus(this.kind, objectName, this.apiGroup, message);
   }
 
-  setConfig(config) {
+  async setConfig(config) {
+    await super.setResourceVersion();
     this.spec = config.spec;
     this.status = config.status;
+    return this;
+  }
+
+  async setResourceVersion() {
+    await super.setResourceVersion();
     return this;
   }
 
