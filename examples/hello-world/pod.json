@@ -23,6 +23,24 @@
           {
             "name": "TEST",
             "value": "temp"
+          },
+          {
+            "name": "STRING_VAL",
+            "valueFrom": {
+              "configMapKeyRef": {
+                "name": "hello-world",
+                "key": "string-value"
+              }
+            }
+          },
+          {
+            "name": "NUMBER_VAL",
+            "valueFrom": {
+              "configMapKeyRef": {
+                "name": "hello-world",
+                "key": "number-value"
+              }
+            }
           }
         ],
         "envFrom": [
