@@ -4,6 +4,8 @@ const { Secret: Model } = require('../database/models.js');
 class Secret extends K8Object {
   constructor(config) {
     super(config);
+    this.immutable = config.immutable;
+    this.stringData = config.stringData;
     this.data = config.data;
     this.type = config.type;
   }
@@ -35,13 +37,15 @@ class Secret extends K8Object {
       if (existingSecret) {
         throw new Error(`Secret ${config.metadata.name} already exists`);
       }
-      Object.entries(config.data).forEach(([key, value]) => {
-        if (isBase64(value)) {
-          config.data[key] = value;
-          return;
-        }
-        config.data[key] = Buffer.from(value).toString('base64');
-      });
+      if (config.data) {
+        Object.entries(config.data).forEach(([key, value]) => {
+          if (isBase64(value)) {
+            config.data[key] = value;
+            return;
+          }
+          config.data[key] = Buffer.from(value).toString('base64');
+        });
+      }
       return new Model(config).save();
     })
     .then((secret) => new Secret(secret));
@@ -61,8 +65,11 @@ class Secret extends K8Object {
   }
 
   update(updateObj, options = {}) {
+    if (this?.immutable === true) {
+      throw new Error(`Secret ${config.metadata.name} is immutable`);
+    }
     return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name },
+      { 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace },
       updateObj,
       {
         new: true,
@@ -79,11 +86,18 @@ class Secret extends K8Object {
 
   mapVariables() {
     if (this.type === 'Opaque') {
-      return [...this.data]
-        .map(([key, value]) => ({
-          name: key,
-          value: Buffer.from(value, 'base64').toString(),
-        }));
+      return [
+        ...this.data
+          .map(([key, value]) => ({
+            name: key,
+            value: Buffer.from(value, 'base64').toString(),
+          })),
+        ...this.stringData
+          .map(([key, value]) => ({
+            name: key,
+            value,
+          }))
+      ].flat();
     }
     return null;
   }
