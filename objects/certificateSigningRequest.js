@@ -46,7 +46,7 @@ class CertificateSigningRequest extends K8Object {
   }
 
   delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name })
+    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
     .then((certificateSigningRequest) => {
       if (certificateSigningRequest) {
         return this.setConfig(certificateSigningRequest);
@@ -140,7 +140,7 @@ class CertificateSigningRequest extends K8Object {
 
   update(updateObj, options = {}) {
     return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name },
+      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
       updateObj,
       {
         new: true,

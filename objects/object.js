@@ -14,7 +14,7 @@ class Object {
   async setResourceVersion() {
     this.metadata = {
       ...this.metadata,
-      resourceVersion: `${await Object.hash(JSON.stringify(config))}`
+      resourceVersion: `${await Object.hash(JSON.stringify(this))}`
     }
   }
 

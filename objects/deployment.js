@@ -39,7 +39,7 @@ class Deployment extends K8Object {
   }
 
   static create(config) {
-    return this.findOne({ 'metadata.name': config.metadata.name })
+    return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
     .then((existingDeployment) => {
       if (existingDeployment) {
         throw this.alreadyExistsStatus(config.metadata.name);

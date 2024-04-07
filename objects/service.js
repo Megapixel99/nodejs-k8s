@@ -86,16 +86,23 @@ class Service extends K8Object {
   }
 
   static create(config) {
-    return this.findOne({ 'metadata.name': config.metadata.name })
-    .then((existingService) => {
+    return Promise.all([
+      this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace }),
+      Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+    ])
+    .then((data) => {
+      let [ existingService, existingEndpoint ] = data;
       if (existingService) {
         throw this.alreadyExistsStatus(config.metadata.name);
+      }
+      if (existingEndpoint) {
+        throw Endpoints.alreadyExistsStatus(config.metadata.name);
       }
       return new Model(config).save()
     })
     .then((service) => {
       let newService = new Service(service);
-      return Pod.find({ 'metadata.name': config.metadata.name })
+      return Pod.find({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
         .then((pods) => {
           return Endpoints.create({
             metadata: newService.metadata,

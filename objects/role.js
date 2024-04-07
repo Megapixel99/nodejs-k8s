@@ -35,7 +35,7 @@ class Role extends K8Object {
   }
 
   static create(config) {
-    return this.findOne({ 'metadata.name': this.metadata.name })
+    return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
     .then((existingRole) => {
       if (existingRole) {
         throw this.alreadyExistsStatus(config.metadata.name);
@@ -46,7 +46,7 @@ class Role extends K8Object {
   }
 
   delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name })
+    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
     .then((role) => {
       if (role) {
         return this.setConfig(role);
@@ -140,7 +140,7 @@ class Role extends K8Object {
 
   update(updateObj, options = {}) {
     return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name },
+      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
       updateObj,
       {
         new: true,

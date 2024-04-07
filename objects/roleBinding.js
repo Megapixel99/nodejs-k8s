@@ -35,7 +35,7 @@ class RoleBinding extends K8Object {
   }
 
   static create(config) {
-    return this.findOne({ 'metadata.name': this.metadata.name })
+    return this.findOne({ 'metadata.name': cofig.metadata.name, 'metadata.namespace': cofig.metadata.namespace })
     .then((existingRoleBinding) => {
       if (existingRoleBinding) {
         throw this.alreadyExistsStatus(config.metadata.name);
@@ -46,7 +46,7 @@ class RoleBinding extends K8Object {
   }
 
   delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name })
+    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
     .then((roleBinding) => {
       if (roleBinding) {
         return this.setConfig(roleBinding);
@@ -140,7 +140,7 @@ class RoleBinding extends K8Object {
 
   update(updateObj, options = {}) {
     return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name },
+      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
       updateObj,
       {
         new: true,
