@@ -200,19 +200,19 @@ class Ingress extends K8Object {
       }));
   }
 
-  static notFoundStatus(objectName = '') {
+  static notFoundStatus(objectName = undefined) {
     return super.notFoundStatus(this.kind, objectName, this.apiGroup);
   }
 
-  static forbiddenStatus(objectName = '') {
+  static forbiddenStatus(objectName = undefined) {
     return super.forbiddenStatus(this.kind, objectName, this.apiGroup);
   }
 
-  static alreadyExistsStatus(objectName = '') {
+  static alreadyExistsStatus(objectName = undefined) {
     return super.alreadyExistsStatus(this.kind, objectName);
   }
 
-  static unprocessableContentStatus(objectName, message) {
+  static unprocessableContentStatus(objectName = undefined, message = undefined) {
     return super.unprocessableContentStatus(this.kind, objectName, this.apiGroup, message);
   }
 

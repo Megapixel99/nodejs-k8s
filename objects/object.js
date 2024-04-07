@@ -46,71 +46,72 @@ class Object {
     return this.arrayBufferTo53bitNumber(sha256);
   }
 
-  static notFoundStatus(objectKind = '', objectName = '') {
+  static notFoundStatus(kind = undefined, name = undefined, group = undefined) {
     return new Status({
       status: 'Failure',
       reason: 'NotFound',
       code: 404,
-      message: objectKind && objectName ? `${objectKind.toLowerCase()} "${objectName}" not found` : undefined,
+      message: kind && name ? `${kind.toLowerCase()} "${name}" not found` : undefined,
       details: {
-        name: objectName ? objectName : undefined,
-        kind: objectKind ? objectKind.toLowerCase() : undefined,
+        name,
+        group,
+        kind: kind ? kind.toLowerCase() : undefined,
       }
     });
   }
 
-  static forbiddenStatus(objectKind = '', objectName = '', apiGroup = '') {
+  static forbiddenStatus(kind = undefined, name = undefined, group = undefined) {
     return new Status({
       status: 'Failure',
       reason: 'Forbidden',
       code: 403,
-      message: objectKind && objectName ? `${objectKind.toLowerCase()} "${objectName}" is forbidden: User "" cannot get resource "${objectName}" in API group "${apiGroup}" in the ${objectKind.toLowerCase()} "${objectName}"` : undefined,
+      message: kind && name ? `${kind.toLowerCase()} "${name}" is forbidden: User "" cannot get resource "${name}" in API group "${group}" in the ${kind.toLowerCase()} "${name}"` : undefined,
       details: {
-        name: objectName ? objectName : undefined,
-        group: apiGroup ? apiGroup : undefined,
-        kind: objectKind ? objectKind.toLowerCase() : undefined,
+        name,
+        group,
+        kind: kind ? kind.toLowerCase() : undefined,
       }
     });
   }
 
-  static unprocessableContentStatus(objectKind = '', objectName = '', apiGroup = '', message = '') {
+  static unprocessableContentStatus(kind = undefined, name = undefined, group = undefined, message = undefined) {
     return new Status({
       status: 'Failure',
       reason: 'UnprocessableContent',
       code: 422,
-      message: message ? message : undefined,
+      message,
       details: {
-        name: objectName ? objectName : undefined,
-        group: apiGroup ? apiGroup : undefined,
-        kind: objectKind ? objectKind.toLowerCase() : undefined,
+        name,
+        group,
+        kind: kind ? kind.toLowerCase() : undefined,
       }
     });
   }
 
-  static alreadyExistsStatus(objectKind = '', objectName = '', apiGroup = '') {
+  static alreadyExistsStatus(kind = undefined, name = undefined, group = undefined) {
     return new Status({
       status: 'Failure',
       reason: 'AlreadyExists',
       code: 409,
-      message: objectKind && objectName ? `${objectKind.toLowerCase()} "${objectName}" already exists` : undefined,
+      message: kind && name ? `${kind.toLowerCase()} "${name}" already exists` : undefined,
       details: {
-        name: objectName ? objectName : undefined,
-        group: apiGroup ? apiGroup : undefined,
-        kind: objectKind ? objectKind.toLowerCase() : undefined,
+        name,
+        group,
+        kind: kind ? kind.toLowerCase() : undefined,
       }
     });
   }
 
-  static internalServerErrorStatus(objectKind = '', objectName = '', apiGroup = '') {
+  static internalServerErrorStatus(kind = undefined, name = undefined, group = undefined) {
     return new Status({
       status: 'Failure',
       reason: 'InternalServerError',
       code: 500,
       message: "An internal server error has occured, please see the logs for more information",
       details: {
-        name: objectName ? objectName : undefined,
-        group: apiGroup ? apiGroup : undefined,
-        kind: objectKind ? objectKind.toLowerCase() : undefined,
+        name,
+        group,
+        kind: kind ? kind.toLowerCase() : undefined,
       }
     });
   }
