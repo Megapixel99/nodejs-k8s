@@ -9,5 +9,10 @@ module.exports = {
   configMap: require('./configMap.js'),
   secret: require('./secret.js'),
   service: require('./service.js'),
+  certificateSigningRequest: require('./certificateSigningRequest.js'),
+  clusterRole: require('./clusterRole.js'),
+  role: require('./role.js'),
+  clusterRoleBinding: require('./clusterRoleBinding.js'),
+  roleBinding: require('./roleBinding.js'),
   openapi: require('./openapi.js'),
 };

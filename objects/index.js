@@ -8,5 +8,10 @@ module.exports = {
   Ingress: require('./ingress.js'),
   ConfigMap: require('./configMap.js'),
   Endpoints: require('./endpoints.js'),
+  CertificateSigningRequest: require('./certificateSigningRequest.js'),
+  ClusterRole: require('./clusterRole.js'),
+  Role: require('./role.js'),
+  ClusterRoleBinding: require('./clusterRoleBinding.js'),
+  RoleBinding: require('./roleBinding.js'),
   Pod: require('./pod.js'),
 };

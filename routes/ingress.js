@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { Ingress } = require('../objects');
 const { general, openapi } = require('../middleware');
 
-const { apiAppsV1OpenApiV3, apiV1OpenapiV3, validSchema } = openapi;
+const { apiNetworkingK8sIoV1OpenApiV3, apiV1OpenapiV3, validSchema } = openapi;
 
 const routes = ['/apis/networking.k8s.io/v1/namespaces/:namespace/ingresses', '/api/v1/namespaces/:namespace/ingresses'];
 

@@ -298,6 +298,16 @@ const pod = {
 //   spec: pod.spec,
 // }
 
+const statusConditions = {
+  conditions: {
+    status: String,
+    type: String,
+    lastTransitionTime: Date,
+    message: String,
+    reason: String,
+  }
+};
+
 const namespaceSchema = Schema({
   apiVersion: String,
   kind: String,
@@ -305,15 +315,7 @@ const namespaceSchema = Schema({
   spec: {
     finalizers: [ String ],
   },
-  status: {
-    conditions: {
-      status: String,
-      type: String,
-      lastTransitionTime: Date,
-      message: String,
-      reason: String,
-    }
-  },
+  status: statusConditions,
 });
 
 const deploymentSchema = Schema({
@@ -344,15 +346,8 @@ const deploymentSchema = Schema({
     unavailableReplicas: { type: Number, default: 0 },
     updatedReplicas: { type: Number, default: 0 },
     collisionCount: Number,
-    conditions: {
-      status: String,
-      type: String,
-      lastTransitionTime: Date,
-      lastUpdateTime: Date,
-      message: String,
-      reason: String,
-    },
     observedGeneration: Number,
+    ...statusConditions,
   },
 });
 
@@ -410,14 +405,7 @@ const serviceSchema = Schema({
     type: { type: String },
   },
   status: {
-    conditions: {
-      lastTransitionTime: String,
-      message: String,
-      observedGeneration: Number,
-      reason: String,
-      status: String,
-      type: String,
-    },
+    ...statusConditions,
     loadBalancer: ingressLoadBalancerStatus,
   },
 });
@@ -603,6 +591,78 @@ const endpointsSchema = Schema({
   }]
 })
 
+const role = {
+  apiVersion: String,
+  kind: String,
+  metadata,
+  rules: [{
+    apiGroups: [String],
+    resources: [String],
+    verbs: [String],
+    resourceNames: [String],
+    nonResourceURLs: [String],
+  }]
+};
+
+const roleSchema = Schema(role);
+
+const clusterRoleSchema = Schema({
+  ...role,
+  aggregationRule: {
+    clusterRoleSelectors: [{
+      matchExpressions: {
+        key: String,
+        operator: String,
+        values: String,
+      },
+      matchLabels: {
+        type: Map,
+        of: String
+      },
+    }]
+  }
+})
+
+const roleBindingSchema = Schema({
+  apiVersion: String,
+  kind: String,
+  metadata,
+  roleRef: {
+    apiGroup: String,
+    kind: String,
+    name: String,
+  },
+  subjects: [{
+    apiGroups: [String],
+    kind: [String],
+    namespace: [String],
+    name: [String],
+  }]
+})
+
+const certificateSigningRequestSchema = Schema({
+  apiVersion: String,
+  kind: String,
+  metadata,
+  spec: {
+    expirationSeconds: Number,
+    extra: {
+      type: Map,
+      of: String
+    },
+    groups: [String],
+    request: String,
+    signerName: String,
+    uid: String,
+    usages: [String],
+    username: String,
+  },
+  status: {
+    certificate: String,
+    ...statusConditions,
+  }
+})
+
 module.exports = {
   Namespace: model('Namespace', namespaceSchema),
   Deployment: model('Deployment', deploymentSchema),
@@ -611,6 +671,11 @@ module.exports = {
   Secret: model('Secret', secretSchema),
   ConfigMap: model('ConfigMap', configMapSchema),
   Ingress: model('Ingress', ingressSchema),
+  ClusterRole: model('ClusterRole', clusterRoleSchema),
+  ClusterRoleBinding: model('ClusterRoleBinding', roleBindingSchema),
+  RoleBinding: model('RoleBinding', roleBindingSchema),
+  Role: model('Role', roleSchema),
+  CertificateSigningRequest: model('CertificateSigningRequest', certificateSigningRequestSchema),
   Endpoints: model('Endpoints', endpointsSchema),
   DNS: model('DNS', dns),
 };
