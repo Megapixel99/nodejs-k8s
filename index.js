@@ -26,7 +26,8 @@ app.use((req, res, next) => {
   next();
 })
 
-app.use('/', api);
+app.use(api);
+app.use(openapi.router);
 
 app.use(namespace);
 app.use(namespaceCheck);
@@ -37,7 +38,6 @@ app.use(deployment);
 app.use(secret);
 app.use(configMap);
 
-app.use('/', openapi.router);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
