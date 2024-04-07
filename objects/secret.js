@@ -87,12 +87,12 @@ class Secret extends K8Object {
   mapVariables() {
     if (this.type === 'Opaque') {
       return [
-        ...this.data
+        [...this.data]
           .map(([key, value]) => ({
             name: key,
             value: Buffer.from(value, 'base64').toString(),
           })),
-        ...this.stringData
+        [...this.stringData]
           .map(([key, value]) => ({
             name: key,
             value,

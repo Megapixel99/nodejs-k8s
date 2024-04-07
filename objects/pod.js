@@ -144,7 +144,7 @@ class Pod extends Object {
 
   getEnvVarsFromSecret(secretName) {
     return Secret.findOne({ 'metadata.name': secretName, 'metadata.namespace': this.metadata.namespace })
-      .then((secret) => secret.mapVariables());
+      .then((secret) => (secret?.mapVariables() || []));
   }
 
   start() {
