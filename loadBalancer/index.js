@@ -41,7 +41,7 @@ const handler = (port) => {
       if (e.response) {
         return res.status(e.response.status).send(e.response.data);
       }
-      console.log(e);
+      console.error(e);
       res.sendStatus(503);
     }
     cur = (cur + 1) % pods.length;
