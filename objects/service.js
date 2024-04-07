@@ -99,7 +99,7 @@ class Service extends K8Object {
   }
 
   delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace })
+    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
     .then((service) => {
       if (service) {
         return this.setConfig(service);
@@ -109,7 +109,7 @@ class Service extends K8Object {
 
   update(updateObj) {
     return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace },
+      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
       updateObj,
       { new: true }
     )

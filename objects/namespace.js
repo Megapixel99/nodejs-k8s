@@ -35,7 +35,7 @@ class Namespace extends K8Object {
     const base64RegExp = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
     const isBase64 = (str) => base64RegExp.test(str);
 
-    return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+    return this.findOne({ 'metadata.name': this.metadata.name })
     .then((existingNamespace) => {
       if (existingNamespace) {
         throw this.alreadyExistsStatus(config.metadata.name);
@@ -55,7 +55,7 @@ class Namespace extends K8Object {
   }
 
   delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace })
+    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name })
     .then((namespace) => {
       if (namespace) {
         return this.setConfig(namespace);
@@ -152,7 +152,7 @@ class Namespace extends K8Object {
       throw new Error(`Namespace ${config.metadata.name} is immutable`);
     }
     return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace },
+      { 'metadata.name': this.metadata.name },
       updateObj,
       {
         new: true,

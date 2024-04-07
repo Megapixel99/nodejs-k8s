@@ -71,7 +71,7 @@ class Ingress extends K8Object {
   }
 
   delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace })
+    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
     .then((ingress) => {
       if (ingress) {
         return this.setConfig(ingress);
@@ -81,7 +81,7 @@ class Ingress extends K8Object {
 
   update(updateObj) {
     return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace },
+      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
       updateObj,
       { new: true }
     )

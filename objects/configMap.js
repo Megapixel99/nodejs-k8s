@@ -152,7 +152,7 @@ class ConfigMap extends K8Object {
   }
 
   delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace })
+    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
     .then((configMap) => {
       if (configMap) {
         return this.setConfig(configMap);
@@ -181,7 +181,7 @@ class ConfigMap extends K8Object {
       throw new Error(`ConfigMap ${config.metadata.name} is immutable`);
     }
     return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace },
+      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
       updateObj,
       {
         new: true,

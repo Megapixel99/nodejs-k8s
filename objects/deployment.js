@@ -76,7 +76,7 @@ class Deployment extends K8Object {
   }
 
   delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace })
+    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
     .then((deployment) => {
       if (deployment) {
         return this.setConfig(deployment);
@@ -86,7 +86,7 @@ class Deployment extends K8Object {
 
   update(updateObj) {
     return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace },
+      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
       updateObj,
       { new: true }
     )
@@ -318,7 +318,7 @@ class Deployment extends K8Object {
             }]
           }
         }),
-        Service.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace })
+        Service.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
         .then((service) => {
           if (service) {
             return service.addPod(newPod.status.podIP);
