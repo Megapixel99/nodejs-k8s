@@ -1,4 +1,4 @@
-const Object = require('./object.js');
+const K8Object = require('./object.js');
 const Pod = require('./pod.js');
 const Service = require('./service.js');
 const { Deployment: Model } = require('../database/models.js');
@@ -6,15 +6,19 @@ const {
   runImage,
   getContainerIP,
   getAllContainersWithName,
+  duration,
 }  = require('../functions.js');
 
-class Deployment extends Object {
+class Deployment extends K8Object {
   constructor(config) {
     super(config);
     this.spec = config.spec;
     this.status = config.status;
     this.rollingOut = false;
   }
+
+  static apiVersion = 'v1';
+  static kind = 'Deployment';
 
   static findOne(params) {
     return Model.findOne(params)
@@ -97,6 +101,122 @@ class Deployment extends Object {
         return newDeployment;
       }
     });
+  }
+
+  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
+    let params = {
+      'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
+      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
+    };
+    if (!([...new Set(Object.values(params))].find((e) => undefined))) {
+      params = {};
+    }
+    let projection = {};
+    let options = {
+      sort: sortOptions,
+      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
+    };
+    return this.find(params, projection, options);
+  }
+
+  static list (queryOptions = {}) {
+    return this.findAllSorted(queryOptions)
+      .then(async (deployments) => ({
+        apiVersion: this.apiVersion,
+        kind: `${this.kind}List`,
+        metadata: {
+          continue: false,
+          remainingItemCount: queryOptions.limit && queryOptions.limit < deployments.length ? deployments.length - queryOptions.limit : 0,
+          resourceVersion: `${await super.hash(`${deployments.length}${JSON.stringify(deployments[0])}`)}`
+        },
+        items: deployments
+      }));
+  }
+
+  static table (queryOptions = {}) {
+    return this.findAllSorted(queryOptions)
+      .then(async (deployments) => ({
+        "kind": "Table",
+        "apiVersion": "meta.k8s.io/v1",
+        "metadata": {
+          "resourceVersion": `${await super.hash(`${configMaps.length}${JSON.stringify(configMaps[0])}`)}`,
+        },
+        "columnDefinitions": [
+          {
+            "name": "Name",
+            "type": "string",
+            "format": "name",
+            "description": "Name must be unique within a namespace. Is required when creating resources, although some resources may allow a client to request the generation of an appropriate name automatically. Name is primarily intended for creation idempotence and configuration definition. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+            "priority": 0
+          },
+          {
+            "name": "Ready",
+            "type": "string",
+            "format": "",
+            "description": "Number of the pod with ready state",
+            "priority": 0
+          },
+          {
+            "name": "Up-to-date",
+            "type": "string",
+            "format": "",
+            "description": "Total number of non-terminated pods targeted by this deployment that have the desired template spec.",
+            "priority": 0
+          },
+          {
+            "name": "Available",
+            "type": "string",
+            "format": "",
+            "description": "Total number of available pods (ready for at least minReadySeconds) targeted by this deployment.",
+            "priority": 0
+          },
+          {
+            "name": "Age",
+            "type": "string",
+            "format": "",
+            "description": "CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.\n\nPopulated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
+            "priority": 0
+          },
+          {
+            "name": "Containers",
+            "type": "string",
+            "format": "",
+            "description": "Names of each container in the template.",
+            "priority": 1
+          },
+          {
+            "name": "Images",
+            "type": "string",
+            "format": "",
+            "description": "Images referenced by each container in the template.",
+            "priority": 1
+          },
+          {
+            "name": "Selector",
+            "type": "string",
+            "format": "",
+            "description": "Label selector for pods. Existing ReplicaSets whose pods are selected by this will be the ones affected by this deployment.",
+            "priority": 1
+          }
+        ],
+        "rows": deployments.map((e) => ({
+          "cells": [
+            e.metadata.name,
+            `${e.status.availableReplicas}/${e.spec.replicas}`,
+            e.status.updatedReplicas,
+            e.status.availableReplicas,
+            duration(new Date() - e.metadata.creationTimestamp),
+            e.spec.template.spec.containers.map((e) => e.name).join(', '),
+            e.spec.template.spec.containers.map((e) => e.image).join(', '),
+            Object.values(e.spec.selector.matchLabels).join(', '),
+          ],
+          object: {
+            "kind": "PartialObjectMetadata",
+            "apiVersion": "meta.k8s.io/v1",
+            metadata: e.metadata,
+          }
+        })),
+      }));
   }
 
   setConfig(config) {

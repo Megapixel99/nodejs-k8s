@@ -15,9 +15,31 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), (re
   .catch(next);
 });
 
-router.get('api/v1/secrets', validSchema(apiV1OpenapiV3), (req, res, next) => {
-  Secret.find()
-  .then((secrets) => res.status(200).send(secrets))
+router.get(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
+  if (req.headers?.accept?.split(';').find((e) => e === 'as=Table')) {
+    return Secret.table({
+      ...req.query,
+      namespace: req.params.namespace,
+    })
+      .then((secretList) => res.status(200).send(secretList))
+      .catch(next);
+  }
+  Secret.list({
+    ...req.query,
+    namespace: req.params.namespace,
+  })
+    .then((secretList) => res.status(200).send(secretList))
+    .catch(next);
+})
+
+router.get('/api/v1/secrets', validSchema(apiV1OpenapiV3), (req, res, next) => {
+  if (req.headers?.accept?.split(';').find((e) => e === 'as=Table')) {
+    return Secret.table(req.query)
+      .then((secretList) => res.status(200).send(secretList))
+      .catch(next);
+  }
+  Secret.list(req.query)
+  .then((secretList) => res.status(200).send(secretList))
   .catch(next);
 });
 

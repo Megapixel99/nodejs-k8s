@@ -5,27 +5,42 @@ const { apiV1OpenapiV3, validSchema } = require('./openapi.js');
 let routes = ['/apis/apps/v1/namespaces/:namespace/services', '/api/v1/namespaces/:namespace/services'];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req, res, next) => {
-  Service.findOne({ 'metadata.name': req.params.name })
-  .then((service) => res.send(service))
+  Service.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
+  .then((service) => {
+    if (service) {
+      return res.staus(200).send(service);
+    }
+    return res.status(404).send(Service.notFoundStatus(req.params.name));
+  })
   .catch(next);
 });
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req, res, next) => {
-  if (Object.keys(req.body).length > 0) {
-    Service.findOne({ 'metadata.name': req.params.name })
-    .then((service) => service.update(req.body))
-    .catch(next);
-  } else {
-    Service.findOne({ 'metadata.name': req.params.name })
-    .then((service) => res.send(service))
-    .catch(next);
+router.get(routes, validSchema(apiV1OpenapiV3), (req, res, next) => {
+  if (req.headers?.accept?.split(';').find((e) => e === 'as=Table')) {
+    return Service.table({
+      ...req.query,
+      namespace: req.params.namespace,
+    })
+      .then((serviceList) => res.status(200).send(serviceList))
+      .catch(next);
   }
-});
+  Service.list({
+    ...req.query,
+    namespace: req.params.namespace,
+  })
+    .then((serviceList) => res.status(200).send(serviceList))
+    .catch(next);
+})
 
-router.get(routes.map((e) => `${e}/:name/status`), validSchema(apiV1OpenapiV3), (req, res, next) => {
-  Service.findOne({ 'metadata.name': req.params.name }).then((service) => {
-    res.send(service.status);
-  }).catch(next);
+router.get('/api/v1/services', validSchema(apiV1OpenapiV3), (req, res, next) => {
+  if (req.headers?.accept?.split(';').find((e) => e === 'as=Table')) {
+    return Service.table(req.query)
+      .then((serviceList) => res.status(200).send(serviceList))
+      .catch(next);
+  }
+  Service.list(req.query)
+  .then((serviceList) => res.status(200).send(serviceList))
+  .catch(next);
 });
 
 router.post(routes, validSchema(apiV1OpenapiV3), (req, res, next) => {
@@ -37,6 +52,66 @@ router.post(routes, validSchema(apiV1OpenapiV3), (req, res, next) => {
   }
   Service.create(req.body)
   .then((service) => res.status(201).send(service))
+  .catch(next);
+});
+
+router.put(routes, validSchema(apiV1OpenapiV3), (req, res, next) => {
+  if (Object.keys(req.body).length > 0) {
+    Service.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
+    .then((service) => service ? service.update(req.body) : Promise.resolve())
+    .then((service) => {
+      if (service) {
+        return res.staus(201).send(service);
+      }
+      return res.status(404).send(Service.notFoundStatus(req.params.name));
+    })
+    .catch(next);
+  } else {
+    Service.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
+    .then((service) => {
+      if (service) {
+        return res.staus(200).send(service);
+      }
+      return res.status(404).send(Service.notFoundStatus(req.params.name));
+    })
+    .catch(next);
+  }
+});
+
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req, res, next) => {
+  if (Object.keys(req.body).length > 0) {
+    Service.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
+    .then((service) => service ? service.update(req.body) : Promise.resolve())
+    .then((service) => {
+      if (service) {
+        return res.staus(201).send(service);
+      }
+      return res.status(404).send(Service.notFoundStatus(req.params.name));
+    })
+    .catch(next);
+  } else {
+    Service.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
+    .then((service) => service ? res.staus(200).send(service) : res.status(200).send({}))
+    .catch(next);
+  }
+});
+
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req, res, next) => {
+  Service.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
+  .then((service) => service ? service.delete() : Promise.resolve())
+  .then((service) => {
+    if (service) {
+      return res.staus(200).send(service.successfulStatus());
+    }
+    return res.status(404).send(Service.notFoundStatus(req.params.name));
+  })
+  .catch(next);
+});
+
+router.delete(routes, validSchema(apiV1OpenapiV3), (req, res, next) => {
+  Service.find(req.body)
+  .then((services) => Promise.all(services.map((service) => service.delete())))
+  .then((service) => services ? res.staus(200).send(service) : res.status(200).send({}))
   .catch(next);
 });
 
