@@ -8,7 +8,7 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiNetworkingK8sIoV1Open
   Endpoints.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
   .then((endpoints) => {
     if (endpoints) {
-      return res.staus(200).send(endpoints);
+      return res.status(200).send(endpoints);
     }
     return res.status(404).send(Endpoints.notFoundStatus(req.params.name));
   })
@@ -61,7 +61,7 @@ router.put(routes, validSchema(apiNetworkingK8sIoV1OpenApiV3), (req, res, next) 
     .then((endpoints) => endpoints ? endpoints.update(req.body) : Promise.resolve())
     .then((endpoints) => {
       if (endpoints) {
-        return res.staus(201).send(endpoints);
+        return res.status(201).send(endpoints);
       }
       return res.status(404).send(Endpoints.notFoundStatus(req.params.name));
     })
@@ -70,7 +70,7 @@ router.put(routes, validSchema(apiNetworkingK8sIoV1OpenApiV3), (req, res, next) 
     Endpoints.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
     .then((endpoints) => {
       if (endpoints) {
-        return res.staus(200).send(endpoints);
+        return res.status(200).send(endpoints);
       }
       return res.status(404).send(Endpoints.notFoundStatus(req.params.name));
     })
@@ -84,14 +84,14 @@ router.patch(routes.map((e) => `${e}/:name`), validSchema(apiNetworkingK8sIoV1Op
     .then((endpoints) => endpoints ? endpoints.update(req.body) : Promise.resolve())
     .then((endpoints) => {
       if (endpoints) {
-        return res.staus(201).send(endpoints);
+        return res.status(201).send(endpoints);
       }
       return res.status(404).send(Endpoints.notFoundStatus(req.params.name));
     })
     .catch(next);
   } else {
     Endpoints.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
-    .then((endpoints) => endpoints ? res.staus(200).send(endpoints) : res.status(200).send({}))
+    .then((endpoints) => endpoints ? res.status(200).send(endpoints) : res.status(200).send({}))
     .catch(next);
   }
 });
@@ -101,7 +101,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiNetworkingK8sIoV1O
   .then((endpoints) => endpoints ? endpoints.delete() : Promise.resolve())
   .then((endpoints) => {
     if (endpoints) {
-      return res.staus(200).send(endpoints.successfulStatus());
+      return res.status(200).send(endpoints.successfulStatus());
     }
     return res.status(404).send(Endpoints.notFoundStatus(req.params.name));
   })
@@ -111,7 +111,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiNetworkingK8sIoV1O
 router.delete(routes, validSchema(apiNetworkingK8sIoV1OpenApiV3), (req, res, next) => {
   Endpoints.find(req.body)
   .then((endpointses) => Promise.all(endpointses.map((endpoints) => endpoints.delete())))
-  .then((endpoints) => endpointses ? res.staus(200).send(endpoints) : res.status(200).send({}))
+  .then((endpoints) => endpointses ? res.status(200).send(endpoints) : res.status(200).send({}))
   .catch(next);
 });
 

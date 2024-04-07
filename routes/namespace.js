@@ -8,7 +8,7 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), (re
   Namespace.findOne({ 'metadata.name': req.params.name })
   .then((mamespace) => {
     if (mamespace) {
-      return res.staus(200).send(mamespace);
+      return res.status(200).send(mamespace);
     }
     return res.status(404).send(Namespace.notFoundStatus(req.params.name));
   })
@@ -61,7 +61,7 @@ router.put(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
     .then((mamespace) => mamespace ? mamespace.update(req.body) : Promise.resolve())
     .then((mamespace) => {
       if (mamespace) {
-        return res.staus(201).send(mamespace);
+        return res.status(201).send(mamespace);
       }
       return res.status(404).send(Namespace.notFoundStatus(req.params.name));
     })
@@ -70,7 +70,7 @@ router.put(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
     Namespace.findOne({ 'metadata.name': req.params.name })
     .then((mamespace) => {
       if (mamespace) {
-        return res.staus(200).send(mamespace);
+        return res.status(200).send(mamespace);
       }
       return res.status(404).send(Namespace.notFoundStatus(req.params.name));
     })
@@ -84,14 +84,14 @@ router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), (
     .then((mamespace) => mamespace ? mamespace.update(req.body) : Promise.resolve())
     .then((mamespace) => {
       if (mamespace) {
-        return res.staus(201).send(mamespace);
+        return res.status(201).send(mamespace);
       }
       return res.status(404).send(Namespace.notFoundStatus(req.params.name));
     })
     .catch(next);
   } else {
     Namespace.findOne({ 'metadata.name': req.params.name })
-    .then((mamespace) => mamespace ? res.staus(200).send(mamespace) : res.status(200).send({}))
+    .then((mamespace) => mamespace ? res.status(200).send(mamespace) : res.status(200).send({}))
     .catch(next);
   }
 });
@@ -101,7 +101,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), 
   .then((mamespace) => mamespace ? mamespace.delete() : Promise.resolve())
   .then((mamespace) => {
     if (mamespace) {
-      return res.staus(200).send(mamespace.successfulStatus());
+      return res.status(200).send(mamespace.successfulStatus());
     }
     return res.status(404).send(Namespace.notFoundStatus(req.params.name));
   })
@@ -111,7 +111,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), 
 router.delete(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
   Namespace.find(req.body)
   .then((mamespaces) => Promise.all(mamespaces.map((mamespace) => mamespace.delete())))
-  .then((mamespace) => mamespaces ? res.staus(200).send(mamespace) : res.status(200).send({}))
+  .then((mamespace) => mamespaces ? res.status(200).send(mamespace) : res.status(200).send({}))
   .catch(next);
 });
 

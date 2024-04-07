@@ -8,7 +8,7 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req, r
   Service.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
   .then((service) => {
     if (service) {
-      return res.staus(200).send(service);
+      return res.status(200).send(service);
     }
     return res.status(404).send(Service.notFoundStatus(req.params.name));
   })
@@ -61,7 +61,7 @@ router.put(routes, validSchema(apiV1OpenapiV3), (req, res, next) => {
     .then((service) => service ? service.update(req.body) : Promise.resolve())
     .then((service) => {
       if (service) {
-        return res.staus(201).send(service);
+        return res.status(201).send(service);
       }
       return res.status(404).send(Service.notFoundStatus(req.params.name));
     })
@@ -70,7 +70,7 @@ router.put(routes, validSchema(apiV1OpenapiV3), (req, res, next) => {
     Service.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
     .then((service) => {
       if (service) {
-        return res.staus(200).send(service);
+        return res.status(200).send(service);
       }
       return res.status(404).send(Service.notFoundStatus(req.params.name));
     })
@@ -84,14 +84,14 @@ router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req,
     .then((service) => service ? service.update(req.body) : Promise.resolve())
     .then((service) => {
       if (service) {
-        return res.staus(201).send(service);
+        return res.status(201).send(service);
       }
       return res.status(404).send(Service.notFoundStatus(req.params.name));
     })
     .catch(next);
   } else {
     Service.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
-    .then((service) => service ? res.staus(200).send(service) : res.status(200).send({}))
+    .then((service) => service ? res.status(200).send(service) : res.status(200).send({}))
     .catch(next);
   }
 });
@@ -101,7 +101,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req
   .then((service) => service ? service.delete() : Promise.resolve())
   .then((service) => {
     if (service) {
-      return res.staus(200).send(service.successfulStatus());
+      return res.status(200).send(service.successfulStatus());
     }
     return res.status(404).send(Service.notFoundStatus(req.params.name));
   })
@@ -111,7 +111,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req
 router.delete(routes, validSchema(apiV1OpenapiV3), (req, res, next) => {
   Service.find(req.body)
   .then((services) => Promise.all(services.map((service) => service.delete())))
-  .then((service) => services ? res.staus(200).send(service) : res.status(200).send({}))
+  .then((service) => services ? res.status(200).send(service) : res.status(200).send({}))
   .catch(next);
 });
 

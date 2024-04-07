@@ -8,7 +8,7 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), (re
   Deployment.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
   .then((deployment) => {
     if (deployment) {
-      return res.staus(200).send(deployment);
+      return res.status(200).send(deployment);
     }
     return res.status(404).send(Deployment.notFoundStatus(req.params.name));
   })
@@ -61,7 +61,7 @@ router.put(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
     .then((deployment) => deployment ? deployment.update(req.body) : Promise.resolve())
     .then((deployment) => {
       if (deployment) {
-        return res.staus(201).send(deployment);
+        return res.status(201).send(deployment);
       }
       return res.status(404).send(Deployment.notFoundStatus(req.params.name));
     })
@@ -70,7 +70,7 @@ router.put(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
     Deployment.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
     .then((deployment) => {
       if (deployment) {
-        return res.staus(200).send(deployment);
+        return res.status(200).send(deployment);
       }
       return res.status(404).send(Deployment.notFoundStatus(req.params.name));
     })
@@ -84,14 +84,14 @@ router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), (
     .then((deployment) => deployment ? deployment.update(req.body) : Promise.resolve())
     .then((deployment) => {
       if (deployment) {
-        return res.staus(201).send(deployment);
+        return res.status(201).send(deployment);
       }
       return res.status(404).send(Deployment.notFoundStatus(req.params.name));
     })
     .catch(next);
   } else {
     Deployment.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
-    .then((deployment) => deployment ? res.staus(200).send(deployment) : res.status(200).send({}))
+    .then((deployment) => deployment ? res.status(200).send(deployment) : res.status(200).send({}))
     .catch(next);
   }
 });
@@ -101,7 +101,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), 
   .then((deployment) => deployment ? deployment.delete() : Promise.resolve())
   .then((deployment) => {
     if (deployment) {
-      return res.staus(200).send(deployment.successfulStatus());
+      return res.status(200).send(deployment.successfulStatus());
     }
     return res.status(404).send(Deployment.notFoundStatus(req.params.name));
   })
@@ -111,7 +111,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), 
 router.delete(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
   Deployment.find(req.body)
   .then((deployments) => Promise.all(deployments.map((deployment) => deployment.delete())))
-  .then((deployment) => deployments ? res.staus(200).send(deployment) : res.status(200).send({}))
+  .then((deployment) => deployments ? res.status(200).send(deployment) : res.status(200).send({}))
   .catch(next);
 });
 

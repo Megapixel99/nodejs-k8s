@@ -8,7 +8,7 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), (re
   ConfigMap.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
   .then((configMap) => {
     if (configMap) {
-      return res.staus(200).send(configMap);
+      return res.status(200).send(configMap);
     }
     return res.status(404).send(ConfigMap.notFoundStatus(req.params.name));
   })
@@ -61,7 +61,7 @@ router.put(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
     .then((configMap) => configMap ? configMap.update(req.body) : Promise.resolve())
     .then((configMap) => {
       if (configMap) {
-        return res.staus(201).send(configMap);
+        return res.status(201).send(configMap);
       }
       return res.status(404).send(ConfigMap.notFoundStatus(req.params.name));
     })
@@ -70,7 +70,7 @@ router.put(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
     ConfigMap.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
     .then((configMap) => {
       if (configMap) {
-        return res.staus(200).send(configMap);
+        return res.status(200).send(configMap);
       }
       return res.status(404).send(ConfigMap.notFoundStatus(req.params.name));
     })
@@ -84,14 +84,14 @@ router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), (
     .then((configMap) => configMap ? configMap.update(req.body) : Promise.resolve())
     .then((configMap) => {
       if (configMap) {
-        return res.staus(201).send(configMap);
+        return res.status(201).send(configMap);
       }
       return res.status(404).send(ConfigMap.notFoundStatus(req.params.name));
     })
     .catch(next);
   } else {
     ConfigMap.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
-    .then((configMap) => configMap ? res.staus(200).send(configMap) : res.status(200).send({}))
+    .then((configMap) => configMap ? res.status(200).send(configMap) : res.status(200).send({}))
     .catch(next);
   }
 });
@@ -101,7 +101,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), 
   .then((configMap) => configMap ? configMap.delete() : Promise.resolve())
   .then((configMap) => {
     if (configMap) {
-      return res.staus(200).send(configMap.successfulStatus());
+      return res.status(200).send(configMap.successfulStatus());
     }
     return res.status(404).send(ConfigMap.notFoundStatus(req.params.name));
   })
@@ -111,7 +111,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), 
 router.delete(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
   ConfigMap.find(req.body)
   .then((configMaps) => Promise.all(configMaps.map((configMap) => configMap.delete())))
-  .then((configMap) => configMaps ? res.staus(200).send(configMap) : res.status(200).send({}))
+  .then((configMap) => configMaps ? res.status(200).send(configMap) : res.status(200).send({}))
   .catch(next);
 });
 

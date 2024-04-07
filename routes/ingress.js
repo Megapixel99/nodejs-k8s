@@ -8,7 +8,7 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiNetworkingK8sIoV1Open
   Ingress.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
   .then((ingress) => {
     if (ingress) {
-      return res.staus(200).send(ingress);
+      return res.status(200).send(ingress);
     }
     return res.status(404).send(Ingress.notFoundStatus(req.params.name));
   })
@@ -61,7 +61,7 @@ router.put(routes, validSchema(apiNetworkingK8sIoV1OpenApiV3), (req, res, next) 
     .then((ingress) => ingress ? ingress.update(req.body) : Promise.resolve())
     .then((ingress) => {
       if (ingress) {
-        return res.staus(201).send(ingress);
+        return res.status(201).send(ingress);
       }
       return res.status(404).send(Ingress.notFoundStatus(req.params.name));
     })
@@ -70,7 +70,7 @@ router.put(routes, validSchema(apiNetworkingK8sIoV1OpenApiV3), (req, res, next) 
     Ingress.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
     .then((ingress) => {
       if (ingress) {
-        return res.staus(200).send(ingress);
+        return res.status(200).send(ingress);
       }
       return res.status(404).send(Ingress.notFoundStatus(req.params.name));
     })
@@ -84,14 +84,14 @@ router.patch(routes.map((e) => `${e}/:name`), validSchema(apiNetworkingK8sIoV1Op
     .then((ingress) => ingress ? ingress.update(req.body) : Promise.resolve())
     .then((ingress) => {
       if (ingress) {
-        return res.staus(201).send(ingress);
+        return res.status(201).send(ingress);
       }
       return res.status(404).send(Ingress.notFoundStatus(req.params.name));
     })
     .catch(next);
   } else {
     Ingress.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
-    .then((ingress) => ingress ? res.staus(200).send(ingress) : res.status(200).send({}))
+    .then((ingress) => ingress ? res.status(200).send(ingress) : res.status(200).send({}))
     .catch(next);
   }
 });
@@ -101,7 +101,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiNetworkingK8sIoV1O
   .then((ingress) => ingress ? ingress.delete() : Promise.resolve())
   .then((ingress) => {
     if (ingress) {
-      return res.staus(200).send(ingress.successfulStatus());
+      return res.status(200).send(ingress.successfulStatus());
     }
     return res.status(404).send(Ingress.notFoundStatus(req.params.name));
   })
@@ -111,7 +111,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiNetworkingK8sIoV1O
 router.delete(routes, validSchema(apiNetworkingK8sIoV1OpenApiV3), (req, res, next) => {
   Ingress.find(req.body)
   .then((ingresses) => Promise.all(ingresses.map((ingress) => ingress.delete())))
-  .then((ingress) => ingresses ? res.staus(200).send(ingress) : res.status(200).send({}))
+  .then((ingress) => ingresses ? res.status(200).send(ingress) : res.status(200).send({}))
   .catch(next);
 });
 

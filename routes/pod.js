@@ -8,7 +8,7 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req, r
   Pod.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
   .then((pod) => {
     if (pod) {
-      return res.staus(200).send(pod);
+      return res.status(200).send(pod);
     }
     return res.status(404).send(Pod.notFoundStatus(req.params.name));
   })
@@ -61,7 +61,7 @@ router.put(routes, validSchema(apiV1OpenapiV3), (req, res, next) => {
     .then((pod) => pod ? pod.update(req.body) : Promise.resolve())
     .then((pod) => {
       if (pod) {
-        return res.staus(201).send(pod);
+        return res.status(201).send(pod);
       }
       return res.status(404).send(Pod.notFoundStatus(req.params.name));
     })
@@ -70,7 +70,7 @@ router.put(routes, validSchema(apiV1OpenapiV3), (req, res, next) => {
     Pod.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
     .then((pod) => {
       if (pod) {
-        return res.staus(200).send(pod);
+        return res.status(200).send(pod);
       }
       return res.status(404).send(Pod.notFoundStatus(req.params.name));
     })
@@ -84,14 +84,14 @@ router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req,
     .then((pod) => pod ? pod.update(req.body) : Promise.resolve())
     .then((pod) => {
       if (pod) {
-        return res.staus(201).send(pod);
+        return res.status(201).send(pod);
       }
       return res.status(404).send(Pod.notFoundStatus(req.params.name));
     })
     .catch(next);
   } else {
     Pod.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
-    .then((pod) => pod ? res.staus(200).send(pod) : res.status(200).send({}))
+    .then((pod) => pod ? res.status(200).send(pod) : res.status(200).send({}))
     .catch(next);
   }
 });
@@ -101,7 +101,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req
   .then((pod) => pod ? pod.delete() : Promise.resolve())
   .then((pod) => {
     if (pod) {
-      return res.staus(200).send(pod.successfulStatus());
+      return res.status(200).send(pod.successfulStatus());
     }
     return res.status(404).send(Pod.notFoundStatus(req.params.name));
   })
@@ -111,7 +111,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenapiV3), (req
 router.delete(routes, validSchema(apiV1OpenapiV3), (req, res, next) => {
   Pod.find(req.body)
   .then((pods) => Promise.all(pods.map((pod) => pod.delete())))
-  .then((pod) => pods ? res.staus(200).send(pod) : res.status(200).send({}))
+  .then((pod) => pods ? res.status(200).send(pod) : res.status(200).send({}))
   .catch(next);
 });
 

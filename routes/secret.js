@@ -8,7 +8,7 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), (re
   Secret.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
   .then((secret) => {
     if (secret) {
-      return res.staus(200).send(secret);
+      return res.status(200).send(secret);
     }
     return res.status(404).send(Secret.notFoundStatus(req.params.name));
   })
@@ -61,7 +61,7 @@ router.put(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
     .then((secret) => secret ? secret.update(req.body) : Promise.resolve())
     .then((secret) => {
       if (secret) {
-        return res.staus(201).send(secret);
+        return res.status(201).send(secret);
       }
       return res.status(404).send(Secret.notFoundStatus(req.params.name));
     })
@@ -70,7 +70,7 @@ router.put(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
     Secret.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
     .then((secret) => {
       if (secret) {
-        return res.staus(200).send(secret);
+        return res.status(200).send(secret);
       }
       return res.status(404).send(Secret.notFoundStatus(req.params.name));
     })
@@ -84,14 +84,14 @@ router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), (
     .then((secret) => secret ? secret.update(req.body) : Promise.resolve())
     .then((secret) => {
       if (secret) {
-        return res.staus(201).send(secret);
+        return res.status(201).send(secret);
       }
       return res.status(404).send(Secret.notFoundStatus(req.params.name));
     })
     .catch(next);
   } else {
     Secret.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
-    .then((secret) => secret ? res.staus(200).send(secret) : res.status(200).send({}))
+    .then((secret) => secret ? res.status(200).send(secret) : res.status(200).send({}))
     .catch(next);
   }
 });
@@ -101,7 +101,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), 
   .then((secret) => secret ? secret.delete() : Promise.resolve())
   .then((secret) => {
     if (secret) {
-      return res.staus(200).send(secret.successfulStatus());
+      return res.status(200).send(secret.successfulStatus());
     }
     return res.status(404).send(Secret.notFoundStatus(req.params.name));
   })
@@ -111,7 +111,7 @@ router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), 
 router.delete(routes, validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
   Secret.find(req.body)
   .then((secrets) => Promise.all(secrets.map((secret) => secret.delete())))
-  .then((secret) => secrets ? res.staus(200).send(secret) : res.status(200).send({}))
+  .then((secret) => secrets ? res.status(200).send(secret) : res.status(200).send({}))
   .catch(next);
 });
 
