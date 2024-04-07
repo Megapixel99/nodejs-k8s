@@ -117,7 +117,7 @@ class Pod extends Object {
   }
 
   delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name })
+    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace })
     .then((pod) => {
       if (pod) {
         return this.setConfig(pod);
@@ -127,7 +127,7 @@ class Pod extends Object {
 
   update(updateObj) {
     return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name },
+      { 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace },
       updateObj,
       { new: true }
     )

@@ -72,7 +72,7 @@ class Deployment extends Object {
   }
 
   delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name })
+    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace })
     .then((deployment) => {
       if (deployment) {
         return this.setConfig(deployment);
@@ -82,7 +82,7 @@ class Deployment extends Object {
 
   update(updateObj) {
     return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name },
+      { 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace },
       updateObj,
       { new: true }
     )
@@ -182,7 +182,7 @@ class Deployment extends Object {
             }]
           }
         }),
-        Service.findOne({ 'metadata.name': this.metadata.name })
+        Service.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace })
         .then((service) => {
           if (service) {
             return service.addPod(newPod.status.podIP);

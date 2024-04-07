@@ -66,7 +66,7 @@ class Ingress extends Object {
   }
 
   delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name })
+    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace })
     .then((ingress) => {
       if (ingress) {
         return this.setConfig(ingress);
@@ -76,7 +76,7 @@ class Ingress extends Object {
 
   update(updateObj) {
     return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name },
+      { 'metadata.name': this.metadata.name, 'metadata.namespace': config.metadata.namespace },
       updateObj,
       { new: true }
     )
