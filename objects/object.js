@@ -72,6 +72,20 @@ class Object {
       }
     });
   }
+
+  static internalServerErrorStatus(objectKind = '', objectName = '', apiGroup = '') {
+    return new Status({
+      status: 'Failure',
+      reason: 'InternalServerError',
+      code: 500,
+      message: "An internal server error has occured, please see the logs for more information",
+      details: {
+        name: objectName ? objectName : undefined,
+        group: apiGroup ? apiGroup : undefined,
+        kind: objectKind ? objectKind.toLowerCase() : undefined,
+      }
+    });
+  }
 }
 
 module.exports = Object;

@@ -46,15 +46,7 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error(err.stack);
   console.log(err);
-  let errRes = {
-    status: 'ERROR',
-    message: {
-      code: err?.status || 500,
-      reason: err.cause || 'An unknown error occured. Please see the logs.',
-      err: err?.response?.data || err?.message,
-    },
-  };
-  res.status(err?.status || 500).send(errRes);
+  res.status(500).send(Object.internalServerErrorStatus());
   return next();
 });
 
