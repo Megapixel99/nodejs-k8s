@@ -1,6 +1,6 @@
 # Kubernetes in NodeJS
 
-This project was/is an attempt to recreate the core functionality of [v1.29.1 Kubernetes](https://v1-29.docs.kubernetes.io/) in NodeJS, whle being fully compatible with the [`kubectl` CLI](https://kubernetes.io/docs/reference/kubectl/). Though this project only implements some resources, the resources which were partially/fully implemented seem to be the most used (i.e. Pods, Services, etc) and the others may be implemented in the future.
+This project was/is an attempt to recreate the core functionality of [v1.29.1 Kubernetes](https://v1-29.docs.kubernetes.io/) in NodeJS, while being fully compatible with the [`kubectl` CLI](https://kubernetes.io/docs/reference/kubectl/). Though this project only implements some resources, the resources which were partially/fully implemented seem to be the most used (i.e. Pods, Services, etc) and the others may be implemented in the future.
 
 ### Resources Partially Implemented
 * Pod (volume mounts are not supported)
