@@ -1,0 +1,76 @@
+  spec	<NodeSpec>
+    configSource	<NodeConfigSource>
+      configMap	<ConfigMapNodeConfigSource>
+        kubeletConfigKey	<string> -required-
+        name	<string> -required-
+        namespace	<string> -required-
+        resourceVersion	<string>
+        uid	<string>
+    externalID	<string>
+    podCIDR	<string>
+    podCIDRs	<[]string>
+    providerID	<string>
+    taints	<[]Taint>
+      effect	<string> -required-
+      key	<string> -required-
+      timeAdded	<string>
+      value	<string>
+    unschedulable	<boolean>
+  status	<NodeStatus>
+    addresses	<[]NodeAddress>
+      address	<string> -required-
+      type	<string> -required-
+    allocatable	<map[string]Quantity>
+    capacity	<map[string]Quantity>
+    conditions	<[]NodeCondition>
+      lastHeartbeatTime	<string>
+      lastTransitionTime	<string>
+      message	<string>
+      reason	<string>
+      status	<string> -required-
+      type	<string> -required-
+    config	<NodeConfigStatus>
+      active	<NodeConfigSource>
+        configMap	<ConfigMapNodeConfigSource>
+          kubeletConfigKey	<string> -required-
+          name	<string> -required-
+          namespace	<string> -required-
+          resourceVersion	<string>
+          uid	<string>
+      assigned	<NodeConfigSource>
+        configMap	<ConfigMapNodeConfigSource>
+          kubeletConfigKey	<string> -required-
+          name	<string> -required-
+          namespace	<string> -required-
+          resourceVersion	<string>
+          uid	<string>
+      error	<string>
+      lastKnownGood	<NodeConfigSource>
+        configMap	<ConfigMapNodeConfigSource>
+          kubeletConfigKey	<string> -required-
+          name	<string> -required-
+          namespace	<string> -required-
+          resourceVersion	<string>
+          uid	<string>
+    daemonEndpoints	<NodeDaemonEndpoints>
+      kubeletEndpoint	<DaemonEndpoint>
+        Port	<integer> -required-
+    images	<[]ContainerImage>
+      names	<[]string>
+      sizeBytes	<integer>
+    nodeInfo	<NodeSystemInfo>
+      architecture	<string> -required-
+      bootID	<string> -required-
+      containerRuntimeVersion	<string> -required-
+      kernelVersion	<string> -required-
+      kubeProxyVersion	<string> -required-
+      kubeletVersion	<string> -required-
+      machineID	<string> -required-
+      operatingSystem	<string> -required-
+      osImage	<string> -required-
+      systemUUID	<string> -required-
+    phase	<string>
+    volumesAttached	<[]AttachedVolume>
+      devicePath	<string> -required-
+      name	<string> -required-
+    volumesInUse	<[]string>

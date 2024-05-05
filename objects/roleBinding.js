@@ -90,7 +90,7 @@ class RoleBinding extends K8Object {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${configMaps.length}${JSON.stringify(configMaps[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${roleBindings.length}${JSON.stringify(roleBindings[0])}`)}`,
         },
         "columnDefinitions": [
           {

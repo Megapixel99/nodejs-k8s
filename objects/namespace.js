@@ -88,7 +88,7 @@ class Namespace extends K8Object {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${configMaps.length}${JSON.stringify(configMaps[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${namespaces.length}${JSON.stringify(namespaces[0])}`)}`,
         },
         "columnDefinitions": [
           {
