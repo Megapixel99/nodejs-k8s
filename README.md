@@ -22,15 +22,14 @@ This project was/is an attempt to recreate the core functionality of [v1.29.1 Ku
 ## Requirements
 * [NodeJS v20](https://nodejs.org/dist/v20.0.0/) or higher
 * [Docker Engine v25.0.3](https://docs.docker.com/engine/install/) or higher
-* A [MongoDB](https://www.mongodb.com/docs/manual/installation/) instance
 
 ###### It is also recommended you install [kubectl](https://kubernetes.io/docs/tasks/tools/), though it is not required
 
 ## How to use
 1. Install NodeJS and Docker
 2. Install the project dependencies by running `npm i`
-3. Create an `.env` file and set `DB_URL` to your `MongoDB` instance
-4. Run `npm start` (you may need to allow the start script to run by modifying the permissions of `start.sh` with `chmod`)
+3. If you have your own MongDB instance, create a `.env` file and set `DB_URL` to your `MongoDB` instance. If you do not have a `MongoDB` instance, a `MongoDB` instance will be spun up with Docker for you when you run the project (in the next step).
+4. Run `npm start` (you may need to allow the start script to run by modifying the permissions of `start.sh` (with `chmod`)
 5. Set your `kubectl` to use this project by running `kubectl config use-context /localhost:8080/admin` in your shell
 6. Create Kubernetes resources with `kubectl`
 
