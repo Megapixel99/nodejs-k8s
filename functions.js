@@ -62,6 +62,10 @@ const isContainerRunning = (containerName) => dockerCommand(`inspect -f '{{.Stat
 
 const stopContainer = (containerName) => dockerCommand(`stop ${containerName}`, { echo: false });
 
+const killContainer = (containerName) => dockerCommand(`kill ${containerName}`, { echo: false });
+
+const removeContainer = (containerName) => dockerCommand(`rm ${containerName}`, { echo: false });
+
 const getContainerIP = (containerName) => dockerCommand(`inspect ${containerName}`, { echo: false })
 
 const getAllContainersWithName = (containerName, imageName) => dockerCommand(`ps -q -f name=${containerName} -f ancestor=${imageName}`, { echo: false });
@@ -112,4 +116,6 @@ module.exports = {
   pullImage,
   runImage,
   stopContainer,
+  killContainer,
+  removeContainer,
 };
