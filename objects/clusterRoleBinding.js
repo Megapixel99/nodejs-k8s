@@ -59,9 +59,6 @@ class ClusterRoleBinding extends K8Object {
       'metadata.clusterRoleBinding': queryOptions.clusterRoleBinding ? queryOptions.clusterRoleBinding : undefined,
       'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
     };
-    if (!([...new Set(Object.values(params))].find((e) => undefined))) {
-      params = {};
-    }
     let projection = {};
     let options = {
       sort: sortOptions,

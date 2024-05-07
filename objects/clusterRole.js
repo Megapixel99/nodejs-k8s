@@ -59,9 +59,6 @@ class ClusterRole extends K8Object {
       'metadata.clusterRole': queryOptions.clusterRole ? queryOptions.clusterRole : undefined,
       'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
     };
-    if (!([...new Set(Object.values(params))].find((e) => undefined))) {
-      params = {};
-    }
     let projection = {};
     let options = {
       sort: sortOptions,
