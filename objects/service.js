@@ -46,12 +46,14 @@ class Service extends K8Object {
     return Model.find(params)
       .then((services) => {
         if (services) {
-          Endpoints.find(params)
+          return Endpoints.find(params)
           .then((endpoints) => {
-            return Promise.all(services.map((service) => new Service({
-              ...service,
-              endpoints: endpoints.find((e) => e.metadata.name === service.metadata.name),
-            }).setResourceVersion()));
+            return Promise.all(services.map((service) => {
+              service.endpoints = endpoints.filter((e) => e.metadata.name === service.metadata.name);
+              let s = new Service(service);
+              s.setResourceVersion();
+              return s;
+            }));
           })
         }
       });
@@ -181,9 +183,6 @@ class Service extends K8Object {
       'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
       'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
     };
-    if (!([...new Set(Object.values(params))].find((e) => undefined))) {
-      params = {};
-    }
     let projection = {};
     let options = {
       sort: sortOptions,
@@ -198,7 +197,7 @@ class Service extends K8Object {
         apiVersion: this.apiVersion,
         kind: `${this.kind}List`,
         metadata: {
-          continue: false,
+          continue: queryOptions.limit && queryOptions.limit < services.length,
           remainingItemCount: queryOptions.limit && queryOptions.limit < services.length ? services.length - queryOptions.limit : 0,
           resourceVersion: `${await super.hash(`${services.length}${JSON.stringify(services[0])}`)}`
         },
@@ -265,7 +264,7 @@ class Service extends K8Object {
             "priority": 1
           }
         ],
-        "rows": pods.map((e) => ({
+        "rows": services.map((e) => ({
           "cells": [
             e.metadata.name,
             e.spec.type,
