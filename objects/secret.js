@@ -70,9 +70,6 @@ class Secret extends K8Object {
       'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
       'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
     };
-    if (!([...new Set(Object.values(params))].find((e) => undefined))) {
-      params = {};
-    }
     let projection = {};
     let options = {
       sort: sortOptions,

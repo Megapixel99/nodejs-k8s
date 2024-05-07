@@ -59,9 +59,6 @@ class CertificateSigningRequest extends K8Object {
       'metadata.certificateSigningRequest': queryOptions.certificateSigningRequest ? queryOptions.certificateSigningRequest : undefined,
       'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
     };
-    if (!([...new Set(Object.values(params))].find((e) => undefined))) {
-      params = {};
-    }
     let projection = {};
     let options = {
       sort: sortOptions,
