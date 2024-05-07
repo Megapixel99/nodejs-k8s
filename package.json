@@ -16,6 +16,7 @@
     "express": "^4.19.1",
     "istextorbinary": "^9.5.0",
     "mongoose": "^8.2.3",
+    "node-cleanup": "^2.1.2",
     "portfinder": "^1.0.32",
     "uuid": "^9.0.1",
     "yaml": "^2.4.1"
