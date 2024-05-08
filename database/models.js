@@ -684,6 +684,112 @@ const serviceAccountSchema = Schema({
   },
 })
 
+const nodeSchema = Schema({
+  apiVersion: String,
+  kind: String,
+  metadata,
+  spec: {
+    configSource: {
+      configMap: {
+        kubeletConfigKey: String,
+        name: String,
+        namespace: String,
+        resourceVersion: String,
+        uid: String,
+      },
+    },
+    externalID: String,
+    podCIDR: String,
+    podCIDRs: [ String ],
+    providerID: String,
+    taints: [{}],
+       effect: String,
+       key: String,
+       timeAdded: String,
+       value: String,
+    unschedulable: Boolean,
+  },
+  status: {
+    addresses: [{
+      address: String,
+      type: String,
+    }],
+    allocatable: {
+      type: Map,
+      of: String,
+    },
+    capacity: {
+      type: Map,
+      of: String,
+    },
+    conditions: [{
+      lastHeartbeatTime: String,
+      lastTransitionTime: String,
+      message: String,
+      reason: String,
+      status: String,
+      type: String,
+    }],
+    config: {
+      active: {
+         configMap: {
+           kubeletConfigKey: String,
+           name: String,
+           namespace: String,
+           resourceVersion: String,
+           uid: String,
+         },
+       },
+     },
+      assigned: {
+       configMap: {
+          kubeletConfigKey: String,
+          name: String,
+          namespace: String,
+          resourceVersion: String,
+          uid: String,
+        },
+      },
+      error: String,
+      lastKnownGood: {
+         configMap: {
+            kubeletConfigKey: String,
+            name: String,
+            namespace: String,
+            resourceVersion: String,
+            uid: String,
+          },
+        },
+    daemonEndpoints: {
+      kubeletEndpoint: {
+         Port: Number,
+       },
+     },
+    images: [{
+      names: [ String ],
+      sizeBytes: Number,
+    }],
+    nodeInfo: {
+      architecture: String,
+      bootID: String,
+      containerRuntimeVersion: String,
+      kernelVersion: String,
+      kubeProxyVersion: String,
+      kubeletVersion: String,
+      machineID: String,
+      operatingSystem: String,
+      osImage: String,
+      systemUUID: String,
+    },
+    phase: String,
+    volumesAttached: [{
+      devicePath: String,
+      name: String,
+    }],
+    volumesInUse: [ String ],
+  },
+})
+
 module.exports = {
   Namespace: model('Namespace', namespaceSchema),
   Deployment: model('Deployment', deploymentSchema),
@@ -695,6 +801,7 @@ module.exports = {
   ClusterRole: model('ClusterRole', clusterRoleSchema),
   ClusterRoleBinding: model('ClusterRoleBinding', roleBindingSchema),
   RoleBinding: model('RoleBinding', roleBindingSchema),
+  Node: model('Node', nodeSchema),
   Role: model('Role', roleSchema),
   CertificateSigningRequest: model('CertificateSigningRequest', certificateSigningRequestSchema),
   ServiceAccount: model('ServiceAccount', serviceAccountSchema),

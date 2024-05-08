@@ -15,5 +15,6 @@ module.exports = {
   clusterRoleBinding: require('./clusterRoleBinding.js'),
   roleBinding: require('./roleBinding.js'),
   openapi: require('./openapi.js'),
+  node: require('./node.js'),
   serviceAccount: require('./serviceAccount.js'),
 };

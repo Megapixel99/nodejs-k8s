@@ -13,6 +13,7 @@ module.exports = {
   Role: require('./role.js'),
   ClusterRoleBinding: require('./clusterRoleBinding.js'),
   RoleBinding: require('./roleBinding.js'),
+  Node: require('./node.js'),
   ServiceAccount: require('./serviceAccount.js'),
   Pod: require('./pod.js'),
 };

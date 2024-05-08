@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const db = require('./database/connection.js');
-const { api, namespace, namespaceCheck, deployment, endpoints, pod, service, ingress, secret, configMap, certificatesigningrequest, clusterRole, role, clusterRoleBinding, roleBinding, openapi, serviceAccount } = require('./routes/index.js');
+const { api, namespace, namespaceCheck, deployment, endpoints, pod, service, ingress, secret, configMap, certificatesigningrequest, clusterRole, role, clusterRoleBinding, roleBinding, openapi, serviceAccount, node } = require('./routes/index.js');
 const { killContainer, removeContainer } = require('./functions.js');
 const { Object, Status } = require('./objects');
 const nodeCleanup = require('node-cleanup');
@@ -46,6 +46,7 @@ app.use(endpoints);
 app.use(deployment);
 app.use(secret);
 app.use(configMap);
+app.use(node);
 app.use(serviceAccount);
 
 app.use((req, res) => {
