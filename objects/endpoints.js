@@ -13,6 +13,8 @@ const {
   runImage,
   getContainerIP,
   duration,
+  stopContainer,
+  removeContainer,
 } = require('../functions.js');
 
 class Endpoints extends K8Object {
@@ -77,6 +79,13 @@ class Endpoints extends K8Object {
     });
   }
 
+  stopLoadBalancer() {
+    Promise.all(this.spec.containers.map((e) => {
+      return stopContainer(this.metadata.generateName)
+        .then(() => removeContainer(`${this.metadata.generateName}-${e.name}`));
+    }));
+  }
+
   getPods() {
     return this.subsets.map((s) => s.ports.map((p) => {
       return s.notReadyAddresses.map((a) => `${a}:${p}`);
@@ -139,6 +148,7 @@ class Endpoints extends K8Object {
   }
 
   delete() {
+    this.stopLoadBalancer();
     return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
     .then((endpoints) => {
       if (endpoints) {

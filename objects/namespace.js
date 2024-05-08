@@ -1,6 +1,13 @@
 const K8Object = require('./object.js');
 const { Namespace: Model } = require('../database/models.js');
+const Models = require('../database/models.js');
+const Pod = require('./pod.js');
+const Endpoints = require('./endpoints.js');
 const { duration } = require('../functions.js');
+
+delete Models.Namespace;
+delete Models.Pod;
+delete Models.Endpoints;
 
 class Namespace extends K8Object {
   constructor(config) {
@@ -32,7 +39,7 @@ class Namespace extends K8Object {
   }
 
   static create(config) {
-    return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+    return this.findOne({ 'metadata.name': config.metadata.name })
     .then((existingNamespace) => {
       if (existingNamespace) {
         throw this.alreadyExistsStatus(config.metadata.name);
@@ -42,9 +49,23 @@ class Namespace extends K8Object {
     .then((namespace) => new Namespace(namespace));
   }
 
-  delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name })
-    .then((namespace) => {
+  async delete () {
+    return Promise.all([
+      Pod.find({ 'metadata.namespace': this.metadata.name }),
+      Endpoints.find({ 'metadata.namespace': this.metadata.name }),
+    ])
+    .then((data) => {
+      let [ pods, endpoints ] = data;
+      pods.map((p) => p.delete());
+      endpoints.map((e) => e.delete());
+      return [
+        ...Object.keys(Models).map((m) => Models[m].findOneAndDelete({ 'metadata.namespace': this.metadata.name })),
+        Model.findOneAndDelete({ 'metadata.name': this.metadata.name }),
+      ];
+    })
+    .then((arr) => Promise.all(arr))
+    .then((promises) => {
+      let namespace = promises.at(-1);
       if (namespace) {
         return this.setConfig(namespace);
       }
