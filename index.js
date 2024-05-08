@@ -53,6 +53,19 @@ app.use(node);
 app.use(serviceAccount);
 app.use(version);
 
+app.get('/', (req, res, next) => {
+  let routes = app._router.stack.map((middleware) => {
+    if (middleware.route) {
+      return middleware.route;
+    } else if (middleware.name === 'router') {
+      return middleware.handle.stack.map((handler) => handler.route ? handler.route : undefined);
+    }
+  });
+  res.json({
+    paths: routes.flat(Math.Infinity).filter((e) => e).map((e) => e.path).flat(Math.Infinity)
+  });
+})
+
 app.use((req, res) => {
   res.status(404).send(Object.notFoundStatus());
 })
