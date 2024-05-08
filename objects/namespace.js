@@ -16,7 +16,6 @@ class Namespace extends K8Object {
   static findOne(params = {}, options = {}) {
     return Model.findOne(params, options)
       .then((namespace) => {
-        console.log(namespace);
         if (namespace) {
           return new Namespace(namespace).setResourceVersion();
         }
