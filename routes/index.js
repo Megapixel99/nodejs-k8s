@@ -17,4 +17,5 @@ module.exports = {
   openapi: require('./openapi.js'),
   node: require('./node.js'),
   serviceAccount: require('./serviceAccount.js'),
+  version: require('./version.js'),
 };
