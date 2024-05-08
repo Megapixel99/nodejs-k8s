@@ -2,13 +2,13 @@ const router = require('express').Router();
 const { Deployment } = require('../objects');
 const { general, openapi } = require('../middleware');
 
-const { apiAppsV1OpenApiV3, apiV1OpenapiV3, validSchema } = openapi;
+const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 let routes = ['/apis/apps/v1/namespaces/:namespace/deployments', '/api/v1/namespaces/:namespace/deployments'];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(Deployment));
 
-router.get(['/api/v1/deployments', ...routes], validSchema(apiV1OpenapiV3), general.list(Deployment));
+router.get(['/api/v1/deployments', ...routes], validSchema(apiV1OpenApiV3), general.list(Deployment));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(Deployment));
 

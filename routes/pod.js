@@ -2,13 +2,13 @@ const router = require('express').Router();
 const { Pod } = require('../objects');
 const { general, openapi } = require('../middleware');
 
-const { apiAppsV1OpenApiV3, apiV1OpenapiV3, validSchema } = openapi;
+const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 let routes = ['/apis/apps/v1/namespaces/:namespace/pods', '/api/v1/namespaces/:namespace/pods'];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(Pod));
 
-router.get(['/api/v1/pods', ...routes], validSchema(apiV1OpenapiV3), general.list(Pod));
+router.get(['/api/v1/pods', ...routes], validSchema(apiV1OpenApiV3), general.list(Pod));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(Pod));
 

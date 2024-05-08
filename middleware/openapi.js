@@ -18,7 +18,7 @@ const openapi = new OpenApi({
 
 module.exports = {
   openapiv3: OpenApiV3(openApiV3Spec),
-  apiV1OpenapiV3: ApiV1OpenApiV3(apiV1OpenApiV3Spec),
+  apiV1OpenApiV3: ApiV1OpenApiV3(apiV1OpenApiV3Spec),
   apiNetworkingK8sIoV1OpenApiV3: ApiNetworkingK8sIoV1OpenApiV3(apiNetworkingK8sIoV1OpenApiV3Spec),
   apiAppsV1OpenApiV3: ApiAppsV1OpenApiV3(apiAppsV1OpenApiV3Spec),
   apiRbacAuthorizatonK8sIoV1OpenApiV3: ApiNetworkingK8sIoV1OpenApiV3(apiRbacAuthorizatonK8sIoV1OpenApiV3Spec),
