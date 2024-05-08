@@ -82,6 +82,7 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(8080);
+app.listen(6443);
 
 nodeCleanup(async (exitCode, signal) => {
   if (signal) {
