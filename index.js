@@ -29,6 +29,7 @@ const app = express();
 app.use(express.json());
 
 app.use((req, res, next) => {
+  console.log(req.method);
   console.log(req.headers, req.body, req.url);
   console.log('------------------');
   next();
@@ -70,7 +71,6 @@ app.listen(8080);
 nodeCleanup(async (exitCode, signal) => {
   if (signal) {
     if (dbNameIndex != -1) {
-      console.log(process.argv[dbNameIndex + 1]);
       await killContainer(process.argv[dbNameIndex + 1]);
       await removeContainer(process.argv[dbNameIndex + 1]);
     }
