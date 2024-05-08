@@ -663,6 +663,27 @@ const certificateSigningRequestSchema = Schema({
   }
 })
 
+const serviceAccountSchema = Schema({
+  apiVersion: String,
+  kind: String,
+  metadata,
+  spec: {
+    automountServiceAccountToken: Boolean,
+    imagePullSecrets: [{
+      name: String,
+    }],
+    secrets: [{
+      apiVersion: String,
+      fieldPath: String,
+      kind: String,
+      name: String,
+      namespace: String,
+      resourceVersion: String,
+      uid: String,
+    }],
+  },
+})
+
 module.exports = {
   Namespace: model('Namespace', namespaceSchema),
   Deployment: model('Deployment', deploymentSchema),
@@ -676,6 +697,7 @@ module.exports = {
   RoleBinding: model('RoleBinding', roleBindingSchema),
   Role: model('Role', roleSchema),
   CertificateSigningRequest: model('CertificateSigningRequest', certificateSigningRequestSchema),
+  ServiceAccount: model('ServiceAccount', serviceAccountSchema),
   Endpoints: model('Endpoints', endpointsSchema),
   DNS: model('DNS', dns),
 };
