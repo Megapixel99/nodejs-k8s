@@ -211,7 +211,7 @@ const container = {
   stdin: Boolean,
   stdinOnce: Boolean,
   tty: Boolean,
-  command: String,
+  command: [ String ],
   args: String,
   workingDir: String,
   terminationMessagePath: String,

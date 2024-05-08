@@ -88,12 +88,8 @@ class Service extends K8Object {
   }
 
   static create(config) {
-    return Promise.all([
-      this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace }),
-      Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
-    ])
-    .then((data) => {
-      let [ existingService, existingEndpoint ] = data;
+    return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+    .then((existingService) => {
       if (existingService) {
         throw this.alreadyExistsStatus(config.metadata.name);
       }
@@ -106,36 +102,40 @@ class Service extends K8Object {
       let newService = new Service(service);
       return Pod.find({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
         .then((pods) => {
-          return Endpoints.create({
-            metadata: newService.metadata,
-            subsets: newService.convertToSubsets(pods),
-            ports: newService.spec.ports.map((e) => `${e.port}:${e.targetPort}`).join(' '),
-          })
-            .then((newEndpoints) => {
-              newService.endpoints = newEndpoints;
-              return getContainerIP(`${newService.endpoints.metadata.name}-loadBalancer`);
-            })
-            .then((ipInfo) => JSON.parse(ipInfo?.raw)[0]?.NetworkSettings?.Networks?.bridge?.IPAddress)
-            .then((serviceIP) => {
-              if (serviceIP) {
-                return newService.update({
-                  $set: {
-                    'spec.clusterIP': serviceIP,
-                    'spec.clusterIPs': [serviceIP],
-                  }
-                });
+          Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+            .then(async (existingEndpoint) => {
+              let endpoints = existingEndpoint;
+              if (!endpoints) {
+                endpoints = (await Endpoints.create({
+                  metadata: newService.metadata,
+                  subsets: newService.convertToSubsets(pods),
+                  ports: newService.spec.ports.map((e) => `${e.port}:${e.targetPort}`).join(' '),
+                }));
               }
+              newService.endpoints = endpoints;
+              return getContainerIP(`${newService.endpoints.metadata.name}-loadBalancer`)
+              .then((ipInfo) => JSON.parse(ipInfo?.raw)[0]?.NetworkSettings?.Networks?.bridge?.IPAddress)
+              .then((serviceIP) => {
+                if (serviceIP) {
+                  return newService.update({
+                    $set: {
+                      'spec.clusterIP': serviceIP,
+                      'spec.clusterIPs': [serviceIP],
+                    }
+                  });
+                }
+              })
+              .then(async () => {
+                await new DNS({
+                  name: `${newService.metadata.name}.${newService.metadata.namespace}.cluster.local`,
+                  type: 'A',
+                  class: 'IN',
+                  ttl: 300,
+                  address: newService.spec.clusterIP,
+                }).save()
+                return newService;
+              });
             })
-            .then(async () => {
-              await new DNS({
-                name: `${newService.metadata.name}.${newService.metadata.namespace}.cluster.local`,
-                type: 'A',
-                class: 'IN',
-                ttl: 300,
-                address: newService.spec.clusterIP,
-              }).save()
-              return newService;
-            });
         })
     });
   }

@@ -412,17 +412,22 @@ class Pod extends K8Object {
           }
         }
         if (e.envFrom) {
-          await Promise.all(e.envFrom.map(async (e) => {
+          await Promise.all(e.envFrom.map(async (a) => {
             if (e.secretRef) {
-              return this.getEnvVarsFromSecret(e.secretRef.name);
+              return this.getEnvVarsFromSecret(a.secretRef.name);
             }
             return null;
           }))
-          .then((variables) => variables.flat().filter((e) => e))
+          .then((variables) => variables.flat().filter((a) => a))
           .then((variables) => options['env'].push(...variables));
         }
       }
-      return runImage(e.image, this.metadata.generateName, options);
+      if (this.spec.containers.length > 1) {
+        await runImage(e.image, `${this.metadata.generateName}-${e.name}`, options);
+        return `${this.metadata.generateName}-${e.name}`;
+      }
+      await runImage(e.image, this.metadata.generateName, options);
+      return this.metadata.generateName;
     });
     return Promise.all(p);
   }
