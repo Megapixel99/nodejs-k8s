@@ -1780,7 +1780,7 @@ router.get('/api', (req, res, next) => {
     }
   });
   if (headerOpts?.as === 'APIGroupDiscoveryList,application/json' && headerOpts?.g === 'apidiscovery.k8s.io' && headerOpts?.v) {
-    response.setHeader('Content-Type', `application/json;g=${headerOpts.g};v=${headerOpts?.v};as=APIGroupDiscoveryList`);
+    res.setHeader('Content-Type', `application/json;g=${headerOpts.g};v=${headerOpts?.v};as=APIGroupDiscoveryList`);
     res.send({
       kind: "APIGroupDiscoveryList",
       apiVersion: `${headerOpts.g}/${headerOpts.v}`,
