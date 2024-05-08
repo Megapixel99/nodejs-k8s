@@ -47,6 +47,8 @@ app.use(endpoints);
 app.use(deployment);
 app.use(secret);
 app.use(configMap);
+app.use(clusterRoleBinding);
+app.use(clusterRole);
 app.use(node);
 app.use(serviceAccount);
 app.use(version);
