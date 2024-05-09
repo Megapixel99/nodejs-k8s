@@ -1,3 +1,5 @@
+#! /bin/bash
+
 export $(grep -v '^#' ./.env | xargs)
 
 docker rm -f loadbalancer

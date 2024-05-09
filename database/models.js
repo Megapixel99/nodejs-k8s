@@ -17,7 +17,7 @@ const metadata = {
   generateName: String,
   generation: Number,
   namespace: String,
-  managedFields: {
+  managedFields: [{
     apiVersion: String,
     fieldsType: String,
     fieldsV1: String,
@@ -25,15 +25,15 @@ const metadata = {
     operation: String,
     subresource: String,
     time: String,
-  },
-  ownerReferences: {
+  }],
+  ownerReferences: [{
     apiVersion: String,
     blockOwnerDeletion: Boolean,
     controller: Boolean,
     kind: String,
     name: String,
     uid: String,
-  },
+  }],
   selfLink: String,
   labels: {
     type: Map,
