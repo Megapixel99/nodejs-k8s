@@ -1,0 +1,36 @@
+{
+  "kind": "Node",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "${ip}",
+    "labels": {
+      "name": "my-first-k8s-node"
+    }
+  },
+  "status": {
+    "capacity": {
+      "cpu": "1",
+      "ephemeral-storage": "15625000Ki",
+      "hugepages-1Gi": "0",
+      "hugepages-2Mi": "0",
+      "memory": "15625000Ki",
+      "pods": "250"
+    },
+    "allocatable": {},
+    "conditions": [],
+    "addresses": [
+      {
+        "type": "ExternalIP",
+        "address": "$ip"
+      },
+      {
+        "type": "InternalIP",
+        "address": "$ip"
+      },
+      {
+        "type": "Hostname",
+        "address": "$ip"
+      }
+    ]
+  }
+}

@@ -64,6 +64,13 @@ app.get('/', (req, res, next) => {
   res.json({
     paths: routes.flat(Math.Infinity).filter((e) => e).map((e) => e.path).flat(Math.Infinity)
   });
+});
+
+app.get('/ping', (req, res) => {
+  if (db.connectionStatus() === 1) {
+    return res.sendStatus(200);
+  }
+  return res.sendStatus(502);
 })
 
 app.use((req, res) => {

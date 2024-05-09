@@ -2,17 +2,17 @@ apiVersion: v1
 clusters:
 - cluster:
     insecure-skip-tls-verify: true
-    server: http://host.docker.internal:8080
-  name: host.docker.internal:8080
+    server: http://localhost:8080
+  name: localhost:8080
 contexts:
 - context:
-    cluster: host.docker.internal:8080
-    user: admin/host.docker.internal:8080
-  name: /host.docker.internal:8080/admin
-current-context: /host.docker.internal:8080/admin
+    cluster: localhost:8080
+    user: admin/localhost:8080
+  name: /localhost:8080/admin
+current-context: /localhost:8080/admin
 kind: Config
 preferences: {}
 users:
-- name: admin/host.docker.internal:8080
+- name: admin/localhost:8080
   user:
     token: token
