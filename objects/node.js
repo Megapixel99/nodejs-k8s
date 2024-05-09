@@ -1,6 +1,9 @@
 const K8Object = require('./object.js');
 const { Node: Model } = require('../database/models.js');
-const { duration } = require('../functions.js');
+const {
+  duration,
+  isContainerRunning,
+} = require('../functions.js');
 
 class Node extends K8Object {
   constructor(config) {
@@ -11,7 +14,6 @@ class Node extends K8Object {
 
   static apiVersion = 'v1';
   static kind = 'Node';
-
 
   static findOne(params = {}, options = {}) {
     return Model.findOne(params, options)
@@ -29,14 +31,17 @@ class Node extends K8Object {
     };
     return Model.find(params, projection, options)
       .then((nodes) => {
-        if (nodes) {
-          return Promise.all(nodes.map((node) => new Node(node).setResourceVersion()));
+        if (nodes.length > 0) {
+          return Promise.all(nodes.map((node) => {
+            return new Node(node).setResourceVersion();
+          }))
         }
+        return nodes;
       });
   }
 
   static create(config) {
-    return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+    return this.findOne({ 'metadata.name': config.metadata.name })
     .then((existingNode) => {
       if (existingNode) {
         throw this.alreadyExistsStatus(config.metadata.name);
@@ -47,7 +52,7 @@ class Node extends K8Object {
   }
 
   delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
+    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name })
     .then((node) => {
       if (node) {
         return this.setConfig(node);
@@ -56,15 +61,25 @@ class Node extends K8Object {
   }
 
   static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.node': queryOptions.node ? queryOptions.node : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
+    let params = {};
     let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
+    if (queryOptions.node) {
+      params['metadata.node'] = queryOptions.node;
+    }
+    if (queryOptions.resourceVersionMatch) {
+      params['metadata.resourceVersion'] = queryOptions.resourceVersionMatch;
+    }
+    if (queryOptions.fieldSelector) {
+      if ('true' === queryOptions.fieldSelector?.split('=')[1]) {
+        projection[queryOptions.fieldSelector.split('=')[0]] = 1;
+      } else if ('false' === queryOptions.fieldSelector?.split('=')[1]) {
+        projection[queryOptions.fieldSelector.split('=')[0]] = 0;
+      }
+    }
+    let options = { sort: sortOptions };
+    if (queryOptions.limit) {
+      options.limit = Number(queryOptions.limit);
+    }
     return this.find(params, projection, options);
   }
 
@@ -74,8 +89,8 @@ class Node extends K8Object {
         apiVersion: this.apiVersion,
         kind: `${this.kind}List`,
         metadata: {
-          continue: false,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < nodes.length ? nodes.length - queryOptions.limit : 0,
+          continue: queryOptions?.limit < nodes.length ? "true" : undefined,
+          remainingItemCount: queryOptions?.limit < nodes.length ? nodes.length - queryOptions.limit : 0,
           resourceVersion: `${await super.hash(`${nodes.length}${JSON.stringify(nodes[0])}`)}`
         },
         items: nodes
@@ -138,7 +153,7 @@ class Node extends K8Object {
 
   update(updateObj, options = {}) {
     return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
+      { 'metadata.name': this.metadata.name },
       updateObj,
       {
         new: true,

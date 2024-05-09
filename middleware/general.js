@@ -1,4 +1,17 @@
 module.exports = {
+  find(Model) {
+    return (req, res, next) => {
+      let query = {};
+      if (req.params.namespace) {
+        query = { 'metadata.namespace': req.params.namespace };
+      }
+      Model.find(query)
+        .then((items) => {
+          return res.status(200).send(items);
+        })
+        .catch(next);
+    };
+  },
   findOne(Model) {
     return (req, res, next) => {
       let query = { 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace };

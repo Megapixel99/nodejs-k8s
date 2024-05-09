@@ -702,17 +702,18 @@ const nodeSchema = Schema({
     podCIDR: String,
     podCIDRs: [ String ],
     providerID: String,
-    taints: [{}],
-       effect: String,
-       key: String,
-       timeAdded: String,
-       value: String,
-    unschedulable: Boolean,
+    taints: [{
+      effect: String,
+      key: String,
+      timeAdded: String,
+      value: String,
+    }],
+    unschedulable: { type: Boolean, default: false },
   },
   status: {
     addresses: [{
       address: String,
-      type: String,
+      type: { type: String },
     }],
     allocatable: {
       type: Map,

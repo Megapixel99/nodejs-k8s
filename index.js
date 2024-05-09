@@ -37,6 +37,7 @@ app.use((req, res, next) => {
 
 app.use(api);
 app.use(openapi);
+app.use(node);
 
 app.use(namespace);
 app.use(namespaceCheck);
@@ -49,7 +50,6 @@ app.use(secret);
 app.use(configMap);
 app.use(clusterRoleBinding);
 app.use(clusterRole);
-app.use(node);
 app.use(serviceAccount);
 app.use(version);
 
