@@ -1,4 +1,3 @@
-const EventEmitter = require('events');
 const K8Object = require('./object.js');
 const Secret = require('./secret.js');
 const ConfigMap = require('./configMap.js');
@@ -18,7 +17,6 @@ class Pod extends K8Object {
     super(config);
     this.spec = config.spec;
     this.status = config.status;
-    this.eventEmitter = new EventEmitter();
   }
 
   static apiVersion = 'v1';
@@ -166,7 +164,7 @@ class Pod extends K8Object {
   }
 
   events() {
-    return this.eventEmitter;
+    return super.eventEmitter;
   }
 
   async setConfig(config) {
@@ -186,7 +184,7 @@ class Pod extends K8Object {
     return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
     .then((pod) => {
       if (pod) {
-        this.eventEmitter.emit('Delete', pod);
+        super.eventEmitter.emit('Delete', pod);
         return this.setConfig(pod);
       }
     });

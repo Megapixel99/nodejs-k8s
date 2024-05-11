@@ -1,3 +1,4 @@
+const EventEmitter = require('events');
 const Status = require('./status.js');
 
 class Object {
@@ -5,6 +6,37 @@ class Object {
     this.apiVersion = config.apiVersion;
     this.kind = config.kind;
     this.metadata = config.metadata;
+    this.eventEmitter = (() => {
+      let e = new EventEmitter();
+      return {
+        ...e,
+        on: async (name, data) => {
+          let objRef = {
+            "kind": "Pod",
+            "namespace": this.metadata.namespace,
+            "name": this.metadata.generateName,
+            "uid": this.metadata.uid,
+            "apiVersion": this.metadata.apiVersion,
+            "resourceVersion": await this.setResourceVersion(),
+            "fieldPath": `spec.containers{${this.spec.containers.map((e) => e.name).join(',')}}`
+          };
+          Event.create({
+            deprecatedSource: {
+              component: 'kubelet',
+              host: '',
+            },
+            note: name,
+            reason: name,
+            regarding: objRef,
+            related: objRef,
+            reportingController: 'kubelet',
+            reportingInstance: String,
+            type: 'Normal'
+          });
+          return e.on(name, data)
+        },
+      }
+    })()
   }
 
   getMetadata() {
