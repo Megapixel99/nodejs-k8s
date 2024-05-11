@@ -78,7 +78,7 @@ class ConfigMap extends K8Object {
         apiVersion: this.apiVersion,
         kind: `${this.kind}List`,
         metadata: {
-          continue: false,
+          continue: queryOptions?.limit < configMaps.length ? "true" : undefined,
           remainingItemCount: queryOptions.limit && queryOptions.limit < configMaps.length ? configMaps.length - queryOptions.limit : 0,
           resourceVersion: `${await super.hash(`${configMaps.length}${JSON.stringify(configMaps[0])}`)}`
         },

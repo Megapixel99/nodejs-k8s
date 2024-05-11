@@ -91,7 +91,7 @@ class Namespace extends K8Object {
         apiVersion: this.apiVersion,
         kind: `${this.kind}List`,
         metadata: {
-          continue: false,
+          continue: queryOptions?.limit < namespaces.length ? "true" : undefined,
           remainingItemCount: queryOptions.limit && queryOptions.limit < namespaces.length ? namespaces.length - queryOptions.limit : 0,
           resourceVersion: `${await super.hash(`${namespaces.length}${JSON.stringify(namespaces[0])}`)}`
         },

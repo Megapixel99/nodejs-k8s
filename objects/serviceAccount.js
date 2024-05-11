@@ -83,7 +83,7 @@ class ServiceAccount extends K8Object {
         apiVersion: this.apiVersion,
         kind: `${this.kind}List`,
         metadata: {
-          continue: false,
+          continue: queryOptions?.limit < serviceAccounts.length ? "true" : undefined,
           remainingItemCount: queryOptions.limit && queryOptions.limit < serviceAccounts.length ? serviceAccounts.length - queryOptions.limit : 0,
           resourceVersion: `${await super.hash(`${serviceAccounts.length}${JSON.stringify(serviceAccounts[0])}`)}`
         },

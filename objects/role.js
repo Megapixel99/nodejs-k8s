@@ -73,7 +73,7 @@ class Role extends K8Object {
         apiVersion: this.apiVersion,
         kind: `${this.kind}List`,
         metadata: {
-          continue: false,
+          continue: queryOptions?.limit < roles.length ? "true" : undefined,
           remainingItemCount: queryOptions.limit && queryOptions.limit < roles.length ? roles.length - queryOptions.limit : 0,
           resourceVersion: `${await super.hash(`${roles.length}${JSON.stringify(roles[0])}`)}`
         },

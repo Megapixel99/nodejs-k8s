@@ -196,6 +196,7 @@ class Service extends K8Object {
       .then(async (services) => ({
         apiVersion: this.apiVersion,
         kind: `${this.kind}List`,
+        continue: queryOptions?.limit < services.length ? "true" : undefined,
         metadata: {
           continue: queryOptions.limit && queryOptions.limit < services.length,
           remainingItemCount: queryOptions.limit && queryOptions.limit < services.length ? services.length - queryOptions.limit : 0,

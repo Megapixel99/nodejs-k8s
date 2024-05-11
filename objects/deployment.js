@@ -122,7 +122,7 @@ class Deployment extends K8Object {
         apiVersion: this.apiVersion,
         kind: `${this.kind}List`,
         metadata: {
-          continue: false,
+          continue: queryOptions?.limit < deployments.length ? "true" : undefined,
           remainingItemCount: queryOptions.limit && queryOptions.limit < deployments.length ? deployments.length - queryOptions.limit : 0,
           resourceVersion: `${await super.hash(`${deployments.length}${JSON.stringify(deployments[0])}`)}`
         },

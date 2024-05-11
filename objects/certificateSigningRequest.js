@@ -73,7 +73,7 @@ class CertificateSigningRequest extends K8Object {
         apiVersion: this.apiVersion,
         kind: `${this.kind}List`,
         metadata: {
-          continue: false,
+          continue: queryOptions?.limit < certificateSigningRequests.length ? "true" : undefined,
           remainingItemCount: queryOptions.limit && queryOptions.limit < certificateSigningRequests.length ? certificateSigningRequests.length - queryOptions.limit : 0,
           resourceVersion: `${await super.hash(`${certificateSigningRequests.length}${JSON.stringify(certificateSigningRequests[0])}`)}`
         },

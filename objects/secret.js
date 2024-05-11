@@ -84,7 +84,7 @@ class Secret extends K8Object {
         apiVersion: this.apiVersion,
         kind: `${this.kind}List`,
         metadata: {
-          continue: false,
+          continue: queryOptions?.limit < secrets.length ? "true" : undefined,
           remainingItemCount: queryOptions.limit && queryOptions.limit < secrets.length ? secrets.length - queryOptions.limit : 0,
           resourceVersion: `${await super.hash(`${secrets.length}${JSON.stringify(secrets[0])}`)}`
         },

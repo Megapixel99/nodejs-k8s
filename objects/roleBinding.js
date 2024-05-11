@@ -73,7 +73,7 @@ class RoleBinding extends K8Object {
         apiVersion: this.apiVersion,
         kind: `${this.kind}List`,
         metadata: {
-          continue: false,
+          continue: queryOptions?.limit < roleBindings.length ? "true" : undefined,
           remainingItemCount: queryOptions.limit && queryOptions.limit < roleBindings.length ? roleBindings.length - queryOptions.limit : 0,
           resourceVersion: `${await super.hash(`${roleBindings.length}${JSON.stringify(roleBindings[0])}`)}`
         },

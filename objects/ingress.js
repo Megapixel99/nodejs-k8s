@@ -111,7 +111,7 @@ class Ingress extends K8Object {
         apiVersion: this.apiVersion,
         kind: `${this.kind}List`,
         metadata: {
-          continue: false,
+          continue: queryOptions?.limit < ingresses.length ? "true" : undefined,
           remainingItemCount: queryOptions.limit && queryOptions.limit < ingresses.length ? ingresses.length - queryOptions.limit : 0,
           resourceVersion: `${await super.hash(`${ingresses.length}${JSON.stringify(ingresses[0])}`)}`
         },

@@ -73,7 +73,7 @@ class ClusterRole extends K8Object {
         apiVersion: this.apiVersion,
         kind: `${this.kind}List`,
         metadata: {
-          continue: false,
+          continue: queryOptions?.limit < clusterRoles.length ? "true" : undefined,
           remainingItemCount: queryOptions.limit && queryOptions.limit < clusterRoles.length ? clusterRoles.length - queryOptions.limit : 0,
           resourceVersion: `${await super.hash(`${clusterRoles.length}${JSON.stringify(clusterRoles[0])}`)}`
         },
