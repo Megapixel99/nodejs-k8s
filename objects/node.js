@@ -1,5 +1,6 @@
 const K8Object = require('./object.js');
 const { Node: Model } = require('../database/models.js');
+const Namespace = require('./namespace.js');
 const {
   duration,
   isContainerRunning,
@@ -60,19 +61,23 @@ class Node extends K8Object {
     .then(async (node) => {
       let i = setInterval(async () => {
         let isRunning = Boolean(await isContainerRunning(node.metadata.labels.get('name')));
-        console.log(isRunning);
         if (isRunning) {
           clearInterval(i);
-          await node.update({
+          let createNamespace = (name) => Namespace.create({ metadata: { name } });
+          await Promise.all([
+            Namespace.findOne({ 'metadata.name': 'kube-system' })
+              .then((namespace) => namespace ? Promise.resolve() : createNamespace('kube-system')),
+            Namespace.findOne({ 'metadata.name': 'kube-public' })
+              .then((namespace) => namespace ? Promise.resolve() : createNamespace('kube-public')),
+            Namespace.findOne({ 'metadata.name': 'kube-node-lease' })
+              .then((namespace) => namespace ? Promise.resolve() : createNamespace('kube-node-lease')),
+          ]);
+          node.update({
             'status.images': [{
               names: [ node.metadata.labels.get('name') ],
               sizeBytes: node.status.capacity.get('ephemeral-storage').match(/[0-9]/g)[0]
             }],
             'status.phase': 'Running',
-            // 'spec.taints': [{
-            //   'key': 'node-role.kubernetes.io/master',
-            //   'effect': 'NoSchedule'
-            // }],
             'status.conditions': [{
               "type": "MemoryPressure",
               "status": "False",

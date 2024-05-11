@@ -313,9 +313,14 @@ const namespaceSchema = Schema({
   kind: String,
   metadata,
   spec: {
-    finalizers: [ String ],
+    finalizers: {
+      type: [ String ],
+      default: [ 'kubernetes' ]
+    },
   },
-  status: statusConditions,
+  status: {
+    phase: { type: String, default: 'Active' },
+  },
 });
 
 const deploymentSchema = Schema({
