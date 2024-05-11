@@ -1,5 +1,7 @@
 const router = require('express').Router();
 
+let bDate = new Date();
+
 router.get('/version', (req, res) => {
   res.json({
     major: "1",
@@ -7,9 +9,9 @@ router.get('/version', (req, res) => {
     gitVersion: "v1.0.0",
     gitCommit: "c725f2ce5164bf4165b22d6c28dd0ace4b3b7e9b",
     gitTreeState: "clean",
-    buildDate: "2024-02-21T18:19:42Z",
-    goVersion: "go1.20.12 X:strictfipsruntime",
-    compiler: "gc",
+    buildDate: bDate,
+    goVersion: null,
+    compiler: null,
     platform: "linux/amd64"
   })
 });

@@ -293,10 +293,10 @@ const pod = {
   }
 }
 
-// const podTemplate = {
-//   metadata,
-//   spec: pod.spec,
-// }
+const podTemplate = {
+  metadata,
+  spec: pod.spec,
+}
 
 const statusConditions = {
   conditions: {
@@ -831,6 +831,68 @@ const eventSchema = Schema({
   type: { type: String, enum: [ 'Normal', 'Warning' ] },
 })
 
+const replicaSetSchema = Schema({
+  apiVersion: String,
+  kind: String,
+  metadata,
+  spec: {
+    selector: labelSelector,
+    template: podTemplate,
+    minReadySeconds: { type: Number, default: 0 },
+    replicas: { type: Number, default: 1 },
+  },
+  status: {
+    replicas: Number,
+    availableReplicas: Number,
+    readyReplicas: Number,
+    fullyLabeledReplicas: Number,
+    conditions: [{
+      status: String,
+      type: String,
+      lastTransitionTime: { type: Date, default: new Date() },
+      message: String,
+      reason: String,
+    }],
+    observedGeneration: Number,
+  }
+})
+
+const daemonSetSchema = Schema({
+  apiVersion: String,
+  kind: String,
+  metadata,
+  spec: {
+    selector: labelSelector,
+    template: podTemplate,
+    minReadySeconds: { type: Number, default: 0 },
+    updateStrategy: {
+      type: { type: String, enum: [ 'RollingUpdate', 'OnDelete' ] },
+      rollingUpdate: {
+        maxSurge: String,
+        maxUnavailable: String,
+      }
+    },
+    revisionHistoryLimit: { type: Number, default: 10 },
+  },
+  status: {
+    numberReadynumberAvailable: Number,
+    numberUnavailable: Number,
+    numberMisschedule: Number,
+    ddesiredNumberScheduled: Number,
+    currentNumberScheduled: Number,
+    updatedNumberScheduled: Number,
+    collisionCount: Number,
+    conditions: [{
+      status: String,
+      type: String,
+      lastTransitionTime: { type: Date, default: new Date() },
+      message: String,
+      reason: String,
+    }],
+    observedGeneration: Number,
+  }
+})
+
 module.exports = {
   Namespace: model('Namespace', namespaceSchema),
   Deployment: model('Deployment', deploymentSchema),
@@ -848,5 +910,7 @@ module.exports = {
   ServiceAccount: model('ServiceAccount', serviceAccountSchema),
   Event: model('Event', eventSchema),
   Endpoints: model('Endpoints', endpointsSchema),
+  ReplicaSet: model('ReplicaSet', replicaSetSchema),
+  DaemonSet: model('DaemonSet', daemonSetSchema),
   DNS: model('DNS', dns),
 };

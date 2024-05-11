@@ -17,4 +17,6 @@ module.exports = {
   ServiceAccount: require('./serviceAccount.js'),
   Event: require('./event.js'),
   Pod: require('./pod.js'),
+  ReplicaSet: require('./replicaSet.js'),
+  DaemonSet: require('./daemonSet.js'),
 };

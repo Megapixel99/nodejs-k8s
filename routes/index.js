@@ -19,4 +19,6 @@ module.exports = {
   serviceAccount: require('./serviceAccount.js'),
   version: require('./version.js'),
   events: require('./events.js'),
+  replicaset: require('./replicaset.js'),
+  daemonset: require('./daemonset.js'),
 };
