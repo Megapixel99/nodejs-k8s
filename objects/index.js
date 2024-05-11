@@ -15,5 +15,6 @@ module.exports = {
   RoleBinding: require('./roleBinding.js'),
   Node: require('./node.js'),
   ServiceAccount: require('./serviceAccount.js'),
+  Event: require('./event.js'),
   Pod: require('./pod.js'),
 };

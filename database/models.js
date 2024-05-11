@@ -791,6 +791,41 @@ const nodeSchema = Schema({
   },
 })
 
+const objectReferenceSchema = Schema({
+  kind: String,
+  namespace: String,
+  name: String,
+  uid: String,
+  apiVersion: String,
+  resourceVersion: String,
+  fieldPath: String,
+});
+
+const eventSchema = Schema({
+  apiVersion: String,
+  kind: String,
+  metadata,
+  action: String,
+  deprecatedCount: { type: Number, default: 0 },
+  deprecatedFirstTimestamp: { type: Date, default: new Date() },
+  deprecatedLastTimestamp: { type: Date, default: new Date() },
+  deprecatedSource: {
+    component: String,
+    host: String,
+  },
+  note: String,
+  reason: String,
+  regarding: objectReferenceSchema,
+  related: objectReferenceSchema,
+  reportingController: String,
+  reportingInstance: String,
+  series: {
+    count: { type: Number, default: 0 },
+    lastObservedTime: { type: Date, default: new Date() },
+  },
+  type: { type: String, enum: [ 'Normal', 'Warning' ] },
+})
+
 module.exports = {
   Namespace: model('Namespace', namespaceSchema),
   Deployment: model('Deployment', deploymentSchema),
@@ -806,6 +841,7 @@ module.exports = {
   Role: model('Role', roleSchema),
   CertificateSigningRequest: model('CertificateSigningRequest', certificateSigningRequestSchema),
   ServiceAccount: model('ServiceAccount', serviceAccountSchema),
+  Event: model('Event', eventSchema),
   Endpoints: model('Endpoints', endpointsSchema),
   DNS: model('DNS', dns),
 };

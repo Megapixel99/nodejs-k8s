@@ -18,4 +18,5 @@ module.exports = {
   node: require('./node.js'),
   serviceAccount: require('./serviceAccount.js'),
   version: require('./version.js'),
+  events: require('./events.js'),
 };
