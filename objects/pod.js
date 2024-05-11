@@ -85,7 +85,6 @@ class Pod extends K8Object {
             });
         }))
         .then(async (podsInfo) => {
-          // console.log(podsInfo);
           return Promise.all(podsInfo.map((podInfo) => {
             let [podIP, podName] = podInfo;
             return new Promise(function(resolve, reject) {
