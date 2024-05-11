@@ -703,10 +703,10 @@ const nodeSchema = Schema({
     podCIDRs: [ String ],
     providerID: String,
     taints: [{
-      effect: String,
-      key: String,
-      timeAdded: String,
-      value: String,
+      effect: { type: String },
+      key: { type: String },
+      timeAdded: { type: String },
+      value: { type: String },
     }],
     unschedulable: { type: Boolean, default: false },
   },
@@ -724,12 +724,12 @@ const nodeSchema = Schema({
       of: String,
     },
     conditions: [{
-      lastHeartbeatTime: String,
-      lastTransitionTime: String,
+      lastHeartbeatTime: Date,
+      lastTransitionTime: Date,
       message: String,
       reason: String,
       status: String,
-      type: String,
+      type: { type: String },
     }],
     config: {
       active: {

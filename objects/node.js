@@ -46,9 +46,66 @@ class Node extends K8Object {
       if (existingNode) {
         throw this.alreadyExistsStatus(config.metadata.name);
       }
+      config.status.conditions = [{
+        "type": "Ready",
+        "status": "False",
+        "lastHeartbeatTime": new Date(),
+        "lastTransitionTime": new Date(),
+        "reason": "KubeletNotReady",
+        "message": "kubelet is not ready"
+      }]
       return new Model(config).save();
     })
-    .then((node) => new Node(node));
+    .then((node) => new Node(node))
+    .then(async (node) => {
+      let i = setInterval(async () => {
+        let isRunning = Boolean(await isContainerRunning(node.metadata.labels.get('name')));
+        console.log(isRunning);
+        if (isRunning) {
+          clearInterval(i);
+          await node.update({
+            'status.images': [{
+              names: [ node.metadata.labels.get('name') ],
+              sizeBytes: node.status.capacity.get('ephemeral-storage').match(/[0-9]/g)[0]
+            }],
+            'status.phase': 'Running',
+            // 'spec.taints': [{
+            //   'key': 'node-role.kubernetes.io/master',
+            //   'effect': 'NoSchedule'
+            // }],
+            'status.conditions': [{
+              "type": "MemoryPressure",
+              "status": "False",
+              "lastHeartbeatTime": new Date(),
+              "lastTransitionTime": new Date(),
+              "reason": "KubeletHasSufficientMemory",
+              "message": "kubelet has sufficient memory available"
+            }, {
+              "type": "DiskPressure",
+              "status": "False",
+              "lastHeartbeatTime": new Date(),
+              "lastTransitionTime": new Date(),
+              "reason": "KubeletHasNoDiskPressure",
+              "message": "kubelet has no disk pressure"
+            }, {
+              "type": "PIDPressure",
+              "status": "False",
+              "lastHeartbeatTime": new Date(),
+              "lastTransitionTime": new Date(),
+              "reason": "KubeletHasSufficientPID",
+              "message": "kubelet has sufficient PID available"
+            }, {
+              "type": "Ready",
+              "status": "True",
+              "lastHeartbeatTime": new Date(),
+              "lastTransitionTime": new Date(),
+              "reason": "KubeletReady",
+              "message": "kubelet is posting ready status"
+            }],
+          });
+        }
+      }, 1000);
+    })
   }
 
   delete () {
