@@ -12,6 +12,17 @@ const { spawn } = require('child_process');
 
 (async () => {
   let nodeName = 'worker-node-1';
+
+  await new Promise((resolve, reject) => {
+    spawn('docker', ['kill', nodeName])
+    .on('close', resolve);
+  });
+
+  await new Promise((resolve, reject) => {
+    spawn('docker', ['rm', nodeName])
+    .on('close', resolve);
+  });
+
   await runImage('ubuntu', nodeName);
   let ip = JSON.parse((await getContainerIP(nodeName)).raw)[0]?.NetworkSettings.Networks.bridge.IPAddress;
   nodeSpec.metadata.name = ip;
@@ -26,6 +37,27 @@ const { spawn } = require('child_process');
     "type": "Hostname",
     "address": ip,
   }];
+
+  await new Promise((resolve, reject) => {
+    let s = spawn('lsof', ['-ti:8080'])
+
+    s.stdout.on('data', (pid) => {
+      process.kill(pid);
+      let count = 0;
+      setInterval(() => {
+        try {
+          process.kill(pid, 0);
+        } catch (e) {
+          resolve();
+        }
+        if (count >= 100) {
+          reject(new Error("Timeout process kill"))
+        }
+      }, 100);
+    });
+
+    s.on('close', resolve);
+  });
 
   let server = spawn('npm', ['start']);
 
@@ -51,6 +83,9 @@ const { spawn } = require('child_process');
     }, 10000);
   });
 
+  try {
+    await axios.delete(`http://localhost:8080/api/v1/nodes/${ip}`);
+  } catch (e) { }
   await axios.post('http://localhost:8080/api/v1/nodes', nodeSpec);
   let test = spawn('kubetest2', ['noop', '--kubeconfig=./test-config', '--v', '10', '--test=ginkgo'])
 
@@ -60,7 +95,6 @@ const { spawn } = require('child_process');
 
   test.on('close', async (code) => {
     console.log(`[test] closed`);
-    await axios.delete(`http://localhost:8080/api/v1/nodes/${ip}`);
     server.kill('SIGKILL');
   });
 })();
