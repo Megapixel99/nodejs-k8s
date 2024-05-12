@@ -6,13 +6,13 @@ const { killContainer, removeContainer } = require('./functions.js');
 const { Object, Status } = require('./objects');
 const nodeCleanup = require('node-cleanup');
 
-let dnsServerIndex = process.argv.indexOf('-dnsServer');
-
-if (dnsServerIndex === -1) {
-  console.error('Could not find local DNS server!');
-  console.error('Did you run npm start?');
-  process.exit(1);
-}
+// let dnsServerIndex = process.argv.indexOf('-dnsServer');
+//
+// if (dnsServerIndex === -1) {
+//   console.error('Could not find local DNS server!');
+//   console.error('Did you run npm start?');
+//   process.exit(1);
+// }
 
 let dbNameIndex = process.argv.indexOf('-dbName');
 
@@ -20,7 +20,7 @@ if (dbNameIndex !== -1) {
   process.env.DB_URL = `mongodb://localhost:27017`;
 }
 
-process.env.DNS_SERVER = process.argv[dnsServerIndex + 1];
+// process.env.DNS_SERVER = process.argv[dnsServerIndex + 1];
 
 db.connect(process.env.DB_URL);
 
