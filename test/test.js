@@ -7,6 +7,7 @@ const {
 } = require('../functions.js');
 
 const nodeSpec = require('./templates/node.json');
+const { DateTime } = require('luxon');
 const axios = require('axios');
 const { spawn } = require('child_process');
 
@@ -61,9 +62,9 @@ const { spawn } = require('child_process');
 
   let server = spawn('npm', ['start']);
 
-  server.stdout.on('data', (data) => console.log(`[${new Date()}] [server] ${data}`));
+  server.stdout.on('data', (data) => console.log(`[${DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")}] [server] ${data}`));
 
-  server.stderr.on('data', (data) => console.log(`[${new Date()}] [server] ${data}`));
+  server.stderr.on('data', (data) => console.log(`[${DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")}] [server] ${data}`));
 
   server.on('exit', async (code) => {
     console.log(`[server] closed`);
@@ -89,9 +90,9 @@ const { spawn } = require('child_process');
   await axios.post('http://localhost:8080/api/v1/nodes', nodeSpec);
   let test = spawn('kubetest2', ['noop', '--kubeconfig=./test-config', '--v', '10', '--test=ginkgo'])
 
-  test.stdout.on('data', (data) => console.log(`[${new Date()}] [test] ${data}`));
+  test.stdout.on('data', (data) => console.log(`[${DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")}] [test] ${data}`));
 
-  test.stderr.on('data', (data) => console.log(`[${new Date()}] [test] ${data}`));
+  test.stderr.on('data', (data) => console.log(`[${DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")}] [test] ${data}`));
 
   test.on('close', async (code) => {
     console.log(`[test] closed`);
