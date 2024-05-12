@@ -11,6 +11,7 @@ const {
   removeContainer,
   randomBytes,
   isContainerRunning,
+  getContainerLogs,
 } = require('../functions.js');
 
 class Pod extends K8Object {
@@ -166,6 +167,10 @@ class Pod extends K8Object {
 
   events() {
     return super.eventEmitter;
+  }
+
+  async logs() {
+    return (await getContainerLogs(this.metadata.generateName)).raw;
   }
 
   async setConfig(config) {
