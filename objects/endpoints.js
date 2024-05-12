@@ -22,37 +22,17 @@ class Endpoints extends K8Object {
   constructor(config) {
     super(config);
     this.subsets = config.subsets;
+    this.apiVersion = Endpoints.apiVersion;
+    this.kind = Endpoints.kind;
+    this.Model = Endpoints.Model;
   }
 
   static apiVersion = 'v1';
   static kind = 'Endpoints';
-
-  static findOne(params) {
-    return Model.findOne(params)
-      .then((endpoints) => {
-        if (endpoints) {
-          return new Endpoints(endpoints).setResourceVersion();
-        }
-      });
-  }
-
-  static find(params) {
-    return Model.find(params)
-      .then((endpointses) => {
-        if (endpointses) {
-          return Promise.all(endpointses.map((endpoints) => new Endpoints(endpoints).setResourceVersion()));
-        }
-      });
-  }
+  static Model = Model;
 
   static create(config) {
-    return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
-    .then((existingEndpoints) => {
-      if (existingEndpoints) {
-        throw this.alreadyExistsStatus(config.metadata.name);
-      }
-      return new Model(config).save()
-    })
+    return super.create(config)
     .then((endpoints) => {
       let newEndpoints = new Endpoints(endpoints);
       return imageExists('loadbalancer')
@@ -60,20 +40,24 @@ class Endpoints extends K8Object {
           pullImage('node')
           .then(() => buildImage('loadbalancer', 'loadBalancer/Dockerfile'))
         )
-        .then(() => {
+        .then(async () => {
           let options = {
             ports: newEndpoints.subsets.map((s) => s.ports.map((p) => `${p.port}:${p.port}`)),
             env: [{
               name: 'PORTS',
               value: config.ports,
             }, {
-              name: 'DNS_SERVER',
-              value: process.env.DNS_SERVER,
-            }, {
               name: 'PODS',
               value: endpoints.subsets.map((e) => e.notReadyAddresses.map((a) => a.ip)).join(' '),
             }]
           };
+          let dnsPod = await Pod.findOne({ 'metadata.name': 'core-dns' });
+          if (dnsPod) {
+            options.env.push({
+              name: 'DNS_SERVER',
+              value: await getContainerIP(dnsPod.metadata.generateName),
+            })
+          }
           return runImage('loadbalancer', `${newEndpoints.metadata.name}-loadBalancer`, options)
         })
         .then(() => newEndpoints.listenForPods())
@@ -81,10 +65,8 @@ class Endpoints extends K8Object {
   }
 
   stopLoadBalancer() {
-    Promise.all(this.spec.containers.map((e) => {
-      return stopContainer(this.metadata.generateName)
-        .then(() => removeContainer(`${this.metadata.generateName}-${e.name}`));
-    }));
+    return stopContainer(`${this.metadata.name}-loadBalancer`)
+      .then(() => removeContainer(`${this.metadata.name}-loadBalancer`));
   }
 
   getPods() {
@@ -148,79 +130,6 @@ class Endpoints extends K8Object {
       });
   }
 
-  delete() {
-    this.stopLoadBalancer();
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-    .then((endpoints) => {
-      if (endpoints) {
-        return this.setConfig(endpoints);
-      }
-    });
-  }
-
-  update(findObj = {}, updateObj = {}, options = {}) {
-    return Model.findOneAndUpdate(
-      {
-        'metadata.name': this.metadata.name,
-        'metadata.namespace': config.metadata.namespace,
-        ...findObj,
-      },
-      updateObj,
-      {
-        new: true,
-        ...options,
-      }
-    )
-    .then((endpoints) => {
-      if (endpoints) {
-        return this.setConfig(endpoints);
-      }
-    });
-  }
-
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
-  }
-
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
-    let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
-    return this.find(params, projection, options);
-  }
-
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (endpointses) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: queryOptions?.limit < endpointses.length ? "true" : undefined,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < endpointses.length ? endpointses.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${endpointses.length}${JSON.stringify(endpointses[0])}`)}`
-        },
-        items: endpointses
-      }));
-  }
-
   static table (queryOptions = {}) {
     return this.findAllSorted(queryOptions)
       .then(async (endpointses) => ({
@@ -262,11 +171,6 @@ class Endpoints extends K8Object {
   async setConfig(config) {
     await super.setResourceVersion();
     this.subsets = config.subsets;
-    return this;
-  }
-
-  async setResourceVersion() {
-    await super.setResourceVersion();
     return this;
   }
 

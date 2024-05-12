@@ -2,6 +2,7 @@ const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const { Node: Model } = require('../database/models.js');
 const Namespace = require('./namespace.js');
+const Pod = require('./pod.js');
 const {
   duration,
   isContainerRunning,
@@ -12,35 +13,14 @@ class Node extends K8Object {
     super(config);
     this.spec = config.spec;
     this.status = config.status;
+    this.apiVersion = Node.apiVersion;
+    this.kind = Node.kind;
+    this.Model = Node.Model;
   }
 
   static apiVersion = 'v1';
   static kind = 'Node';
-
-  static findOne(params = {}, options = {}) {
-    return Model.findOne(params, options)
-      .then((node) => {
-        if (node) {
-          return new Node(node).setResourceVersion();
-        }
-      });
-  }
-
-  static find(params = {}, projection = {}, queryOptions = {}) {
-    let options = {
-      sort: { 'metadata.name': 1 },
-      ...queryOptions
-    };
-    return Model.find(params, projection, options)
-      .then((nodes) => {
-        if (nodes.length > 0) {
-          return Promise.all(nodes.map((node) => {
-            return new Node(node).setResourceVersion();
-          }))
-        }
-        return nodes;
-      });
-  }
+  static Model = Model;
 
   static create(config) {
     return this.findOne({ 'metadata.name': config.metadata.name })
@@ -73,6 +53,35 @@ class Node extends K8Object {
             Namespace.findOne({ 'metadata.name': 'kube-node-lease' })
               .then((namespace) => namespace ? Promise.resolve() : createNamespace('kube-node-lease')),
           ]);
+          await Pod.findOne({ 'metadata.namespace': 'kube-system', 'metadata.name': 'core-dns' })
+            .then((pod) => {
+              if (pod) {
+                return Promise.resolve();
+              }
+              return Pod.create({
+                metadata: {
+                  name: 'core-dns',
+                  namespace: 'kube-system',
+                  labels: {
+                    name: "core-dns",
+                    role: "core-dns"
+                  },
+                },
+                spec: {
+                  containers: [{
+                    name: "core-dns",
+                    image: "dns:latest",
+                    ports: [{
+                      name: "udp",
+                      containerPort: 5333
+                    }, {
+                      name: "tcp",
+                      containerPort: 5334
+                    }],
+                  }]
+                }
+              })
+            });
           node.update({
             'status.images': [{
               names: [ node.metadata.labels.get('name') ],
@@ -116,123 +125,15 @@ class Node extends K8Object {
 
   delete () {
     return Model.findOneAndDelete({ 'metadata.name': this.metadata.name })
-    .then((node) => {
+    .then(async (node) => {
+      let nodes = await Model.find({});
+      if (nodes.length === 0) {
+        await Promise.all((await Namespace.find({})).map((namespace) => namespace.delete()))
+      }
       if (node) {
         return this.setConfig(node);
       }
     });
-  }
-
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {};
-    let projection = {};
-    if (queryOptions.node) {
-      params['metadata.node'] = queryOptions.node;
-    }
-    if (queryOptions.resourceVersionMatch) {
-      params['metadata.resourceVersion'] = queryOptions.resourceVersionMatch;
-    }
-    if (queryOptions.fieldSelector) {
-      if ('true' === queryOptions.fieldSelector?.split('=')[1]) {
-        projection[queryOptions.fieldSelector.split('=')[0]] = 1;
-      } else if ('false' === queryOptions.fieldSelector?.split('=')[1]) {
-        projection[queryOptions.fieldSelector.split('=')[0]] = 0;
-      }
-    }
-    let options = { sort: sortOptions };
-    if (queryOptions.limit) {
-      options.limit = Number(queryOptions.limit);
-    }
-    return this.find(params, projection, options);
-  }
-
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (nodes) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: queryOptions?.limit < nodes.length ? "true" : undefined,
-          remainingItemCount: queryOptions?.limit < nodes.length ? nodes.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${nodes.length}${JSON.stringify(nodes[0])}`)}`
-        },
-        items: nodes
-      }));
-  }
-
-  static table (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (nodes) => ({
-        "kind": "Table",
-        "apiVersion": "meta.k8s.io/v1",
-        "metadata": {
-          "resourceVersion": `${await super.hash(`${nodes.length}${JSON.stringify(nodes[0])}`)}`,
-        },
-        "columnDefinitions": [
-          {
-            "name": "Name",
-            "type": "string",
-            "format": "name",
-            "description": "Name must be unique within a node. Is required when creating resources, although some resources may allow a client to request the generation of an appropriate name automatically. Name is primarily intended for creation idempotence and configuration definition. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
-            "priority": 0
-          },
-          {
-            "name": "Age",
-            "type": "string",
-            "format": "",
-            "description": "CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.\n\nPopulated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
-            "priority": 0
-          },
-        ],
-        "rows": nodes.map((e) => ({
-          "cells": [
-            e.metadata.name,
-            duration(new Date() - e.metadata.creationTimestamp),
-          ],
-          object: {
-            "kind": "PartialObjectMetadata",
-            "apiVersion": "meta.k8s.io/v1",
-            metadata: e.metadata,
-          }
-        })),
-      }));
-  }
-
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
-  }
-
-  update(updateObj, options = {}) {
-    return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name },
-      updateObj,
-      {
-        new: true,
-        ...options,
-      }
-    )
-    .then((node) => {
-      if (node) {
-        return this.setConfig(node);
-      }
-    });
-  }
-
-  async setResourceVersion() {
-    await super.setResourceVersion();
-    return this;
   }
 
   async setConfig(config) {

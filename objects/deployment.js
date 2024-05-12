@@ -16,37 +16,17 @@ class Deployment extends K8Object {
     this.spec = config.spec;
     this.status = config.status;
     this.rollingOut = false;
+    this.apiVersion = Deployment.apiVersion;
+    this.kind = Deployment.kind;
+    this.Model = Deployment.Model;
   }
 
   static apiVersion = 'v1';
   static kind = 'Deployment';
-
-  static findOne(params) {
-    return Model.findOne(params)
-      .then((deployment) => {
-        if (deployment) {
-          return new Deployment(deployment).setResourceVersion();
-        }
-      });
-  }
-
-  static find(params) {
-    return Model.find(params)
-      .then((deployments) => {
-        if (deployments) {
-          return Promise.all(deployments.map((deployment) => new Deployment(deployment).setResourceVersion()));
-        }
-      });
-  }
+  static Model = Model;
 
   static create(config) {
-    return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
-    .then((existingDeployment) => {
-      if (existingDeployment) {
-        throw this.alreadyExistsStatus(config.metadata.name);
-      }
-      return new Model(config).save()
-    })
+    return super.create(config)
     .then((deployment) => {
       let newDeployment = new Deployment(deployment);
       if (newDeployment.spec.paused !== true) {
@@ -76,21 +56,8 @@ class Deployment extends K8Object {
     })
   }
 
-  delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-    .then((deployment) => {
-      if (deployment) {
-        return this.setConfig(deployment);
-      }
-    });
-  }
-
   update(updateObj) {
-    return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
-      updateObj,
-      { new: true }
-    )
+    return super.update(updateObj)
     .then((deployment) => {
       if (deployment) {
         let newDeployment = this.setConfig(deployment);
@@ -102,33 +69,6 @@ class Deployment extends K8Object {
         return newDeployment;
       }
     });
-  }
-
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
-    let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
-    return this.find(params, projection, options);
-  }
-
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (deployments) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: queryOptions?.limit < deployments.length ? "true" : undefined,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < deployments.length ? deployments.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${deployments.length}${JSON.stringify(deployments[0])}`)}`
-        },
-        items: deployments
-      }));
   }
 
   static table (queryOptions = {}) {
@@ -217,22 +157,6 @@ class Deployment extends K8Object {
       }));
   }
 
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
-  }
-
   async setConfig(config) {
     await super.setResourceVersion();
     this.spec = config.spec;
@@ -306,14 +230,14 @@ class Deployment extends K8Object {
             conditions: [{
               "type": "Progressing",
               "status": "True",
-              "lastUpdateTime": new Date(),
-              "lastTransitionTime": new Date(),
+              "lastUpdateTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+              "lastTransitionTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
             },
             {
               "type": "Available",
               "status": "True",
-              "lastUpdateTime": new Date(),
-              "lastTransitionTime": new Date(),
+              "lastUpdateTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+              "lastTransitionTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
             }]
           }
         }),
@@ -330,11 +254,6 @@ class Deployment extends K8Object {
         return this.deletePod();
       }
     })
-  }
-
-  async setResourceVersion() {
-    await super.setResourceVersion();
-    return this;
   }
 
   async rollout(numPods = this.spec.replicas) {

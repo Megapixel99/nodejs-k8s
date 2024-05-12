@@ -3,7 +3,8 @@ const express = require('express');
 const db = require('./database/connection.js');
 const { api, namespace, namespaceCheck, deployment, events, endpoints, pod, service, ingress, secret, configMap, replicaset, daemonset, certificatesigningrequest, clusterRole, role, clusterRoleBinding, roleBinding, openapi, serviceAccount, node, version } = require('./routes/index.js');
 const { killContainer, removeContainer } = require('./functions.js');
-const { Object, Status } = require('./objects');
+const Status = require('./objects/status.js');
+const Object = require('./objects/object.js');
 const nodeCleanup = require('node-cleanup');
 
 // let dnsServerIndex = process.argv.indexOf('-dnsServer');

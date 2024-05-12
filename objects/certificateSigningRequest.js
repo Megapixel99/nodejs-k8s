@@ -7,79 +7,17 @@ class CertificateSigningRequest extends K8Object {
   constructor(config) {
     super(config);
     this.rules = config.rules;
+    this.apiVersion = CertificateSigningRequest.apiVersion;
+    this.kind = CertificateSigningRequest.kind;
+    this.Model = CertificateSigningRequest.Model;
   }
 
   static apiVersion = 'v1';
   static kind = 'CertificateSigningRequest';
-
-
-  static findOne(params = {}, options = {}) {
-    return Model.findOne(params, options)
-      .then((certificateSigningRequest) => {
-        if (certificateSigningRequest) {
-          return new CertificateSigningRequest(certificateSigningRequest).setResourceVersion();
-        }
-      });
-  }
-
-  static find(params = {}, projection = {}, queryOptions = {}) {
-    let options = {
-      sort: { 'metadata.name': 1 },
-      ...queryOptions
-    };
-    return Model.find(params, projection, options)
-      .then((certificateSigningRequests) => {
-        if (certificateSigningRequests) {
-          return Promise.all(certificateSigningRequests.map((certificateSigningRequest) => new CertificateSigningRequest(certificateSigningRequest).setResourceVersion()));
-        }
-      });
-  }
+  static Model = Model;
 
   static create(config) {
-    return this.findOne({ 'metadata.name': this.metadata.name })
-    .then((existingRole) => {
-      if (existingRole) {
-        throw this.alreadyExistsStatus(config.metadata.name);
-      }
-      return new Model(config).save();
-    })
-    .then((certificateSigningRequest) => new CertificateSigningRequest(certificateSigningRequest));
-  }
-
-  delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-    .then((certificateSigningRequest) => {
-      if (certificateSigningRequest) {
-        return this.setConfig(certificateSigningRequest);
-      }
-    });
-  }
-
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.certificateSigningRequest': queryOptions.certificateSigningRequest ? queryOptions.certificateSigningRequest : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
-    let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
-    return this.find(params, projection, options);
-  }
-
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (certificateSigningRequests) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: queryOptions?.limit < certificateSigningRequests.length ? "true" : undefined,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < certificateSigningRequests.length ? certificateSigningRequests.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${certificateSigningRequests.length}${JSON.stringify(certificateSigningRequests[0])}`)}`
-        },
-        items: certificateSigningRequests
-      }));
+    return super.create(config, { 'metadata.name': this.metadata.name });
   }
 
   static table (queryOptions = {}) {
@@ -118,38 +56,6 @@ class CertificateSigningRequest extends K8Object {
           }
         })),
       }));
-  }
-
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
-  }
-
-  update(updateObj, options = {}) {
-    return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
-      updateObj,
-      {
-        new: true,
-        ...options,
-      }
-    )
-    .then((certificateSigningRequest) => {
-      if (certificateSigningRequest) {
-        return this.setConfig(certificateSigningRequest);
-      }
-    });
   }
 
   async setConfig(config) {

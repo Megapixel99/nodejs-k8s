@@ -10,87 +10,14 @@ class ServiceAccount extends K8Object {
     super(config);
     this.spec = config.spec;
     this.status = config.status;
+    this.apiVersion = ServiceAccount.apiVersion;
+    this.kind = ServiceAccount.kind;
+    this.Model = ServiceAccount.Model;
   }
 
   static apiVersion = `v1`;
   static kind = 'ServiceAccount';
-
-  static findOne(params) {
-    return Model.findOne(params)
-      .then((serviceAccount) => {
-        if (serviceAccount) {
-          return new ServiceAccount(serviceAccount).setResourceVersion();
-        }
-      });
-  }
-
-  static find(params) {
-    return Model.find(params)
-      .then((serviceAccounts) => {
-        if (serviceAccounts) {
-          return Promise.all(serviceAccounts.map((serviceAccount) => new ServiceAccount(serviceAccount).setResourceVersion()));
-        }
-      });
-  }
-
-  static create(config) {
-    return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
-    .then((existingServiceAccount) => {
-      if (existingServiceAccount) {
-        throw new Error(this.alreadyExistsStatus(config.metadata.name, this.kind));
-      }
-      return new Model(config).save()
-    })
-  }
-
-  delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-    .then((serviceAccount) => {
-      if (serviceAccount) {
-        return this.setConfig(serviceAccount);
-      }
-    });
-  }
-
-  update(updateObj) {
-    return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
-      updateObj,
-      { new: true }
-    )
-    .then((serviceAccount) => {
-      if (serviceAccount) {
-        return this.setConfig(serviceAccount);
-      }
-    });
-  }
-
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
-    let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
-    return this.find(params, projection, options);
-  }
-
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (serviceAccounts) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: queryOptions?.limit < serviceAccounts.length ? "true" : undefined,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < serviceAccounts.length ? serviceAccounts.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${serviceAccounts.length}${JSON.stringify(serviceAccounts[0])}`)}`
-        },
-        items: serviceAccounts
-      }));
-  }
+  static Model = Model;
 
   static table (queryOptions = {}) {
     return this.findAllSorted(queryOptions)
@@ -170,31 +97,10 @@ class ServiceAccount extends K8Object {
       }));
   }
 
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName, this.kind);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName, this.kind);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, this.kind, message);
-  }
-
   async setConfig(config) {
     await super.setResourceVersion();
     this.spec = config.spec;
     this.status = config.status;
-    return this;
-  }
-
-  async setResourceVersion() {
-    await super.setResourceVersion();
     return this;
   }
 

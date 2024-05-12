@@ -1,7 +1,10 @@
 const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const { Event: Model } = require('../database/models.js');
-const { duration } = require('../functions.js');
+const {
+  duration,
+  randomBytes
+} = require('../functions.js');
 
 class Event extends K8Object {
   constructor(config) {
@@ -19,78 +22,24 @@ class Event extends K8Object {
     this.reportingInstance = config.reportingInstance;
     this.series = config.series;
     this.type = config.type;
+    this.apiVersion = Event.apiVersion;
+    this.kind = Event.kind;
+    this.Model = Event.Model;
   }
 
   static apiVersion = 'events.k8s.io/v1';
   static kind = 'Event';
+  static Model = Model;
 
-  static findOne(params = {}, options = {}) {
-    return Model.findOne(params, options)
-      .then((event) => {
-        if (event) {
-          return new Event(event).setResourceVersion();
-        }
-      });
-  }
-
-  static find(params = {}, projection = {}, queryOptions = {}) {
-    let options = {
-      sort: { 'metadata.name': 1 },
-      ...queryOptions
-    };
-    return Model.find(params, projection, options)
-      .then((events) => {
-        if (events) {
-          return Promise.all(events.map((event) => new Event(event).setResourceVersion()));
-        }
-      });
-  }
-
-  static create(config) {
-    return this.findOne({ 'metadata.name': cofig.metadata.name, 'metadata.namespace': cofig.metadata.namespace })
-    .then((existingEvent) => {
-      if (existingEvent) {
-        throw this.alreadyExistsStatus(config.metadata.name);
-      }
-      return new Model(config).save();
-    })
-    .then((event) => new Event(event));
-  }
-
-  delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-    .then((event) => {
-      if (event) {
-        return this.setConfig(event);
-      }
-    });
-  }
-
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.event': queryOptions.event ? queryOptions.event : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
-    let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
-    return this.find(params, projection, options);
-  }
-
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (events) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: queryOptions?.limit < events.length ? "true" : undefined,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < events.length ? events.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${events.length}${JSON.stringify(events[0])}`)}`
-        },
-        items: events
-      }));
+  static async create(config) {
+    let otherEvent = undefined;
+    let genName = config.metadata.generateName;
+    do {
+      config.metadata.generateName = `${genName}.${randomBytes(10).toString('hex')}`;
+      otherEvent = await Event.findOne({ 'metadata.generateName': config.metadata.generateName });
+    } while (otherEvent);
+    return new Model(config).save()
+      .then((event) => new Event(event));
   }
 
   static table (queryOptions = {}) {
@@ -129,43 +78,6 @@ class Event extends K8Object {
           }
         })),
       }));
-  }
-
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
-  }
-
-  update(updateObj, options = {}) {
-    return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
-      updateObj,
-      {
-        new: true,
-        ...options,
-      }
-    )
-    .then((event) => {
-      if (event) {
-        return this.setConfig(event);
-      }
-    });
-  }
-
-  async setResourceVersion() {
-    await super.setResourceVersion();
-    return this;
   }
 
   async setConfig(config) {

@@ -3,11 +3,7 @@ const { DateTime } = require('luxon');
 module.exports = {
   find(Model) {
     return (req, res, next) => {
-      let query = {};
-      if (req.params.namespace) {
-        query = { 'metadata.namespace': req.params.namespace };
-      }
-      Model.find(query)
+      Model.findByReq(req.query, req.params)
         .then((items) => {
           return res.status(200).send(items);
         })
@@ -16,11 +12,7 @@ module.exports = {
   },
   findOne(Model) {
     return (req, res, next) => {
-      let query = { 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace };
-      if (!req.params.namespace) {
-        query = { 'metadata.name': req.params.name };
-      }
-      Model.findOne(query)
+      Model.findOneByReq(req.query, req.params)
         .then((item) => {
           if (item) {
             return res.status(200).send(item);
@@ -37,7 +29,7 @@ module.exports = {
           .then((table) => res.status(200).send(table))
           .catch(next);
       }
-      Model.list({ ...req.query, ...req.params })
+      Model.list(req.query, req.params)
       .then((list) => res.status(200).send(list))
       .catch(next);
     };

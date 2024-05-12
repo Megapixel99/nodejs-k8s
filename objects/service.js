@@ -23,10 +23,14 @@ class Service extends K8Object {
     this.spec = config.spec;
     this.status = config.status;
     this.endpoints = null;
+    this.apiVersion = Service.apiVersion;
+    this.kind = Service.kind;
+    this.Model = Service.Model;
   }
 
   static apiVersion = 'v1';
   static kind = 'Service';
+  static Model = Model;
 
   static findOne(params) {
     return Model.findOne(params)
@@ -141,72 +145,6 @@ class Service extends K8Object {
     });
   }
 
-  delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-    .then((service) => {
-      if (service) {
-        return this.setConfig(service);
-      }
-    });
-  }
-
-  update(updateObj) {
-    return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
-      updateObj,
-      { new: true }
-    )
-    .then((service) => {
-      if (service) {
-        return this.setConfig(service);
-      }
-    });
-  }
-
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
-  }
-
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
-    let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
-    return this.find(params, projection, options);
-  }
-
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (services) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        continue: queryOptions?.limit < services.length ? "true" : undefined,
-        metadata: {
-          continue: queryOptions.limit && queryOptions.limit < services.length,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < services.length ? services.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${services.length}${JSON.stringify(services[0])}`)}`
-        },
-        items: services
-      }));
-  }
-
   static table (queryOptions = {}) {
     return this.findAllSorted(queryOptions)
       .then(async (services) => ({
@@ -289,11 +227,6 @@ class Service extends K8Object {
     await super.setResourceVersion();
     this.spec = config.spec;
     this.status = config.status;
-    return this;
-  }
-
-  async setResourceVersion() {
-    await super.setResourceVersion();
     return this;
   }
 

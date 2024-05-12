@@ -10,29 +10,14 @@ class Secret extends K8Object {
     this.stringData = config.stringData;
     this.data = config.data;
     this.type = config.type;
+    this.apiVersion = Secret.apiVersion;
+    this.kind = Secret.kind;
+    this.Model = Secret.Model;
   }
 
   static apiVersion = 'v1';
   static kind = 'Secret';
-
-
-  static findOne(params = {}, options = {}) {
-    return Model.findOne(params, options)
-      .then((secret) => {
-        if (secret) {
-          return new Secret(secret).setResourceVersion();
-        }
-      });
-  }
-
-  static find(params = {}, options = {}) {
-    return Model.find(params, options)
-      .then((secrets) => {
-        if (secrets) {
-          return Promise.all(secrets.map((secret) => new Secret(secret).setResourceVersion()));
-        }
-      });
-  }
+  static Model = Model;
 
   static create(config) {
     const base64RegExp = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
@@ -55,42 +40,6 @@ class Secret extends K8Object {
       return new Model(config).save();
     })
     .then((secret) => new Secret(secret));
-  }
-
-  delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-    .then((secret) => {
-      if (secret) {
-        return this.setConfig(secret);
-      }
-    });
-  }
-
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
-    let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
-    return this.find(params, projection, options);
-  }
-
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (secrets) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: queryOptions?.limit < secrets.length ? "true" : undefined,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < secrets.length ? secrets.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${secrets.length}${JSON.stringify(secrets[0])}`)}`
-        },
-        items: secrets
-      }));
   }
 
   static table (queryOptions = {}) {
@@ -145,65 +94,6 @@ class Secret extends K8Object {
           }
         })),
       }));
-  }
-
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
-  }
-
-  update(updateObj, options = {}) {
-    if (this?.immutable === true) {
-      throw new Error(`Secret ${config.metadata.name} is immutable`);
-    }
-    return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
-      updateObj,
-      {
-        new: true,
-        ...options,
-      }
-    )
-    .then((secret) => {
-      if (secret) {
-        return this.setConfig(secret);
-      }
-    });
-  }
-
-  mapVariables() {
-    // TODO: add other types
-    if (this.type === 'Opaque') {
-      return [
-        [...this.data]
-          .map(([key, value]) => ({
-            name: key,
-            value: Buffer.from(value, 'base64').toString(),
-          })),
-        [...this.stringData]
-          .map(([key, value]) => ({
-            name: key,
-            value,
-          }))
-      ].flat();
-    }
-    return null;
-  }
-
-  async setResourceVersion() {
-    await super.setResourceVersion();
-    return this;
   }
 
   async setConfig(config) {

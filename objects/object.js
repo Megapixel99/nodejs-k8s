@@ -1,42 +1,118 @@
-const EventEmitter = require('events');
+const objects = require('./index.js');
 const Status = require('./status.js');
 
-class Object {
+class K8Object {
   constructor(config) {
     this.apiVersion = config.apiVersion;
     this.kind = config.kind;
     this.metadata = config.metadata;
-    this.eventEmitter = (() => {
-      let e = new EventEmitter();
-      return {
-        ...e,
-        on: async (name, data) => {
-          let objRef = {
-            "kind": "Pod",
-            "namespace": this.metadata.namespace,
-            "name": this.metadata.generateName,
-            "uid": this.metadata.uid,
-            "apiVersion": this.metadata.apiVersion,
-            "resourceVersion": await this.setResourceVersion(),
-            "fieldPath": `spec.containers{${this.spec.containers.map((e) => e.name).join(',')}}`
-          };
-          Event.create({
-            deprecatedSource: {
-              component: 'kubelet',
-              host: '',
-            },
-            note: name,
-            reason: name,
-            regarding: objRef,
-            related: objRef,
-            reportingController: 'kubelet',
-            reportingInstance: String,
-            type: 'Normal'
-          });
-          return e.on(name, data)
-        },
+    this.defaultSearchQ = { 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace };
+  }
+
+  static findOneByReq(reqQuery = {}, reqParams = {}) {
+    let q = this.genFindQuery(reqQuery, reqParams);
+    return this.Model.findOne(q.params, q.projection, q.options)
+      .then((obj) => {
+        if (obj) {
+          return new this(obj).setResourceVersion();
+        }
+      });
+  }
+
+  static findByReq(reqQuery = {}, reqParams = {}, options = {}) {
+    let q = this.genFindQuery(reqQuery, reqParams, options)
+    console.log(q);
+    return this.Model.find(q.params, q.projection, q.options)
+      .then((arr) => {
+        if (arr) {
+          return Promise.all(arr.map((obj) => new this(obj).setResourceVersion()));
+        }
+      });
+  }
+
+  static findOne(params = {}, projection = {}, options = {}) {
+    return this.Model.findOne(params, projection, options)
+      .then((obj) => {
+        if (obj) {
+          return new this(obj).setResourceVersion();
+        }
+      });
+  }
+
+  static find(params = {}, projection = {}, options = {}) {
+    return this.Model.find(params, projection, options)
+      .then((arr) => {
+        if (arr) {
+          return Promise.all(arr.map((obj) => new this(obj).setResourceVersion()));
+        }
+      });
+  }
+
+  static create(config, searchQ) {
+    if (!searchQ) {
+      searchQ = { 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace };
+    }
+    return this.findOne()
+    .then((existingObj) => {
+      if (existingObj) {
+        throw this.alreadyExistsStatus(config.metadata.name);
       }
-    })()
+      return new this.Model(config).save();
+    })
+    .then((obj) => obj);
+  }
+
+  delete (searchQ) {
+    if (!searchQ) {
+      searchQ = { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace };
+    }
+    return this.Model.findOneAndDelete(searchQ)
+    .then((obj) => {
+      if (obj) {
+        return obj;
+      }
+    });
+  }
+
+  update(updateObj, searchQ, options = {}) {
+    if (!searchQ) {
+      searchQ = { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace };
+    }
+    return this.Model.findOneAndUpdate(
+      searchQ,
+      updateObj,
+      {
+        new: true,
+        ...options,
+      }
+    )
+    .then((obj) => {
+      if (obj) {
+        return obj;
+      }
+    });
+  }
+
+  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
+    return this.find(queryOptions, sortOptions);
+  }
+
+  static findAllSortedByReq(reqQuery = {}, reqParams = {}, sortOptions = { 'created_at': 1 }) {
+    return this.findByReq(reqQuery, reqParams, sortOptions);
+  }
+
+  static list (queryOptions = {}) {
+    return this.findAllSortedByReq(queryOptions)
+      .then(async (arr) => ({
+        apiVersion: this.apiVersion,
+        kind: `${this.kind}List`,
+        metadata: {
+          continue: queryOptions?.limit < arr.length ? "true" : undefined,
+          remainingItemCount: queryOptions.limit && queryOptions.limit < arr.length ? arr.length - queryOptions.limit : 0,
+          resourceVersion: `${await this.hash(`${arr.length}${JSON.stringify(arr[0])}`)}`
+        },
+        items: arr
+      }));
   }
 
   getMetadata() {
@@ -46,12 +122,57 @@ class Object {
   async setResourceVersion() {
     this.metadata = {
       ...this.metadata,
-      resourceVersion: `${await Object.hash(JSON.stringify(this))}`
+      resourceVersion: `${await K8Object.hash(JSON.stringify(this))}`
     }
+    return this;
+  }
+
+  static genFindQuery(reqQuery = {}, reqParams = {}, sortOptions = {}) {
+    let params = {};
+    if (reqParams.name) {
+      params['metadata.name'] = reqParams.name;
+    }
+    if (reqParams.namespace) {
+      params['metadata.namespace'] = reqParams.namespace;
+    }
+    let projection = {};
+    if (reqQuery.node) {
+      params['metadata.node'] = reqQuery.node;
+    }
+    if (reqQuery.resourceVersionMatch) {
+      params['metadata.resourceVersion'] = reqQuery.resourceVersionMatch;
+    }
+    if (reqQuery.fieldSelector) {
+      if ('true' === reqQuery.fieldSelector?.split('=')[1]) {
+        projection[reqQuery.fieldSelector.split('=')[0]] = 1;
+      } else if ('false' === reqQuery.fieldSelector?.split('=')[1]) {
+        projection[reqQuery.fieldSelector.split('=')[0]] = 0;
+      }
+    }
+    let options = {};
+    if (Object.keys(sortOptions).length > 0) {
+      options.sort = sortOptions;
+    }
+    if (sortOptions.limit) {
+      options.limit = Number(reqQuery.limit);
+    }
+    return {
+      params,
+      projection,
+      options,
+    };
+  }
+
+  static genFindSortedQuery(reqQuery = {}, reqParams = {}, sortOptions = { 'created_at': 1 }) {
+    return this.genFindQuery(reqQuery, reqParams, sortOptions)
   }
 
   getKind() {
     return this.kind;
+  }
+
+  getEventEmitter() {
+    return this.objEmitter;
   }
 
   getApiVersion() {
@@ -85,7 +206,7 @@ class Object {
     return this.arrayBufferTo53bitNumber(sha256);
   }
 
-  static notFoundStatus(kind = undefined, name = undefined, group = undefined) {
+  static notFoundStatus(kind = this.kind, name = undefined, group = undefined) {
     return new Status({
       status: 'Failure',
       reason: 'NotFound',
@@ -99,7 +220,7 @@ class Object {
     });
   }
 
-  static forbiddenStatus(kind = undefined, name = undefined, group = undefined) {
+  static forbiddenStatus(kind = this.kind, name = undefined, group = undefined) {
     return new Status({
       status: 'Failure',
       reason: 'Forbidden',
@@ -113,7 +234,7 @@ class Object {
     });
   }
 
-  static unprocessableContentStatus(kind = undefined, name = undefined, group = undefined, message = undefined) {
+  static unprocessableContentStatus(kind = this.kind, name = undefined, group = undefined, message = undefined) {
     return new Status({
       status: 'Failure',
       reason: 'UnprocessableContent',
@@ -127,7 +248,7 @@ class Object {
     });
   }
 
-  static alreadyExistsStatus(kind = undefined, name = undefined, group = undefined) {
+  static alreadyExistsStatus(kind = this.kind, name = undefined, group = undefined) {
     return new Status({
       status: 'Failure',
       reason: 'AlreadyExists',
@@ -141,7 +262,7 @@ class Object {
     });
   }
 
-  static internalServerErrorStatus(kind = undefined, name = undefined, group = undefined) {
+  static internalServerErrorStatus(kind = this.kind, name = undefined, group = undefined) {
     return new Status({
       status: 'Failure',
       reason: 'InternalServerError',
@@ -156,4 +277,4 @@ class Object {
   }
 }
 
-module.exports = Object;
+module.exports = K8Object;

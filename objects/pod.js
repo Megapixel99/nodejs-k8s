@@ -1,5 +1,6 @@
 const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
+const EventEmitter = require('./emitter.js');
 const Secret = require('./secret.js');
 const ConfigMap = require('./configMap.js');
 const { Pod: Model } = require('../database/models.js');
@@ -19,28 +20,15 @@ class Pod extends K8Object {
     super(config);
     this.spec = config.spec;
     this.status = config.status;
+    this.eventEmitter = new EventEmitter(config);
+    this.apiVersion = Pod.apiVersion;
+    this.kind = Pod.kind;
+    this.Model = Pod.Model;
   }
 
   static apiVersion = 'v1';
   static kind = 'Pod';
-
-  static findOne(params) {
-    return Model.findOne(params)
-      .then((pod) => {
-        if (pod) {
-          return new Pod(pod).setResourceVersion();
-        }
-      });
-  }
-
-  static find(params) {
-    return Model.find(params)
-      .then((pods) => {
-        if (pods) {
-          return Promise.all(pods.map((pod) => new Pod(pod).setResourceVersion()));
-        }
-      });
-  }
+  static Model = Model;
 
   static async create(config) {
     let otherPod = undefined;
@@ -71,7 +59,7 @@ class Pod extends K8Object {
           return getContainerIP(podName)
             .then((data) => JSON.parse(data.raw)[0]?.NetworkSettings.Networks.bridge.IPAddress)
             .then((ip) => {
-              newPod.eventEmitter.emit('NewContainer', {
+              newPod.events().emit('NewContainer', {
                 ip,
                 nodeName: '',
                 targetRef: {
@@ -89,21 +77,36 @@ class Pod extends K8Object {
             let [podIP, podName] = podInfo;
             return new Promise(function(resolve, reject) {
               let inter = setInterval(async () => {
-                // console.log(podName);
                 try {
                   if ((await isContainerRunning(podName)).object === true) {
                     clearInterval(inter);
-                    newPod.eventEmitter.emit('ContainersReady', newPod);
+                    newPod.events().emit('ContainersReady', newPod);
                     newPod.update({
                       $push: {
                         'status.conditions': [{
                           type: "ContainersReady",
                           status: 'True',
-                          lastTransitionTime: new Date(),
-                        }]
+                          lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+                        }],
+                        'status.podIPs': [{
+                          ip: podIP
+                        }],
+                        'status.containerStatuses': [{
+                          "restartCount": 0,
+                          "started": true,
+                          "ready": true,
+                          "name": config.metadata.name,
+                          "imageID": "",
+                          "image": "",
+                          "lastState": {},
+                          "containerID": podName
+                        }],
+                      },
+                      $set: {
+                        'status.podIP': podIP,
                       }
                     })
-                    .then(() => podInfo);
+                    .then(() => resolve());
                   }
                 } catch (e) {
                   reject(e);
@@ -112,52 +115,23 @@ class Pod extends K8Object {
             });
           }));
         })
-        .then((podsInfo) => {
-          return Promise.all(podsInfo.map(async (podInfo) => {
-            let [podIP, podName] = podInfo
-            console.log(`Pod Name: ${podName}`);
-            return; newPod.update({
-              $push: {
-                'status.containerStatuses': {
-                  "restartCount": 0,
-                  "started": true,
-                  "ready": true,
-                  "name": config.metadata.name,
-                  "state": {
-                    "running": {
-                      "startedAt": new Date(),
-                    }
-                  },
-                  "imageID": "",
-                  "image": "",
-                  "lastState": {},
-                  "containerID": podName
-                },
-                'status.podIPs': {
-                  ip: podIP
-                },
-              },
-              $set: {
-                'status.phase': 'Running',
-                'status.podIP': podIP,
-              }
-            })
-          }));
-        })
         .then(() => {
-          newPod.eventEmitter.emit('Ready', newPod);
-          newPod.eventEmitter.emit('PodScheduled', newPod);
+          newPod.events().emit('Ready', newPod);
+          newPod.events().emit('PodScheduled', newPod);
           return newPod.update({
             $push: {
               'status.conditions': [{
                 type: "Ready",
                 status: 'True',
-                lastTransitionTime: new Date(),
+                lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
               }, {
                 type: "PodScheduled",
                 status: 'True',
-                lastTransitionTime: new Date(),
+                lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
               }],
+            },
+            $set: {
+              'status.phase': 'Running'
             }
           });
         });
@@ -166,7 +140,7 @@ class Pod extends K8Object {
   }
 
   events() {
-    return super.eventEmitter;
+    return this.eventEmitter;
   }
 
   async logs() {
@@ -178,62 +152,6 @@ class Pod extends K8Object {
     this.spec = config.spec;
     this.status = config.status;
     return this;
-  }
-
-  async setResourceVersion() {
-    await super.setResourceVersion();
-    return this;
-  }
-
-  delete () {
-    this.stop();
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-    .then((pod) => {
-      if (pod) {
-        super.eventEmitter.emit('Delete', pod);
-        return this.setConfig(pod);
-      }
-    });
-  }
-
-  update(updateObj) {
-    return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
-      updateObj,
-      { new: true }
-    )
-    .then((pod) => {
-      if (pod) {
-        return this.setConfig(pod);
-      }
-    });
-  }
-
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
-    let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
-    return this.find(params, projection, options);
-  }
-
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (pods) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: queryOptions?.limit < pods.length ? "true" : undefined,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < pods.length ? pods.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${pods.length}${JSON.stringify(pods[0])}`)}`
-        },
-        items: pods
-      }));
   }
 
   static table (queryOptions = {}) {
@@ -315,7 +233,7 @@ class Pod extends K8Object {
             `${e.status.phase === "Running" ? 1 : 0}/1`,
             e.status.phase,
             (e.status.containerStatuses.restartCount || 0),
-            duration(new Date() - e.metadata.creationTimestamp),
+            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
             (e.status.podIP || '<None>'),
             (e.metadata.generateName || '<None>'),
             (e.status.nominatedNodeName || '<None>'),
@@ -328,22 +246,6 @@ class Pod extends K8Object {
           }
         })),
       }));
-  }
-
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
   }
 
   stop() {
