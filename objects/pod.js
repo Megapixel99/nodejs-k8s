@@ -1,3 +1,4 @@
+const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const Secret = require('./secret.js');
 const ConfigMap = require('./configMap.js');
@@ -47,7 +48,7 @@ class Pod extends K8Object {
       otherPod = await Pod.findOne({ 'metadata.generateName': config.metadata.generateName });
     } while (otherPod);
     if (!config?.metadata?.creationTimestamp) {
-      config.metadata.creationTimestamp = new Date();
+      config.metadata.creationTimestamp = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
     }
     if (!config.status) {
       config.status = {};
@@ -58,7 +59,7 @@ class Pod extends K8Object {
     config.status.conditions.push({
       type: "Initialized",
       status: 'True',
-      lastTransitionTime: new Date(),
+      lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
     });
     return new Model(config).save()
     .then((pod) => {

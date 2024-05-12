@@ -1,3 +1,4 @@
+const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const { ClusterRole: Model } = require('../database/models.js');
 const { duration } = require('../functions.js');
@@ -108,7 +109,7 @@ class ClusterRole extends K8Object {
         "rows": clusterRoles.map((e) => ({
           "cells": [
             e.metadata.name,
-            duration(new Date() - e.metadata.creationTimestamp),
+            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
           ],
           object: {
             "kind": "PartialObjectMetadata",

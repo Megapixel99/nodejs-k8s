@@ -1,3 +1,4 @@
+const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const { ConfigMap: Model } = require('../database/models.js');
 const { isText, isBinary, duration } = require('../functions.js');
@@ -137,7 +138,7 @@ class ConfigMap extends K8Object {
             Object.keys(e.data).length,
             Object.keys(e.binaryData).length,
             e.immutable ?? false,
-            duration(new Date() - e.metadata.creationTimestamp),
+            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
           ],
           object: {
             "kind": "PartialObjectMetadata",

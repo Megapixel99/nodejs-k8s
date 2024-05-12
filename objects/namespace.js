@@ -1,3 +1,4 @@
+const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const { Namespace: Model } = require('../database/models.js');
 const Models = require('../database/models.js');
@@ -126,7 +127,7 @@ class Namespace extends K8Object {
         "rows": namespaces.map((e) => ({
           "cells": [
             e.metadata.name,
-            duration(new Date() - e.metadata.creationTimestamp),
+            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
           ],
           object: {
             "kind": "PartialObjectMetadata",

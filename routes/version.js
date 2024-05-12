@@ -1,6 +1,7 @@
+const { DateTime } = require('luxon');
 const router = require('express').Router();
 
-let bDate = new Date();
+let bDate = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
 
 router.get('/version', (req, res) => {
   res.json({

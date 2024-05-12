@@ -1,3 +1,4 @@
+const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const Pod = require('./pod.js');
 const Service = require('./service.js');
@@ -202,7 +203,7 @@ class Deployment extends K8Object {
             `${e.status.availableReplicas}/${e.spec.replicas}`,
             e.status.updatedReplicas,
             e.status.availableReplicas,
-            duration(new Date() - e.metadata.creationTimestamp),
+            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
             e.spec.template.spec.containers.map((e) => e.name).join(', '),
             e.spec.template.spec.containers.map((e) => e.image).join(', '),
             Object.values(e.spec.selector.matchLabels).join(', '),

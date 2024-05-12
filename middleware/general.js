@@ -1,3 +1,5 @@
+const { DateTime } = require('luxon');
+
 module.exports = {
   find(Model) {
     return (req, res, next) => {
@@ -43,7 +45,7 @@ module.exports = {
   save(Model) {
     return (req, res, next) => {
       if (!req.body?.metadata?.creationTimestamp) {
-        req.body.metadata.creationTimestamp = new Date();
+        req.body.metadata.creationTimestamp = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
       }
       if (!req.body?.metadata?.namespace) {
         req.body.metadata.namespace = (req.params.namespace || "default");

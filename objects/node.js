@@ -1,3 +1,4 @@
+const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const { Node: Model } = require('../database/models.js');
 const Namespace = require('./namespace.js');
@@ -50,8 +51,8 @@ class Node extends K8Object {
       config.status.conditions = [{
         "type": "Ready",
         "status": "False",
-        "lastHeartbeatTime": new Date(),
-        "lastTransitionTime": new Date(),
+        "lastHeartbeatTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+        "lastTransitionTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
         "reason": "KubeletNotReady",
         "message": "kubelet is not ready"
       }]
@@ -81,29 +82,29 @@ class Node extends K8Object {
             'status.conditions': [{
               "type": "MemoryPressure",
               "status": "False",
-              "lastHeartbeatTime": new Date(),
-              "lastTransitionTime": new Date(),
+              "lastHeartbeatTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+              "lastTransitionTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
               "reason": "KubeletHasSufficientMemory",
               "message": "kubelet has sufficient memory available"
             }, {
               "type": "DiskPressure",
               "status": "False",
-              "lastHeartbeatTime": new Date(),
-              "lastTransitionTime": new Date(),
+              "lastHeartbeatTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+              "lastTransitionTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
               "reason": "KubeletHasNoDiskPressure",
               "message": "kubelet has no disk pressure"
             }, {
               "type": "PIDPressure",
               "status": "False",
-              "lastHeartbeatTime": new Date(),
-              "lastTransitionTime": new Date(),
+              "lastHeartbeatTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+              "lastTransitionTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
               "reason": "KubeletHasSufficientPID",
               "message": "kubelet has sufficient PID available"
             }, {
               "type": "Ready",
               "status": "True",
-              "lastHeartbeatTime": new Date(),
-              "lastTransitionTime": new Date(),
+              "lastHeartbeatTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+              "lastTransitionTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
               "reason": "KubeletReady",
               "message": "kubelet is posting ready status"
             }],

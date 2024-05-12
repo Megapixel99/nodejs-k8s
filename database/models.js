@@ -1,8 +1,9 @@
 const { Schema, model } = require('mongoose');
+const { DateTime } = require('luxon');
 const { v4: uuid } = require('uuid');
 
 const metadata = {
-  creationTimestamp: { type: Date, default: new Date() },
+  creationTimestamp: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") },
   uid: { type: String, default: uuid() },
   name: { type: String, required: true },
   generateName: String,
@@ -229,21 +230,21 @@ const pod = {
   kind: String,
   metadata,
   spec: {
-    initContainers: { type: [container], default: undefined },
-    containers: { type: [container], default: undefined },
-    ephemeralContainers: { type: [ephemeralContainer], default: undefined },
-    imagePullSecrets: {
+    initContainers: { type: [container], default: [] },
+    containers: { type: [container], default: [] },
+    ephemeralContainers: { type: [ephemeralContainer], default: [] },
+    imagePullSecrets: [{
       name: String,
-    },
+    }],
     enableServiceLinks: Boolean,
     os: {
       name: String,
     },
     restartPolicy: String,
     activeDeadlineSeconds: Number,
-    readinessGates: {
+    readinessGates: [{
       conditionType: String,
-    },
+    }],
     terminationGracePeriodSeconds: Number,
     dnsPolicy: String,
     securityContext: {},
@@ -263,17 +264,17 @@ const pod = {
         enum: [ 'True', 'False', 'Unknown' ],
         default: 'False'
       },
-      lastProbeTime: Date,
+      lastProbeTime: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") },
       reason: String,
       message: String,
-      lastTransitionTime: Date
+      lastTransitionTime: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") }
     }],
     hostIP: String,
     podIP: { type: String, default: null },
     podIPs: [{
       ip: String
     }],
-    startTime: Date,
+    startTime: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") },
     containerStatuses: [{
       restartCount: { type: Number, default: 0 },
       started: Boolean,
@@ -281,7 +282,7 @@ const pod = {
       name: String,
       state: {
         running: {
-          startedAt: String
+          startedAt: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") }
         }
       },
       imageID: String,
@@ -302,7 +303,7 @@ const statusConditions = {
   conditions: {
     status: String,
     type: String,
-    lastTransitionTime: Date,
+    lastTransitionTime: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") },
     message: String,
     reason: String,
   }
@@ -729,8 +730,8 @@ const nodeSchema = Schema({
       of: String,
     },
     conditions: [{
-      lastHeartbeatTime: Date,
-      lastTransitionTime: Date,
+      lastHeartbeatTime: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") },
+      lastTransitionTime: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") },
       message: String,
       reason: String,
       status: String,
@@ -812,8 +813,8 @@ const eventSchema = Schema({
   metadata,
   action: String,
   deprecatedCount: { type: Number, default: 0 },
-  deprecatedFirstTimestamp: { type: Date, default: new Date() },
-  deprecatedLastTimestamp: { type: Date, default: new Date() },
+  deprecatedFirstTimestamp: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000") },
+  deprecatedLastTimestamp: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000") },
   deprecatedSource: {
     component: String,
     host: String,
@@ -826,7 +827,7 @@ const eventSchema = Schema({
   reportingInstance: String,
   series: {
     count: { type: Number, default: 0 },
-    lastObservedTime: { type: Date, default: new Date() },
+    lastObservedTime: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000") },
   },
   type: { type: String, enum: [ 'Normal', 'Warning' ] },
 })
@@ -849,7 +850,7 @@ const replicaSetSchema = Schema({
     conditions: [{
       status: String,
       type: String,
-      lastTransitionTime: { type: Date, default: new Date() },
+      lastTransitionTime: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") },
       message: String,
       reason: String,
     }],
@@ -885,7 +886,7 @@ const daemonSetSchema = Schema({
     conditions: [{
       status: String,
       type: String,
-      lastTransitionTime: { type: Date, default: new Date() },
+      lastTransitionTime: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") },
       message: String,
       reason: String,
     }],
