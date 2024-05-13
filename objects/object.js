@@ -6,7 +6,6 @@ class K8Object {
     this.apiVersion = config.apiVersion;
     this.kind = config.kind;
     this.metadata = config.metadata;
-    this.defaultSearchQ = { 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace };
   }
 
   static findOneByReq(reqQuery = {}, reqParams = {}) {
@@ -21,7 +20,6 @@ class K8Object {
 
   static findByReq(reqQuery = {}, reqParams = {}, options = {}) {
     let q = this.genFindQuery(reqQuery, reqParams, options)
-    console.log(q);
     return this.Model.find(q.params, q.projection, q.options)
       .then((arr) => {
         if (arr) {
@@ -101,18 +99,27 @@ class K8Object {
     return this.findByReq(reqQuery, reqParams, sortOptions);
   }
 
-  static list (queryOptions = {}) {
-    return this.findAllSortedByReq(queryOptions)
-      .then(async (arr) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: queryOptions?.limit < arr.length ? "true" : undefined,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < arr.length ? arr.length - queryOptions.limit : 0,
-          resourceVersion: `${await this.hash(`${arr.length}${JSON.stringify(arr[0])}`)}`
-        },
-        items: arr
-      }));
+  static async list (queryOptions = {}, data = []) {
+    return {
+      apiVersion: this.apiVersion,
+      kind: `${this.kind}List`,
+      metadata: {
+        continue: queryOptions?.limit < data.length ? "true" : undefined,
+        remainingItemCount: queryOptions.limit && queryOptions.limit < data.length ? data.length - queryOptions.limit : 0,
+        resourceVersion: `${await this.hash(`${data.length}${JSON.stringify(data[0])}`)}`
+      },
+      items: data
+    }
+  }
+
+  static listByReq (reqQuery = {}, reqParams = {}, queryOptions = {}) {
+    return this.findAllSortedByReq(reqQuery, reqParams, queryOptions)
+      .then((arr) => this.list(queryOptions, arr));
+  }
+
+  static listByQuery (queryOptions = {}) {
+    return this.findAllSorted(queryOptions)
+      .then((arr) => this.list(queryOptions, arr));
   }
 
   getMetadata() {
@@ -147,6 +154,9 @@ class K8Object {
         projection[reqQuery.fieldSelector.split('=')[0]] = 1;
       } else if ('false' === reqQuery.fieldSelector?.split('=')[1]) {
         projection[reqQuery.fieldSelector.split('=')[0]] = 0;
+      } else {
+        params[reqQuery.fieldSelector.split('=')[0]] = reqQuery.fieldSelector?.split('=')[1];
+        // projection[reqQuery.fieldSelector.split('=')[0]] = 1;
       }
     }
     let options = {};
