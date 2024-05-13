@@ -46,6 +46,10 @@ class K8Object {
       });
   }
 
+  events() {
+    return this.eventEmitter;
+  }
+
   static create(config, searchQ) {
     if (!searchQ) {
       searchQ = { 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace };

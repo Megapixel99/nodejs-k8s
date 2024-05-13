@@ -20,7 +20,6 @@ class Pod extends K8Object {
     super(config);
     this.spec = config.spec;
     this.status = config.status;
-    this.eventEmitter = new EventEmitter(config);
     this.apiVersion = Pod.apiVersion;
     this.kind = Pod.kind;
     this.Model = Pod.Model;
@@ -140,7 +139,7 @@ class Pod extends K8Object {
   }
 
   events() {
-    return this.eventEmitter;
+    return new EventEmitter(this);
   }
 
   async logs() {
