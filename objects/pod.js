@@ -247,6 +247,11 @@ class Pod extends K8Object {
       }));
   }
 
+  delete () {
+    super.delete()
+    .then((pod) => pod ? new Pod(pod).stop() : Promise.resolve());
+  }
+
   stop() {
     Promise.all(this.spec.containers.map((e) => {
       return stopContainer(`${this.metadata.generateName}-${e.name}`)
