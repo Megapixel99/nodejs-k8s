@@ -29,7 +29,7 @@ module.exports = {
           .then((table) => res.status(200).send(table))
           .catch(next);
       }
-      Model.list(req.query, req.params)
+      Model.listByReq(req.query, req.params)
       .then((list) => res.status(200).send(list))
       .catch(next);
     };
