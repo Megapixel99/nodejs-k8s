@@ -2,9 +2,9 @@
   "kind": "Node",
   "apiVersion": "v1",
   "metadata": {
-    "name": "${ip}",
+    "name": "worker-node-1",
     "labels": {
-      "name": "my-first-k8s-node"
+      "name": "worker-node-1"
     }
   },
   "status": {
@@ -31,6 +31,11 @@
         "type": "Hostname",
         "address": "$ip"
       }
-    ]
+    ],
+    "daemonEndpoints": {
+      "kubeletEndpoint": {
+        "Port": 10250
+      }
+    }
   }
 }
