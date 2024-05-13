@@ -28,6 +28,7 @@ class Node extends K8Object {
       if (existingNode) {
         throw this.alreadyExistsStatus(config.metadata.name);
       }
+      config.status.allocatable = config.status.capacity;
       config.status.conditions = [{
         "type": "Ready",
         "status": "False",
@@ -47,41 +48,44 @@ class Node extends K8Object {
           let createNamespace = (name) => Namespace.create({ metadata: { name } });
           await Promise.all([
             Namespace.findOne({ 'metadata.name': 'kube-system' })
-              .then((namespace) => namespace ? Promise.resolve() : createNamespace('kube-system')),
+              .then((namespace) => namespace ? Promise.resolve() : createNamespace('kube-system'))
+              .then(() => Pod.findOne({ 'metadata.namespace': 'kube-system', 'metadata.name': 'core-dns' }))
+              .then((pod) => {
+                if (pod) {
+                  return Promise.resolve();
+                }
+                return Pod.create({
+                  metadata: {
+                    name: 'core-dns',
+                    namespace: 'kube-system',
+                    labels: {
+                      name: "core-dns",
+                      role: "core-dns"
+                    },
+                  },
+                  status: {
+                    hostIP: node?.status?.addresses?.find((e) => e.type === 'InternalIP')?.address,
+                  },
+                  spec: {
+                    containers: [{
+                      name: "core-dns",
+                      image: "dns:latest",
+                      ports: [{
+                        name: "udp",
+                        containerPort: 5333
+                      }, {
+                        name: "tcp",
+                        containerPort: 5334
+                      }],
+                    }]
+                  }
+                })
+              }),
             Namespace.findOne({ 'metadata.name': 'kube-public' })
               .then((namespace) => namespace ? Promise.resolve() : createNamespace('kube-public')),
             Namespace.findOne({ 'metadata.name': 'kube-node-lease' })
               .then((namespace) => namespace ? Promise.resolve() : createNamespace('kube-node-lease')),
           ]);
-          await Pod.findOne({ 'metadata.namespace': 'kube-system', 'metadata.name': 'core-dns' })
-            .then((pod) => {
-              if (pod) {
-                return Promise.resolve();
-              }
-              return Pod.create({
-                metadata: {
-                  name: 'core-dns',
-                  namespace: 'kube-system',
-                  labels: {
-                    name: "core-dns",
-                    role: "core-dns"
-                  },
-                },
-                spec: {
-                  containers: [{
-                    name: "core-dns",
-                    image: "dns:latest",
-                    ports: [{
-                      name: "udp",
-                      containerPort: 5333
-                    }, {
-                      name: "tcp",
-                      containerPort: 5334
-                    }],
-                  }]
-                }
-              })
-            });
           node.update({
             'status.images': [{
               names: [ node.metadata.labels.get('name') ],
