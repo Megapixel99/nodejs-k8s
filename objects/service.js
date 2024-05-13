@@ -250,6 +250,10 @@ class Service extends K8Object {
     return addPortToService(`${this.endpoints.metadata.generateName}-loadBalancer`, port);
   }
 
+  async findOldestPod() {
+    return (await Pod.findAllSorted({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })).at(-1);
+  }
+
   removePod(pod) {
     return this.endpoints.removePod(pod);
   }

@@ -330,7 +330,7 @@ const deploymentSchema = Schema({
   metadata,
   spec: {
     selector: labelSelector,
-    template: pod,
+    template: podTemplate,
     replicas: { type: Number, default: 1 },
     minReadySeconds: { type: Number, default: 30 },
     strategy: {
@@ -894,6 +894,32 @@ const daemonSetSchema = Schema({
   }
 })
 
+const replicationControllerSchema = Schema({
+ apiVersion: String,
+ kind: String,
+ metadata,
+ spec: {
+  minReadySeconds: { type: Number, default: 0 },
+  replicas: Number,
+  selector: labelSelector,
+  template: podTemplate,
+  },
+ status: {
+  availableReplicas: { type: Number, default: 0 },
+  conditions: [{
+    lastTransitionTime: String,
+    message: String,
+    reason: String,
+    status: String,
+    type: String,
+  }],
+  fullyLabeledReplicas: { type: Number, default: 0 },
+  observedGeneration: { type: Number, default: 0 },
+  readyReplicas: { type: Number, default: 0 },
+  replicas: { type: Number, default: 0 },
+  },
+});
+
 module.exports = {
   Namespace: model('Namespace', namespaceSchema),
   Deployment: model('Deployment', deploymentSchema),
@@ -912,6 +938,7 @@ module.exports = {
   Event: model('Event', eventSchema),
   Endpoints: model('Endpoints', endpointsSchema),
   ReplicaSet: model('ReplicaSet', replicaSetSchema),
+  ReplicationController: model('ReplicationController', replicationControllerSchema),
   DaemonSet: model('DaemonSet', daemonSetSchema),
   DNS: model('DNS', dns),
 };

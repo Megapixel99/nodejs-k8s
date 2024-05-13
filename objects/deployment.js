@@ -1,6 +1,6 @@
 const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
-const Pod = require('./pod.js');
+const ReplicationController = require('./replicationController.js');
 const Service = require('./service.js');
 const { Deployment: Model } = require('../database/models.js');
 const {
@@ -15,7 +15,6 @@ class Deployment extends K8Object {
     super(config);
     this.spec = config.spec;
     this.status = config.status;
-    this.rollingOut = false;
     this.apiVersion = Deployment.apiVersion;
     this.kind = Deployment.kind;
     this.Model = Deployment.Model;
@@ -33,7 +32,7 @@ class Deployment extends K8Object {
         newDeployment.rollout();
       }
       setInterval(() => {
-        if (newDeployment.rollingOut === false) {
+        if (newDeployment.rollingOut === false && newDeployment.spec.paused !== true) {
           Promise.all(
             newDeployment.spec.template.spec.containers
               .map((e) => getAllContainersWithName(newDeployment.spec.template.metadata.name, e.image))
@@ -41,29 +40,44 @@ class Deployment extends K8Object {
           .then((containers) => containers.map((e) => e.raw))
           .then((raw) => raw.toString().split('\n').filter((e) => e !== ''))
           .then((arr) => {
-            if (newDeployment.rollingOut === false) {
-              if (newDeployment.spec.replicas > arr.length) {
-                newDeployment.rollout(newDeployment.spec.replicas - arr.length);
-              } else if (newDeployment.spec.replicas < arr.length) {
-                new Array(arr.length - newDeployment.spec.replicas)
-                  .fill(0).forEach(() => newDeployment.deletePod());
-              }
-            }
+            return ReplicationController.create({
+              metadata: {
+                ...newDeployment.metadata,
+                name: `${newDeployment.metadata.name}-1`
+              },
+              spec: {
+                minReadySeconds: Infinity,
+                ...newDeployment.spec,
+              },
+            });
           })
+          .then(() => newDeployment.rollout());
         }
       }, 1000);
       return newDeployment;
     })
   }
 
-  update(updateObj) {
-    return super.update(updateObj)
-    .then((deployment) => {
+  update(updateObj, searchQ) {
+    return Promise.all([
+      super.update(updateObj, searchQ),
+      ReplicationController.find({ 'metadata.name': { $regex: `^${this.metadata.name}` } , 'metadata.namespace': this.metadata.namespace })
+    ])
+    .then(async (arr) => {
+      let [ deployment, rc ] = arr;
       if (deployment) {
         let newDeployment = this.setConfig(deployment);
-        if (newDeployment.spec.paused !== true &&
-          this.rollingOut === false &&
-          JSON.stringify(this.spec.template) !== JSON.stringify(deployment.spec.template)) {
+        if (newDeployment.spec.paused !== true) {
+          await ReplicationController.create({
+            metadata: {
+              ...newDeployment.metadata,
+              name: `${newDeployment.metadata.name}-${rc.length + 1}`
+            },
+            spec: {
+              minReadySeconds: 0,
+              ...newDeployment.spec,
+            },
+          });
           newDeployment.rollout();
         }
         return newDeployment;
@@ -172,123 +186,82 @@ class Deployment extends K8Object {
     return this.status;
   }
 
-  deletePod() {
-    return Pod.find(
-      { 'metadata.name': this.spec.template.metadata.name },
-      {},
-      {
-        sort: {
-          'created_at': 1
-        }
-      }
-    )
-    .then((pods) => {
-      if (pods[0]) {
-        return Promise.all([
-          pods[0].stop(),
-          pods[0].delete(),
-          Service.findOne({
-            'metadata.name': this.metadata.name
-          })
-          .then((service) => {
-            if (service) {
-              service.removePod(pod[0])
-            }
-          })
-        ])
-        .then(() => {
-          this.update({
-            $inc: {
-              'status.readyReplicas': -1,
-              'status.replicas': -1,
-              'status.availableReplicas': -1,
-            },
-          })
-        })
-      }
-    })
-  }
-
-  async createPod(config) {
-    if (!config?.metadata?.labels) {
-      config.metadata.labels = new Map();
-    }
-    config.metadata.labels.set('app', this.metadata.name);
-    if (!config?.metadata?.namespace) {
-      config.metadata.namespace = this.metadata.namespace
-    }
-    return Pod.create(config)
-    .then((newPod) => {
-      return Promise.all([
-        this.update({
-          $inc: {
-            'status.replicas': 1,
-            'status.readyReplicas': 1,
-            'status.availableReplicas': 1,
-          },
-          $set: {
-            conditions: [{
-              "type": "Progressing",
-              "status": "True",
-              "lastUpdateTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
-              "lastTransitionTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
-            },
-            {
-              "type": "Available",
-              "status": "True",
-              "lastUpdateTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
-              "lastTransitionTime": DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
-            }]
-          }
-        }),
-        Service.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-        .then((service) => {
-          if (service) {
-            return service.addPod(newPod);
-          }
-        })
-      ])
-    })
-    .then(() => {
-      if (this?.status?.replicas > this?.spec?.replicas) {
-        return this.deletePod();
-      }
-    })
-  }
-
-  async rollout(numPods = this.spec.replicas) {
-    if (this.rollingOut === false) {
-      this.rollingOut = true;
-      if (this.spec.strategy.type === "RollingUpdate") {
-        let percent = Number(`${this.spec.strategy.rollingUpdate.maxUnavailable}`.match(/\d*/)[0]);;
-        let newPods = 0;
-        do {
-          await Promise.all(
-            new Array(Math.ceil(numPods * percent / 100))
-            .fill(0)
-            .map(() => {
-              newPods += 1;
-              return this.createPod(this.spec.template);
+  async rollout() {
+    let rc = (await ReplicationController.findAllSorted({ 'metadata.name': this.spec.metadata.name }))[0];
+    if (this.spec.strategy.type === "RollingUpdate") {
+      let percent = Number(`${this.spec.strategy.rollingUpdate.maxUnavailable}`.match(/\d*/)[0]);;
+      let newPods = 0;
+      do {
+        await Promise.all(
+          new Array(Math.ceil(numPods * percent / 100))
+          .fill(0)
+          .map(() => {
+            newPods += 1;
+            this.update({
+              $set: {
+                'conditions.$.type': "Progressing",
+                'conditions.$.status': "True",
+                'conditions.$.lastUpdateTime': DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+                'conditions.$.lastTransitionTime': DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+              }
+            }, {
+              'conditions.type': 'Progressing',
+              'metadata.name': this.metadata.name,
+              'metadata.namespace': this.metadata.namespace
             })
-          );
-        } while (this.status.replicas < numPods);
-      } else if (this.spec.strategy.type === "Recreate") {
-        Promise.all(
-          new Array(numPods)
-          .fill(0)
-          .map(() => {
-            return this.deletePod();
+            return rc.createPods(1)
+            .then((pods) => {
+              return Promise.all([
+                this.update({
+                  $inc: {
+                    'status.replicas': 1,
+                    'status.readyReplicas': 1,
+                    'status.availableReplicas': 1,
+                  },
+                  $set: {
+                    'conditions.$.type': "Available",
+                    'conditions.$.status': "True",
+                    'conditions.$.lastUpdateTime': DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+                    'conditions.$.lastTransitionTime': DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+                  }
+                }, {
+                  'conditions.type': 'Available',
+                  'metadata.name': this.metadata.name,
+                  'metadata.namespace': this.metadata.namespace
+                }),
+                Service.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
+                .then((service) => {
+                  if (service) {
+                    return service.addPod(pods[0]);
+                  }
+                })
+              ])
+            })
+            .then(() => rc.deletePods(1))
+            .then(() => {
+              return Promise.all([
+                this.update({
+                  $inc: {
+                    'status.replicas': -1,
+                    'status.readyReplicas': -1,
+                    'status.availableReplicas': -1,
+                  },
+                }),
+                Service.findOldestPod()
+                .then((service) => {
+                  if (service) {
+                    return service.removePod(newPod);
+                  }
+                })
+              ])
+            })
           })
-        ).then(() =>
-          new Array(numPods)
-          .fill(0)
-          .map(() => {
-            return this.createPod(this.spec.template);
-          })
-        )
-      }
+        );
+      } while (this.status.replicas < numPods);
+    } else if (this.spec.strategy.type === "Recreate") {
+      return Promise.all(rc.deletePods())
+      .then(() => Promise.all(rc.createPods()));
     }
-    this.rollingOut = false;
   }
 }
 
