@@ -1,3 +1,4 @@
+const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const Pod = require('./pod.js');
 const Endpoints = require('./endpoints.js');
@@ -22,10 +23,14 @@ class Service extends K8Object {
     this.spec = config.spec;
     this.status = config.status;
     this.endpoints = null;
+    this.apiVersion = Service.apiVersion;
+    this.kind = Service.kind;
+    this.Model = Service.Model;
   }
 
   static apiVersion = 'v1';
   static kind = 'Service';
+  static Model = Model;
 
   static findOne(params) {
     return Model.findOne(params)
@@ -46,12 +51,14 @@ class Service extends K8Object {
     return Model.find(params)
       .then((services) => {
         if (services) {
-          Endpoints.find(params)
+          return Endpoints.find(params)
           .then((endpoints) => {
-            return Promise.all(services.map((service) => new Service({
-              ...service,
-              endpoints: endpoints.find((e) => e.metadata.name === service.metadata.name),
-            }).setResourceVersion()));
+            return Promise.all(services.map((service) => {
+              service.endpoints = endpoints.filter((e) => e.metadata.name === service.metadata.name);
+              let s = new Service(service);
+              s.setResourceVersion();
+              return s;
+            }));
           })
         }
       });
@@ -86,12 +93,8 @@ class Service extends K8Object {
   }
 
   static create(config) {
-    return Promise.all([
-      this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace }),
-      Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
-    ])
-    .then((data) => {
-      let [ existingService, existingEndpoint ] = data;
+    return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+    .then((existingService) => {
       if (existingService) {
         throw this.alreadyExistsStatus(config.metadata.name);
       }
@@ -104,106 +107,42 @@ class Service extends K8Object {
       let newService = new Service(service);
       return Pod.find({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
         .then((pods) => {
-          return Endpoints.create({
-            metadata: newService.metadata,
-            subsets: newService.convertToSubsets(pods),
-            ports: newService.spec.ports.map((e) => `${e.port}:${e.targetPort}`).join(' '),
-          })
-            .then((newEndpoints) => {
-              newService.endpoints = newEndpoints;
-              return getContainerIP(`${newService.endpoints.metadata.name}-loadBalancer`);
-            })
-            .then((ipInfo) => JSON.parse(ipInfo?.raw)[0]?.NetworkSettings?.Networks?.bridge?.IPAddress)
-            .then((serviceIP) => {
-              if (serviceIP) {
-                return newService.update({
-                  $set: {
-                    'spec.clusterIP': serviceIP,
-                    'spec.clusterIPs': [serviceIP],
-                  }
-                });
+          Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+            .then(async (existingEndpoint) => {
+              let endpoints = existingEndpoint;
+              if (!endpoints) {
+                endpoints = (await Endpoints.create({
+                  metadata: newService.metadata,
+                  subsets: newService.convertToSubsets(pods),
+                  ports: newService.spec.ports.map((e) => `${e.port}:${e.targetPort}`).join(' '),
+                }));
               }
+              newService.endpoints = endpoints;
+              return getContainerIP(`${newService.endpoints.metadata.name}-loadBalancer`)
+              .then((ipInfo) => JSON.parse(ipInfo?.raw)[0]?.NetworkSettings?.Networks?.bridge?.IPAddress)
+              .then((serviceIP) => {
+                if (serviceIP) {
+                  return newService.update({
+                    $set: {
+                      'spec.clusterIP': serviceIP,
+                      'spec.clusterIPs': [serviceIP],
+                    }
+                  });
+                }
+              })
+              .then(async () => {
+                await new DNS({
+                  name: `${newService.metadata.name}.${newService.metadata.namespace}.cluster.local`,
+                  type: 'A',
+                  class: 'IN',
+                  ttl: 300,
+                  address: newService.spec.clusterIP,
+                }).save()
+                return newService;
+              });
             })
-            .then(async () => {
-              await new DNS({
-                name: `${newService.metadata.name}.${newService.metadata.namespace}.cluster.local`,
-                type: 'A',
-                class: 'IN',
-                ttl: 300,
-                address: newService.spec.clusterIP,
-              }).save()
-              return newService;
-            });
         })
     });
-  }
-
-  delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-    .then((service) => {
-      if (service) {
-        return this.setConfig(service);
-      }
-    });
-  }
-
-  update(updateObj) {
-    return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
-      updateObj,
-      { new: true }
-    )
-    .then((service) => {
-      if (service) {
-        return this.setConfig(service);
-      }
-    });
-  }
-
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
-  }
-
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
-    if (!([...new Set(Object.values(params))].find((e) => undefined))) {
-      params = {};
-    }
-    let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
-    return this.find(params, projection, options);
-  }
-
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (services) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: false,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < services.length ? services.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${services.length}${JSON.stringify(services[0])}`)}`
-        },
-        items: services
-      }));
   }
 
   static table (queryOptions = {}) {
@@ -265,14 +204,14 @@ class Service extends K8Object {
             "priority": 1
           }
         ],
-        "rows": pods.map((e) => ({
+        "rows": services.map((e) => ({
           "cells": [
             e.metadata.name,
             e.spec.type,
             (e.spec.clusterIP || e.spec.clusterIPs?.join() || '<None>'),
             (e.spec.externalIPs?.join() || '<None>'),
             e.spec?.ports?.length > 0 ? e.spec.ports.map((e) => `${e.port}/${e.protocol}`).join() : '<None>',
-            duration(new Date() - e.metadata.creationTimestamp),
+            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
             e.spec?.selector && Object.keys(e.spec.selector).length > 0 ? Object.entries(e.spec.selector).map((e) => `${e[0]}=${e[1]}`).join() : '<None>',
           ],
           object: {
@@ -288,11 +227,6 @@ class Service extends K8Object {
     await super.setResourceVersion();
     this.spec = config.spec;
     this.status = config.status;
-    return this;
-  }
-
-  async setResourceVersion() {
-    await super.setResourceVersion();
     return this;
   }
 
@@ -314,6 +248,10 @@ class Service extends K8Object {
 
   addPort(port) {
     return addPortToService(`${this.endpoints.metadata.generateName}-loadBalancer`, port);
+  }
+
+  async findOldestPod() {
+    return (await Pod.findAllSorted({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })).at(-1);
   }
 
   removePod(pod) {

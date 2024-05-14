@@ -62,6 +62,8 @@ const isContainerRunning = (containerName) => dockerCommand(`inspect -f '{{.Stat
 
 const stopContainer = (containerName) => dockerCommand(`stop ${containerName}`, { echo: false });
 
+const getContainerLogs = (containerName) => dockerCommand(`logs ${containerName}`, { echo: false });
+
 const killContainer = (containerName) => dockerCommand(`kill ${containerName}`, { echo: false });
 
 const removeContainer = (containerName) => dockerCommand(`rm ${containerName}`, { echo: false });
@@ -118,4 +120,5 @@ module.exports = {
   stopContainer,
   killContainer,
   removeContainer,
+  getContainerLogs,
 };

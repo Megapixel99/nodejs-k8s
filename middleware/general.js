@@ -1,11 +1,18 @@
+const { DateTime } = require('luxon');
+
 module.exports = {
+  find(Model) {
+    return (req, res, next) => {
+      Model.findByReq(req.query, req.params)
+        .then((items) => {
+          return res.status(200).send(items);
+        })
+        .catch(next);
+    };
+  },
   findOne(Model) {
     return (req, res, next) => {
-      let query = { 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace };
-      if (!req.params.namespace) {
-        query = { 'metadata.name': req.params.name };
-      }
-      Model.findOne(query)
+      Model.findOneByReq(req.query, req.params)
         .then((item) => {
           if (item) {
             return res.status(200).send(item);
@@ -22,7 +29,7 @@ module.exports = {
           .then((table) => res.status(200).send(table))
           .catch(next);
       }
-      Model.list(req.query)
+      Model.listByReq(req.query, req.params)
       .then((list) => res.status(200).send(list))
       .catch(next);
     };
@@ -30,7 +37,7 @@ module.exports = {
   save(Model) {
     return (req, res, next) => {
       if (!req.body?.metadata?.creationTimestamp) {
-        req.body.metadata.creationTimestamp = new Date();
+        req.body.metadata.creationTimestamp = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
       }
       if (!req.body?.metadata?.namespace) {
         req.body.metadata.namespace = (req.params.namespace || "default");

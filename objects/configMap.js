@@ -1,3 +1,4 @@
+const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const { ConfigMap: Model } = require('../database/models.js');
 const { isText, isBinary, duration } = require('../functions.js');
@@ -8,28 +9,14 @@ class ConfigMap extends K8Object {
     this.data = config.data;
     this.binaryData = config.binaryData;
     this.immutable = config.immutable;
+    this.apiVersion = ConfigMap.apiVersion;
+    this.kind = ConfigMap.kind;
+    this.Model = ConfigMap.Model;
   }
 
   static apiVersion = 'v1';
   static kind = 'ConfigMap';
-
-  static findOne(params = {}, projection = {}, options = {}) {
-    return Model.findOne(params, projection, options)
-      .then((configMap) => {
-        if (configMap) {
-          return new ConfigMap(configMap).setResourceVersion();
-        }
-      });
-  }
-
-  static find(params = {}, projection = {}, options = {}) {
-    return Model.find(params, projection, options)
-      .then((configMaps) => {
-        if (configMaps) {
-          return Promise.all(configMaps.map((configMap) => new ConfigMap(configMap).setResourceVersion()));
-        }
-      });
-  }
+  static Model = Model;
 
   static create(config) {
     const base64RegExp = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
@@ -57,36 +44,6 @@ class ConfigMap extends K8Object {
       return new Model(config).save();
     })
     .then((configMap) => new ConfigMap(configMap));
-  }
-
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
-    if (!([...new Set(Object.values(params))].find((e) => undefined))) {
-      params = {};
-    }
-    let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
-    return this.find(params, projection, options);
-  }
-
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (configMaps) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: false,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < configMaps.length ? configMaps.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${configMaps.length}${JSON.stringify(configMaps[0])}`)}`
-        },
-        items: configMaps
-      }));
   }
 
   static table (queryOptions = {}) {
@@ -140,7 +97,7 @@ class ConfigMap extends K8Object {
             Object.keys(e.data).length,
             Object.keys(e.binaryData).length,
             e.immutable ?? false,
-            duration(new Date() - e.metadata.creationTimestamp),
+            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
           ],
           object: {
             "kind": "PartialObjectMetadata",
@@ -149,55 +106,6 @@ class ConfigMap extends K8Object {
           }
         })),
       }));
-  }
-
-  delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-    .then((configMap) => {
-      if (configMap) {
-        return this.setConfig(configMap);
-      }
-    });
-  }
-
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
-  }
-
-  update(updateObj, options = {}) {
-    if (this?.immutable === true) {
-      throw new Error(`ConfigMap ${config.metadata.name} is immutable`);
-    }
-    return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
-      updateObj,
-      {
-        new: true,
-        ...options,
-      }
-    )
-    .then((configMap) => {
-      if (configMap) {
-        return this.setConfig(configMap);
-      }
-    });
-  }
-
-  async setResourceVersion() {
-    await super.setResourceVersion();
-    return this;
   }
 
   mapVariables() {
@@ -218,6 +126,8 @@ class ConfigMap extends K8Object {
   async setConfig(config) {
     await super.setResourceVersion();
     this.data = config.data;
+    this.binaryData = config.binaryData;
+    this.immutable = config.immutable;
     return this;
   }
 }

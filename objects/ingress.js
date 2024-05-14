@@ -1,3 +1,4 @@
+const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const Pod = require('./pod.js');
 const Service = require('./service.js');
@@ -9,38 +10,18 @@ class Ingress extends K8Object {
     super(config);
     this.spec = config.spec;
     this.status = config.status;
+    this.apiVersion = Ingress.apiVersion;
+    this.kind = Ingress.kind;
+    this.Model = Ingress.Model;
   }
 
   static apiGroup = 'networking.k8s.io';
   static apiVersion = `${this.apiGroup}/v1`;
   static kind = 'Ingress';
-
-  static findOne(params) {
-    return Model.findOne(params)
-      .then((ingress) => {
-        if (ingress) {
-          return new Ingress(ingress).setResourceVersion();
-        }
-      });
-  }
-
-  static find(params) {
-    return Model.find(params)
-      .then((ingresses) => {
-        if (ingresses) {
-          return Promise.all(ingresses.map((ingress) => new Ingress(ingress).setResourceVersion()));
-        }
-      });
-  }
+  static Model = Model;
 
   static create(config) {
-    return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
-    .then((existingIngress) => {
-      if (existingIngress) {
-        throw new Error(this.alreadyExistsStatus(config.metadata.name, this.apiGroup));
-      }
-      return new Model(config).save()
-    })
+    return super.create(config)
     .then(async (ingress) => {
       await Promise.all(
         req.body.spec.rules.map((rule) => {
@@ -68,58 +49,6 @@ class Ingress extends K8Object {
         }));
       return ingress;
     })
-  }
-
-  delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-    .then((ingress) => {
-      if (ingress) {
-        return this.setConfig(ingress);
-      }
-    });
-  }
-
-  update(updateObj) {
-    return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
-      updateObj,
-      { new: true }
-    )
-    .then((ingress) => {
-      if (ingress) {
-        return this.setConfig(ingress);
-      }
-    });
-  }
-
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
-    if (!([...new Set(Object.values(params))].find((e) => undefined))) {
-      params = {};
-    }
-    let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
-    return this.find(params, projection, options);
-  }
-
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (ingresses) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: false,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < ingresses.length ? ingresses.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${ingresses.length}${JSON.stringify(ingresses[0])}`)}`
-        },
-        items: ingresses
-      }));
   }
 
   static table (queryOptions = {}) {
@@ -188,7 +117,7 @@ class Ingress extends K8Object {
             (e.spec.clusterIP || e.spec.clusterIPs?.join() || '<None>'),
             (e.spec.externalIPs?.join() || '<None>'),
             e.spec?.ports?.length > 0 ? e.spec.ports.map((e) => `${e.port}/${e.protocol}`).join() : '<None>',
-            duration(new Date() - e.metadata.creationTimestamp),
+            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
             e.spec?.selector && Object.keys(e.spec.selector).length > 0 ? Object.entries(e.spec.selector).map((e) => `${e[0]}=${e[1]}`).join() : '<None>',
           ],
           object: {
@@ -200,31 +129,10 @@ class Ingress extends K8Object {
       }));
   }
 
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName, this.apiGroup);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName, this.apiGroup);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, this.apiGroup, message);
-  }
-
   async setConfig(config) {
     await super.setResourceVersion();
     this.spec = config.spec;
     this.status = config.status;
-    return this;
-  }
-
-  async setResourceVersion() {
-    await super.setResourceVersion();
     return this;
   }
 

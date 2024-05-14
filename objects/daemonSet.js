@@ -1,39 +1,39 @@
 const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
-const { CertificateSigningRequest: Model } = require('../database/models.js');
-const { duration } = require('../functions.js');
+const { DaemonSet: Model } = require('../database/models.js');
+const {
+  duration,
+  isContainerRunning,
+} = require('../functions.js');
 
-class CertificateSigningRequest extends K8Object {
+class DaemonSet extends K8Object {
   constructor(config) {
     super(config);
-    this.rules = config.rules;
-    this.apiVersion = CertificateSigningRequest.apiVersion;
-    this.kind = CertificateSigningRequest.kind;
-    this.Model = CertificateSigningRequest.Model;
+    this.spec = config.spec;
+    this.status = config.status;
+    this.apiVersion = DaemonSet.apiVersion;
+    this.kind = DaemonSet.kind;
+    this.Model = DaemonSet.Model;
   }
 
   static apiVersion = 'v1';
-  static kind = 'CertificateSigningRequest';
+  static kind = 'DaemonSet';
   static Model = Model;
-
-  static create(config) {
-    return super.create(config, { 'metadata.name': this.metadata.name });
-  }
 
   static table (queryOptions = {}) {
     return this.findAllSorted(queryOptions)
-      .then(async (certificateSigningRequests) => ({
+      .then(async (daemonSets) => ({
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${certificateSigningRequests.length}${JSON.stringify(certificateSigningRequests[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${daemonSets.length}${JSON.stringify(daemonSets[0])}`)}`,
         },
         "columnDefinitions": [
           {
             "name": "Name",
             "type": "string",
             "format": "name",
-            "description": "Name must be unique within a certificateSigningRequest. Is required when creating resources, although some resources may allow a client to request the generation of an appropriate name automatically. Name is primarily intended for creation idempotence and configuration definition. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+            "description": "Name must be unique within a daemonSet. Is required when creating resources, although some resources may allow a client to request the generation of an appropriate name automatically. Name is primarily intended for creation idempotence and configuration definition. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
             "priority": 0
           },
           {
@@ -44,7 +44,7 @@ class CertificateSigningRequest extends K8Object {
             "priority": 0
           },
         ],
-        "rows": certificateSigningRequests.map((e) => ({
+        "rows": daemonSets.map((e) => ({
           "cells": [
             e.metadata.name,
             duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
@@ -65,4 +65,4 @@ class CertificateSigningRequest extends K8Object {
   }
 }
 
-module.exports = CertificateSigningRequest;
+module.exports = DaemonSet;

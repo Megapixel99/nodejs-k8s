@@ -4,17 +4,19 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node ./test/test.js",
     "start": "./start.sh"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@wesleytodd/openapi": "^1.0.0",
+    "axios": "^1.6.8",
     "docker-cli-js": "^2.10.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.1",
     "istextorbinary": "^9.5.0",
+    "luxon": "^3.4.4",
     "mongoose": "^8.2.3",
     "node-cleanup": "^2.1.2",
     "portfinder": "^1.0.32",

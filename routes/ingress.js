@@ -2,13 +2,13 @@ const router = require('express').Router();
 const { Ingress } = require('../objects');
 const { general, openapi } = require('../middleware');
 
-const { apiNetworkingK8sIoV1OpenApiV3, apiV1OpenapiV3, validSchema } = openapi;
+const { apiNetworkingK8sIoV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = ['/apis/networking.k8s.io/v1/namespaces/:namespace/ingresses', '/api/v1/namespaces/:namespace/ingresses'];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiNetworkingK8sIoV1OpenApiV3), general.findOne(Ingress));
 
-router.get(['/api/v1/ingresses', ...routes], validSchema(apiV1OpenapiV3), general.list(Ingress));
+router.get(['/api/v1/ingresses', ...routes], validSchema(apiV1OpenApiV3), general.list(Ingress));
 
 router.post(routes, validSchema(apiNetworkingK8sIoV1OpenApiV3), general.save(Ingress));
 

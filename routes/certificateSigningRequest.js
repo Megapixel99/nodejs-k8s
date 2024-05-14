@@ -2,13 +2,13 @@ const router = require('express').Router();
 const { CertificateSigningRequest } = require('../objects');
 const { general, openapi } = require('../middleware');
 
-const { apiCertificatesK8sIoApiV3, apiV1OpenapiV3, validSchema } = openapi;
+const { apiCertificatesK8sIoApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 let routes = ['/apis/certificates.k8s.io/v1/certificatesigningrequests'];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiCertificatesK8sIoApiV3), general.findOne(CertificateSigningRequest));
 
-router.get(['/api/v1/certificatesigningrequests', ...routes], validSchema(apiV1OpenapiV3), general.list(CertificateSigningRequest));
+router.get(['/api/v1/certificatesigningrequests', ...routes], validSchema(apiV1OpenApiV3), general.list(CertificateSigningRequest));
 
 router.post(routes, validSchema(apiCertificatesK8sIoApiV3), general.save(CertificateSigningRequest));
 

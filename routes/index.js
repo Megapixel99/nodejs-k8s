@@ -15,4 +15,10 @@ module.exports = {
   clusterRoleBinding: require('./clusterRoleBinding.js'),
   roleBinding: require('./roleBinding.js'),
   openapi: require('./openapi.js'),
+  node: require('./node.js'),
+  serviceAccount: require('./serviceAccount.js'),
+  version: require('./version.js'),
+  events: require('./events.js'),
+  replicaset: require('./replicaset.js'),
+  daemonset: require('./daemonset.js'),
 };
