@@ -27,7 +27,7 @@ class Endpoints extends K8Object {
     this.Model = Endpoints.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'networking.k8s.io/v1';
   static kind = 'Endpoints';
   static Model = Model;
 

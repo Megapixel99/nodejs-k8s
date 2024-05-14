@@ -28,7 +28,7 @@ class Service extends K8Object {
     this.Model = Service.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'apps/v1';
   static kind = 'Service';
   static Model = Model;
 

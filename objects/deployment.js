@@ -20,7 +20,7 @@ class Deployment extends K8Object {
     this.Model = Deployment.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'apps/v1';
   static kind = 'Deployment';
   static Model = Model;
 

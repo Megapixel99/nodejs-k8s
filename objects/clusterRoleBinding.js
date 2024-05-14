@@ -12,7 +12,7 @@ class ClusterRoleBinding extends K8Object {
     this.Model = ClusterRoleBinding.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'rbac.authorization.k8s.io/v1';
   static kind = 'ClusterRoleBinding';
   static Model = Model;
 

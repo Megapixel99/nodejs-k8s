@@ -12,7 +12,7 @@ class RoleBinding extends K8Object {
     this.Model = RoleBinding.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'rbac.authorization.k8s.io/v1';
   static kind = 'RoleBinding';
   static Model = Model;
 
