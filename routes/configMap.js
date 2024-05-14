@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-let routes = ['/api/v1/namespaces/:namespace/configmaps'];
+let routes = [`/api/${ConfigMap.apiVersion}/namespaces/:namespace/configmaps`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(ConfigMap));
 

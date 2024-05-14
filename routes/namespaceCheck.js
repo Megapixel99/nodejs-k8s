@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { Namespace } = require('../objects');
 
-router.use('/api/v1/namespaces/:namespace', (req, res, next) => {
+router.use(`/api/${Namespace.apiVersion}/namespaces/:namespace`, (req, res, next) => {
   Namespace.findOne({ 'metadata.name': req.params.namespace })
   .then((mamespace) => {
     if (mamespace) {

@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = ['/apis/networking.k8s.io/v1/namespaces/:namespace/serviceaccounts', '/api/v1/namespaces/:namespace/serviceaccounts'];
+const routes = [`/api/${ServiceAccount.apiVersion}/namespaces/:namespace/serviceaccounts`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(ServiceAccount));
 

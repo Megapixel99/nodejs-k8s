@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-let route = '/api/v1/nodes';
+let route = `/api/${Node.apiVersion}/nodes`;
 
 router.get(`${route}/:name`, validSchema(apiV1OpenApiV3), general.findOne(Node));
 

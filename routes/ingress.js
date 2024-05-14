@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiNetworkingK8sIoV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = ['/apis/networking.k8s.io/v1/namespaces/:namespace/ingresses', '/api/v1/namespaces/:namespace/ingresses'];
+const routes = [`/apis/${Ingress.apiVersion}/namespaces/:namespace/ingresses`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiNetworkingK8sIoV1OpenApiV3), general.findOne(Ingress));
 

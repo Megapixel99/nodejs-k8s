@@ -4,11 +4,11 @@ const { general, openapi } = require('../middleware');
 
 const { apiRbacAuthorizatonK8sIoV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-let routes = ['/apis/rbac.authorization.k8s.io/v1/clusterroles'];
+let routes = [`/apis/${ClusterRole.apiVersion}/clusterroles`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.findOne(ClusterRole));
 
-router.get(['/api/v1/deployments', ...routes], validSchema(apiV1OpenApiV3), general.list(ClusterRole));
+router.get(['/api/v1/clusterroles', ...routes], validSchema(apiV1OpenApiV3), general.list(ClusterRole));
 
 router.post(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(ClusterRole));
 

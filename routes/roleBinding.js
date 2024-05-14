@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiRbacAuthorizatonK8sIoV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-let routes = ['/apis/rbac.authorization.k8s.io/v1/namespaces/:namespace/rolebindings'];
+let routes = [`/apis/${RoleBinding.apiVersion}/namespaces/:namespace/rolebindings`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.findOne(RoleBinding));
 
