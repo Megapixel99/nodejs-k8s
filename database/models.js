@@ -31,11 +31,20 @@ const metadata = {
     type: Map,
     of: String
   },
-  deletionGracePeriodSeconds: { type: Number, default: 0 },
-  deletionTimestamp: { type: Number, default: 0 },
+  deletionGracePeriodSeconds: {
+    type: Number,
+    default: 0
+  },
+  deletionTimestamp: {
+    type: Number,
+    default: 0
+  },
   finalizers: [String],
   generateName: String,
-  generation: { type: Number, default: 0 },
+  generation: {
+    type: Number,
+    default: 0
+  },
   namespace: String,
   managedFields: [{
     apiVersion: String,
@@ -159,12 +168,30 @@ const volumeMounts = [{
 
 const probe = {
   ...lifecycleHandler,
-  initialDelaySeconds: { type: Number, default: 0 },
-  terminationGracePeriodSeconds: { type: Number, default: 0 },
-  periodSeconds: { type: Number, default: 0 },
-  timeoutSeconds: { type: Number, default: 0 },
-  failureThreshold: { type: Number, default: 0 },
-  dsuccessThreshold: { type: Number, default: 0 },
+  initialDelaySeconds: {
+    type: Number,
+    default: 0
+  },
+  terminationGracePeriodSeconds: {
+    type: Number,
+    default: 0
+  },
+  periodSeconds: {
+    type: Number,
+    default: 0
+  },
+  timeoutSeconds: {
+    type: Number,
+    default: 0
+  },
+  failureThreshold: {
+    type: Number,
+    default: 0
+  },
+  dsuccessThreshold: {
+    type: Number,
+    default: 0
+  },
   grpc: {
     port: Schema.Types.Mixed,
     service: String,
@@ -172,10 +199,16 @@ const probe = {
 }
 
 const containerPortInfo = {
-  containerPort: { type: Number, default: 0 },
+  containerPort: {
+    type: Number,
+    default: 0
+  },
   protocol: String,
   hostIP: String,
-  hostPort: { type: Number, default: 0 },
+  hostPort: {
+    type: Number,
+    default: 0
+  },
   name: String,
 };
 
@@ -243,9 +276,15 @@ const container = {
   startupProbe: probe,
   restartPolicy: String,
   securityContext: {
-    runAsUser: { type: Number, default: 0 },
+    runAsUser: {
+      type: Number,
+      default: 0
+    },
     runAsNonRoot: Boolean,
-    runAsGroup: { type: Number, default: 0 },
+    runAsGroup: {
+      type: Number,
+      default: 0
+    },
     readOnlyRootFilesystem: Boolean,
     procMount: String,
     privileged: Boolean,
@@ -297,7 +336,10 @@ const metricInfo = {
 const targetMetricInfo = {
   ...metricInfo,
   target: {
-    averageUtilization: { type: Number, default: 0 },
+    averageUtilization: {
+      type: Number,
+      default: 0
+    },
     averageValue: String,
     type: String,
     value: String,
@@ -307,7 +349,10 @@ const targetMetricInfo = {
 const currentMetricInfo = {
   ...metricInfo,
   current: {
-    averageUtilization: { type: Number, default: 0 },
+    averageUtilization: {
+      type: Number,
+      default: 0
+    },
     averageValue: String,
     value: String,
   },
@@ -319,7 +364,10 @@ const podFailurePolicy = {
     onExitCodes: {
       containerName: String,
       operator: String,
-      values: [{ type: Number, default: 0 }],
+      values: [{
+        type: Number,
+        default: 0
+      }],
     },
     onPodConditions: [{
       status: String,
@@ -332,7 +380,10 @@ const metrics = {
   containerResource: {
     container: String,
     current: {
-      averageUtilization: { type: Number, default: 0 },
+      averageUtilization: {
+        type: Number,
+        default: 0
+      },
       averageValue: String,
       value: String,
     },
@@ -350,7 +401,10 @@ const metrics = {
   pods: currentMetricInfo,
   resource: {
     current: {
-      averageUtilization: { type: Number, default: 0 },
+      averageUtilization: {
+        type: Number,
+        default: 0
+      },
       averageValue: String,
       value: String,
     },
@@ -406,11 +460,17 @@ const containerStatus = {
     },
     terminated: {
       containerID: String,
-      exitCode: { type: Number, default: 0 },
+      exitCode: {
+        type: Number,
+        default: 0
+      },
       finishedAt: String,
       message: String,
       reason: String,
-      signal: { type: Number, default: 0 },
+      signal: {
+        type: Number,
+        default: 0
+      },
       startedAt: String,
     },
     waiting: {
@@ -433,7 +493,10 @@ const containerStatus = {
       of: String,
     },
   },
-  restartCount: { type: Number, default: 0 },
+  restartCount: {
+    type: Number,
+    default: 0
+  },
   started: Boolean,
   state: {
     running: {
@@ -441,11 +504,17 @@ const containerStatus = {
     },
     terminated: {
       containerID: String,
-      exitCode: { type: Number, default: 0 },
+      exitCode: {
+        type: Number,
+        default: 0
+      },
       finishedAt: String,
       message: String,
       reason: String,
-      signal: { type: Number, default: 0 },
+      signal: {
+        type: Number,
+        default: 0
+      },
       startedAt: String,
     },
     waiting: {
@@ -460,12 +529,18 @@ const pod = {
   kind: String,
   metadata,
   spec: {
-    activeDeadlineSeconds: { type: Number, default: 0 },
+    activeDeadlineSeconds: {
+      type: Number,
+      default: 0
+    },
     affinity: {
       nodeAffinity: {
         preferredDuringSchedulingIgnoredDuringExecution: [{
           preference: fieldSelector,
-          weight: { type: Number, default: 0 },
+          weight: {
+            type: Number,
+            default: 0
+          },
         }],
         requiredDuringSchedulingIgnoredDuringExecution: {
           nodeSelectorTerms: [fieldSelector],
@@ -479,7 +554,10 @@ const pod = {
             namespaces: [String],
             topologyKey: String,
           },
-          weight: { type: Number, default: 0 },
+          weight: {
+            type: Number,
+            default: 0
+          },
         }],
         requiredDuringSchedulingIgnoredDuringExecution: [{
           labelSelector: fieldSelector,
@@ -496,7 +574,10 @@ const pod = {
             namespaces: [String],
             topologyKey: String,
           },
-          weight: { type: Number, default: 0 },
+          weight: {
+            type: Number,
+            default: 0
+          },
         }],
         requiredDuringSchedulingIgnoredDuringExecution: [{
           labelSelector: fieldSelector,
@@ -532,41 +613,41 @@ const pod = {
       name: String,
     }],
     initContainers: [container],
-  status: {
-    nominatedNodeName: String,
-    phase: {
-      type: String,
-      enum: ['Pending', 'Running', 'Succeeded', 'Failed', 'Unknown'],
-      default: 'Pending'
-    },
-    conditions: [{
-      ...statusConditions,
-      lastTransitionTime: {
+    status: {
+      nominatedNodeName: String,
+      phase: {
+        type: String,
+        enum: ['Pending', 'Running', 'Succeeded', 'Failed', 'Unknown'],
+        default: 'Pending'
+      },
+      conditions: [{
+        ...statusConditions,
+        lastTransitionTime: {
+          type: String,
+          default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+        }
+      }],
+      containerStatuses: [containerStatus],
+      ephemeralContainerStatuses: [containerStatus],
+      hostIP: String,
+      initContainerStatuses: [containerStatus],
+      message: String,
+      podIP: {
+        type: String,
+        default: null
+      },
+      podIPs: [{
+        ip: String
+      }],
+      qosClass: String,
+      reason: String,
+      resize: String,
+      startTime: {
         type: String,
         default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
-      }
-    }],
-    containerStatuses: [containerStatus],
-    ephemeralContainerStatuses: [containerStatus],
-    hostIP: String,
-    initContainerStatuses: [containerStatus],
-    message: String,
-    podIP: {
-      type: String,
-      default: null
-    },
-    podIPs: [{
-      ip: String
-    }],
-    qosClass: String,
-    reason: String,
-    resize: String,
-    startTime: {
-      type: String,
-      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
-    },
+      },
+    }
   }
-}
 }
 
 const typedLocalObjectReference = {
@@ -579,7 +660,10 @@ const ingressServiceBackend = {
   name: String,
   port: {
     name: String,
-    number: { type: Number, default: 0 },
+    number: {
+      type: Number,
+      default: 0
+    },
   }
 };
 
@@ -613,11 +697,23 @@ const deploymentSchema = Schema({
   kind: String,
   metadata,
   spec: {
-    minReadySeconds: { type: Number, default: 0 },
+    minReadySeconds: {
+      type: Number,
+      default: 0
+    },
     paused: Boolean,
-    progressDeadlineSeconds: { type: Number, default: 0 },
-    replicas: { type: Number, default: 0 },
-    revisionHistoryLimit: { type: Number, default: 0 },
+    progressDeadlineSeconds: {
+      type: Number,
+      default: 0
+    },
+    replicas: {
+      type: Number,
+      default: 0
+    },
+    revisionHistoryLimit: {
+      type: Number,
+      default: 0
+    },
     fieldSelector,
     strategy: {
       rollingUpdate: {
@@ -629,17 +725,38 @@ const deploymentSchema = Schema({
     template: pod,
   },
   status: {
-    availableReplicas: { type: Number, default: 0 },
-    collisionCount: { type: Number, default: 0 },
+    availableReplicas: {
+      type: Number,
+      default: 0
+    },
+    collisionCount: {
+      type: Number,
+      default: 0
+    },
     conditions: [{
       ...statusConditions,
       lastUpdateTime: String,
     }],
-    observedGeneration: { type: Number, default: 0 },
-    readyReplicas: { type: Number, default: 0 },
-    replicas: { type: Number, default: 0 },
-    unavailableReplicas: { type: Number, default: 0 },
-    updatedReplicas: { type: Number, default: 0 },
+    observedGeneration: {
+      type: Number,
+      default: 0
+    },
+    readyReplicas: {
+      type: Number,
+      default: 0
+    },
+    replicas: {
+      type: Number,
+      default: 0
+    },
+    unavailableReplicas: {
+      type: Number,
+      default: 0
+    },
+    updatedReplicas: {
+      type: Number,
+      default: 0
+    },
   },
 });
 
@@ -651,7 +768,10 @@ const ingressLoadBalancerStatus = {
     ip: String,
     ports: [{
       error: String,
-      port: { type: Number, default: 0 },
+      port: {
+        type: Number,
+        default: 0
+      },
       protocol: String,
     }],
   }]
@@ -690,7 +810,10 @@ const serviceSchema = Schema({
     ports: [{
       appProtocol: String,
       name: String,
-      nodePort: { type: Number, default: 0 },
+      nodePort: {
+        type: Number,
+        default: 0
+      },
       port: {
         type: Number,
         required: true
@@ -709,7 +832,10 @@ const serviceSchema = Schema({
     },
     sessionAffinityConfig: {
       clientIP: {
-        timeoutSeconds: { type: Number, default: 0 },
+        timeoutSeconds: {
+          type: Number,
+          default: 0
+        },
       }
     },
     type: {
@@ -729,15 +855,24 @@ const apiServiceSchema = Schema({
   spec: {
     caBundle: String,
     group: String,
-    groupPriorityMinimum: { type: Number, default: 0 },
+    groupPriorityMinimum: {
+      type: Number,
+      default: 0
+    },
     insecureSkipTLSVerify: Boolean,
     service: {
       name: String,
       namespace: String,
-      port: { type: Number, default: 0 },
+      port: {
+        type: Number,
+        default: 0
+      },
     },
     version: String,
-    versionPriority: { type: Number, default: 0 },
+    versionPriority: {
+      type: Number,
+      default: 0
+    },
   },
   status: {
     conditions: [statusConditions],
@@ -751,7 +886,10 @@ const iscsi = {
   initiatorName: String,
   iqn: String,
   iscsiInterface: String,
-  lun: { type: Number, default: 0 },
+  lun: {
+    type: Number,
+    default: 0
+  },
   portals: [String],
   readOnly: Boolean,
   secretRef: {
@@ -925,7 +1063,10 @@ const endpointsSchema = Schema({
     }],
     ports: [{
       name: String,
-      port: { type: Number, default: 0 },
+      port: {
+        type: Number,
+        default: 0
+      },
       protocol: String
     }]
   }]
@@ -977,7 +1118,10 @@ const certificateSigningRequestSchema = Schema({
   kind: String,
   metadata,
   spec: {
-    expirationSeconds: { type: Number, default: 0 },
+    expirationSeconds: {
+      type: Number,
+      default: 0
+    },
     extra: {
       type: Map,
       of: String
@@ -1088,12 +1232,18 @@ const nodeSchema = Schema({
     },
     daemonEndpoints: {
       kubeletEndpoint: {
-        Port: { type: Number, default: 0 },
+        Port: {
+          type: Number,
+          default: 0
+        },
       },
     },
     images: [{
       names: [String],
-      sizeBytes: { type: Number, default: 0 },
+      sizeBytes: {
+        type: Number,
+        default: 0
+      },
     }],
     nodeInfo: {
       architecture: String,
@@ -1186,12 +1336,27 @@ const replicaSetSchema = Schema({
     },
   },
   status: {
-    replicas: { type: Number, default: 0 },
-    availableReplicas: { type: Number, default: 0 },
-    readyReplicas: { type: Number, default: 0 },
-    fullyLabeledReplicas: { type: Number, default: 0 },
+    replicas: {
+      type: Number,
+      default: 0
+    },
+    availableReplicas: {
+      type: Number,
+      default: 0
+    },
+    readyReplicas: {
+      type: Number,
+      default: 0
+    },
+    fullyLabeledReplicas: {
+      type: Number,
+      default: 0
+    },
     conditions: [statusConditions],
-    observedGeneration: { type: Number, default: 0 },
+    observedGeneration: {
+      type: Number,
+      default: 0
+    },
   }
 })
 
@@ -1222,16 +1387,43 @@ const daemonSetSchema = Schema({
     },
   },
   status: {
-    numberReady: { type: Number, default: 0 },
-    numberAvailable: { type: Number, default: 0 },
-    numberUnavailable: { type: Number, default: 0 },
-    numberMisschedule: { type: Number, default: 0 },
-    desiredNumberScheduled: { type: Number, default: 0 },
-    currentNumberScheduled: { type: Number, default: 0 },
-    updatedNumberScheduled: { type: Number, default: 0 },
-    collisionCount: { type: Number, default: 0 },
+    numberReady: {
+      type: Number,
+      default: 0
+    },
+    numberAvailable: {
+      type: Number,
+      default: 0
+    },
+    numberUnavailable: {
+      type: Number,
+      default: 0
+    },
+    numberMisschedule: {
+      type: Number,
+      default: 0
+    },
+    desiredNumberScheduled: {
+      type: Number,
+      default: 0
+    },
+    currentNumberScheduled: {
+      type: Number,
+      default: 0
+    },
+    updatedNumberScheduled: {
+      type: Number,
+      default: 0
+    },
+    collisionCount: {
+      type: Number,
+      default: 0
+    },
     conditions: [statusConditions],
-    observedGeneration: { type: Number, default: 0 },
+    observedGeneration: {
+      type: Number,
+      default: 0
+    },
   }
 })
 
@@ -1244,7 +1436,10 @@ const replicationControllerSchema = Schema({
       type: Number,
       default: 0
     },
-    replicas: { type: Number, default: 0 },
+    replicas: {
+      type: Number,
+      default: 0
+    },
     selector: labelSelector,
     template: pod,
   },
@@ -1280,15 +1475,24 @@ const aPIServiceSchema = Schema({
   spec: {
     caBundle: String,
     group: String,
-    groupPriorityMinimum: { type: Number, default: 0 },
+    groupPriorityMinimum: {
+      type: Number,
+      default: 0
+    },
     insecureSkipTLSVerify: Boolean,
     service: {
       name: String,
       namespace: String,
-      port: { type: Number, default: 0 },
+      port: {
+        type: Number,
+        default: 0
+      },
     },
     version: String,
-    versionPriority: { type: Number, default: 0 },
+    versionPriority: {
+      type: Number,
+      default: 0
+    },
   },
   status: {
     conditions: [statusConditions],
@@ -1323,7 +1527,10 @@ const cSIDriverSchema = Schema({
     storageCapacity: Boolean,
     tokenRequests: [{
       audience: String,
-      expirationSeconds: { type: Number, default: 0 },
+      expirationSeconds: {
+        type: Number,
+        default: 0
+      },
     }],
     volumeLifecycleModes: [String],
   },
@@ -1336,7 +1543,10 @@ const cSINodeSchema = Schema({
   spec: {
     drivers: [{
       allocatable: {
-        count: { type: Number, default: 0 },
+        count: {
+          type: Number,
+          default: 0
+        },
       },
       name: String,
       nodeID: String,
@@ -1371,7 +1581,10 @@ const controllerRevisionSchema = Schema({
   apiVersion: String,
   kind: String,
   metadata,
-  revision: { type: Number, default: 0 },
+  revision: {
+    type: Number,
+    default: 0
+  },
 });
 
 const cronJobSchema = Schema({
@@ -1380,26 +1593,50 @@ const cronJobSchema = Schema({
   metadata,
   spec: {
     concurrencyPolicy: String,
-    failedJobsHistoryLimit: { type: Number, default: 0 },
+    failedJobsHistoryLimit: {
+      type: Number,
+      default: 0
+    },
     jobTemplate: {
       metadata,
       spec: {
-        activeDeadlineSeconds: { type: Number, default: 0 },
-        backoffLimit: { type: Number, default: 0 },
+        activeDeadlineSeconds: {
+          type: Number,
+          default: 0
+        },
+        backoffLimit: {
+          type: Number,
+          default: 0
+        },
         completionMode: String,
-        completions: { type: Number, default: 0 },
+        completions: {
+          type: Number,
+          default: 0
+        },
         manualSelector: Boolean,
-        parallelism: { type: Number, default: 0 },
+        parallelism: {
+          type: Number,
+          default: 0
+        },
         podFailurePolicy,
         selector: labelSelector,
         suspend: Boolean,
         template: pod,
-        ttlSecondsAfterFinished: { type: Number, default: 0 },
+        ttlSecondsAfterFinished: {
+          type: Number,
+          default: 0
+        },
       },
     },
     schedule: String,
-    startingDeadlineSeconds: { type: Number, default: 0 },
-    successfulJobsHistoryLimit: { type: Number, default: 0 },
+    startingDeadlineSeconds: {
+      type: Number,
+      default: 0
+    },
+    successfulJobsHistoryLimit: {
+      type: Number,
+      default: 0
+    },
     suspend: Boolean,
     timeZone: String,
   },
@@ -1597,7 +1834,10 @@ const endpointSliceSchema = Schema({
   ports: [{
     appProtocol: String,
     name: String,
-    port: { type: Number, default: 0 },
+    port: {
+      type: Number,
+      default: 0
+    },
     protocol: String,
   }],
 });
@@ -1610,26 +1850,50 @@ const horizontalPodAutoscalerSchema = Schema({
     behavior: {
       scaleDown: {
         policies: [{
-          periodSeconds: { type: Number, default: 0 },
+          periodSeconds: {
+            type: Number,
+            default: 0
+          },
           type: String,
-          value: { type: Number, default: 0 },
+          value: {
+            type: Number,
+            default: 0
+          },
         }],
         selectPolicy: String,
-        stabilizationWindowSeconds: { type: Number, default: 0 },
+        stabilizationWindowSeconds: {
+          type: Number,
+          default: 0
+        },
       },
       scaleUp: {
         policies: [{
-          periodSeconds: { type: Number, default: 0 },
+          periodSeconds: {
+            type: Number,
+            default: 0
+          },
           type: String,
-          value: { type: Number, default: 0 },
+          value: {
+            type: Number,
+            default: 0
+          },
         }],
         selectPolicy: String,
-        stabilizationWindowSeconds: { type: Number, default: 0 },
+        stabilizationWindowSeconds: {
+          type: Number,
+          default: 0
+        },
       },
     },
-    maxReplicas: { type: Number, default: 0 },
+    maxReplicas: {
+      type: Number,
+      default: 0
+    },
     metrics: [metrics],
-    minReplicas: { type: Number, default: 0 },
+    minReplicas: {
+      type: Number,
+      default: 0
+    },
     scaleTargetRef: {
       apiVersion: String,
       kind: String,
@@ -1639,13 +1903,22 @@ const horizontalPodAutoscalerSchema = Schema({
   status: {
     conditions: [statusConditions],
     currentMetrics: [metrics],
-    currentReplicas: { type: Number, default: 0 },
-    desiredReplicas: { type: Number, default: 0 },
+    currentReplicas: {
+      type: Number,
+      default: 0
+    },
+    desiredReplicas: {
+      type: Number,
+      default: 0
+    },
     lastScaleTime: {
       type: String,
       default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
-    observedGeneration: { type: Number, default: 0 },
+    observedGeneration: {
+      type: Number,
+      default: 0
+    },
   },
 });
 
@@ -1670,33 +1943,60 @@ const jobSchema = Schema({
   kind: String,
   metadata,
   spec: {
-    activeDeadlineSeconds: { type: Number, default: 0 },
-    backoffLimit: { type: Number, default: 0 },
+    activeDeadlineSeconds: {
+      type: Number,
+      default: 0
+    },
+    backoffLimit: {
+      type: Number,
+      default: 0
+    },
     completionMode: String,
-    completions: { type: Number, default: 0 },
+    completions: {
+      type: Number,
+      default: 0
+    },
     manualSelector: Boolean,
-    parallelism: { type: Number, default: 0 },
+    parallelism: {
+      type: Number,
+      default: 0
+    },
     podFailurePolicy,
     selector: labelSelector,
     suspend: Boolean,
     template: pod,
-    ttlSecondsAfterFinished: { type: Number, default: 0 },
+    ttlSecondsAfterFinished: {
+      type: Number,
+      default: 0
+    },
   },
   status: {
-    active: { type: Number, default: 0 },
+    active: {
+      type: Number,
+      default: 0
+    },
     completedIndexes: String,
     completionTime: {
       type: String,
       default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
     conditions: [statusConditions],
-    failed: { type: Number, default: 0 },
-    ready: { type: Number, default: 0 },
+    failed: {
+      type: Number,
+      default: 0
+    },
+    ready: {
+      type: Number,
+      default: 0
+    },
     startTime: {
       type: String,
       default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
-    succeeded: { type: Number, default: 0 },
+    succeeded: {
+      type: Number,
+      default: 0
+    },
     uncountedTerminatedPods: {
       failed: [String],
       succeeded: [String],
@@ -1714,8 +2014,14 @@ const leaseSchema = Schema({
       default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
     holderIdentity: String,
-    leaseDurationSeconds: { type: Number, default: 0 },
-    leaseTransitions: { type: Number, default: 0 },
+    leaseDurationSeconds: {
+      type: Number,
+      default: 0
+    },
+    leaseTransitions: {
+      type: Number,
+      default: 0
+    },
     renewTime: {
       type: String,
       default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
@@ -1797,7 +2103,10 @@ const mutatingWebhookConfigurationSchema = Schema({
         name: String,
         namespace: String,
         path: String,
-        port: { type: Number, default: 0 },
+        port: {
+          type: Number,
+          default: 0
+        },
       },
       url: String,
     },
@@ -1819,7 +2128,10 @@ const mutatingWebhookConfigurationSchema = Schema({
       scope: String,
     }],
     sideEffects: String,
-    timeoutSeconds: { type: Number, default: 0 },
+    timeoutSeconds: {
+      type: Number,
+      default: 0
+    },
   }],
 });
 
@@ -1830,7 +2142,10 @@ const networkPolicySchema = Schema({
   spec: {
     egress: [{
       ports: [{
-        endPort: { type: Number, default: 0 },
+        endPort: {
+          type: Number,
+          default: 0
+        },
         port: String,
         protocol: String,
       }],
@@ -1853,7 +2168,10 @@ const networkPolicySchema = Schema({
         podSelector: labelSelector,
       }],
       ports: [{
-        endPort: { type: Number, default: 0 },
+        endPort: {
+          type: Number,
+          default: 0
+        },
         port: String,
         protocol: String,
       }],
@@ -1874,7 +2192,10 @@ const persistentVolumeSchema = Schema({
     accessModes: [String],
     awsElasticBlockStore: {
       fsType: String,
-      partition: { type: Number, default: 0 },
+      partition: {
+        type: Number,
+        default: 0
+      },
       readOnly: Boolean,
       volumeID: String,
     },
@@ -1957,7 +2278,10 @@ const persistentVolumeSchema = Schema({
     },
     fc: {
       fsType: String,
-      lun: { type: Number, default: 0 },
+      lun: {
+        type: Number,
+        default: 0
+      },
       readOnly: Boolean,
       targetWWNs: [String],
       wwids: [String],
@@ -1981,7 +2305,10 @@ const persistentVolumeSchema = Schema({
     },
     gcePersistentDisk: {
       fsType: String,
-      partition: { type: Number, default: 0 },
+      partition: {
+        type: Number,
+        default: 0
+      },
       pdName: String,
       readOnly: Boolean,
     },
@@ -2142,17 +2469,35 @@ const podDisruptionBudgetSchema = Schema({
   status: {
     conditions: [{
       ...statusConditions,
-      observedGeneration: { type: Number, default: 0 },
+      observedGeneration: {
+        type: Number,
+        default: 0
+      },
     }],
-    currentHealthy: { type: Number, default: 0 },
-    desiredHealthy: { type: Number, default: 0 },
+    currentHealthy: {
+      type: Number,
+      default: 0
+    },
+    desiredHealthy: {
+      type: Number,
+      default: 0
+    },
     disruptedPods: {
       type: Map,
       of: String,
     },
-    disruptionsAllowed: { type: Number, default: 0 },
-    expectedPods: { type: Number, default: 0 },
-    observedGeneration: { type: Number, default: 0 },
+    disruptionsAllowed: {
+      type: Number,
+      default: 0
+    },
+    expectedPods: {
+      type: Number,
+      default: 0
+    },
+    observedGeneration: {
+      type: Number,
+      default: 0
+    },
   },
 });
 
@@ -2163,7 +2508,10 @@ const priorityClassSchema = Schema({
   kind: String,
   metadata,
   preemptionPolicy: String,
-  value: { type: Number, default: 0 },
+  value: {
+    type: Number,
+    default: 0
+  },
 });
 
 const resourceQuotaSchema = Schema({
@@ -2216,7 +2564,10 @@ const runtimeClassSchema = Schema({
       effect: String,
       key: String,
       operator: String,
-      tolerationSeconds: { type: Number, default: 0 },
+      tolerationSeconds: {
+        type: Number,
+        default: 0
+      },
       value: String,
     }],
   },
@@ -2300,24 +2651,39 @@ const statefulSetSchema = Schema({
   kind: String,
   metadata,
   spec: {
-    minReadySeconds: { type: Number, default: 0 },
+    minReadySeconds: {
+      type: Number,
+      default: 0
+    },
     ordinals: {
-      start: { type: Number, default: 0 },
+      start: {
+        type: Number,
+        default: 0
+      },
     },
     persistentVolumeClaimRetentionPolicy: {
       whenDeleted: String,
       whenScaled: String,
     },
     podManagementPolicy: String,
-    replicas: { type: Number, default: 0 },
-    revisionHistoryLimit: { type: Number, default: 0 },
+    replicas: {
+      type: Number,
+      default: 0
+    },
+    revisionHistoryLimit: {
+      type: Number,
+      default: 0
+    },
     selector: labelSelector,
     serviceName: String,
     template: pod,
     updateStrategy: {
       rollingUpdate: {
         maxUnavailable: String,
-        partition: { type: Number, default: 0 },
+        partition: {
+          type: Number,
+          default: 0
+        },
       },
       type: String,
     },
@@ -2379,16 +2745,37 @@ const statefulSetSchema = Schema({
     }],
   },
   status: {
-    availableReplicas: { type: Number, default: 0 },
-    collisionCount: { type: Number, default: 0 },
+    availableReplicas: {
+      type: Number,
+      default: 0
+    },
+    collisionCount: {
+      type: Number,
+      default: 0
+    },
     conditions: [statusConditions],
-    currentReplicas: { type: Number, default: 0 },
+    currentReplicas: {
+      type: Number,
+      default: 0
+    },
     currentRevision: String,
-    observedGeneration: { type: Number, default: 0 },
-    readyReplicas: { type: Number, default: 0 },
-    replicas: { type: Number, default: 0 },
+    observedGeneration: {
+      type: Number,
+      default: 0
+    },
+    readyReplicas: {
+      type: Number,
+      default: 0
+    },
+    replicas: {
+      type: Number,
+      default: 0
+    },
     updateRevision: String,
-    updatedReplicas: { type: Number, default: 0 },
+    updatedReplicas: {
+      type: Number,
+      default: 0
+    },
   },
 });
 
@@ -2479,7 +2866,10 @@ const validatingWebhookConfigurationSchema = Schema({
         name: String,
         namespace: String,
         path: String,
-        port: { type: Number, default: 0 },
+        port: {
+          type: Number,
+          default: 0
+        },
       },
       url: String,
     },
@@ -2500,7 +2890,10 @@ const validatingWebhookConfigurationSchema = Schema({
       scope: String,
     }],
     sideEffects: String,
-    timeoutSeconds: { type: Number, default: 0 },
+    timeoutSeconds: {
+      type: Number,
+      default: 0
+    },
   }],
 });
 
