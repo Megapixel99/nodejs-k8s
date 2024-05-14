@@ -64,7 +64,10 @@ const metadata = {
     controller: Boolean,
     kind: String,
     name: String,
-    uid: String,
+    uid: {
+      type: String,
+      default: uuid()
+    },
   }],
   selfLink: String,
   labels: {
@@ -75,6 +78,13 @@ const metadata = {
     type: Map,
     of: String
   },
+};
+
+const glusterfs = {
+  endpoints: String,
+  endpointsNamespace: String,
+  path: String,
+  readOnly: Boolean,
 };
 
 const labelSelector = {
@@ -129,6 +139,17 @@ const lifecycleHandler = {
     }
   }
 }
+
+const configMapInfo = {
+  kubeletConfigKey: String,
+  name: String,
+  namespace: String,
+  resourceVersion: String,
+  uid: {
+    type: String,
+    default: uuid()
+  },
+};
 
 const lifecycle = {
   postStart: lifecycleHandler,
@@ -241,6 +262,26 @@ const envFrom = {
     name: String,
     optional: Boolean,
   }
+};
+
+const iscsi = {
+  chapAuthDiscovery: Boolean,
+  chapAuthSession: Boolean,
+  fsType: String,
+  initiatorName: String,
+  iqn: String,
+  iscsiInterface: String,
+  lun: {
+    type: Number,
+    default: 0
+  },
+  portals: [String],
+  readOnly: Boolean,
+  secretRef: {
+    name: String,
+    namespace: String,
+  },
+  targetPortal: String,
 };
 
 const container = {
@@ -524,6 +565,407 @@ const containerStatus = {
   },
 };
 
+const nfs = {
+  path: String,
+  readOnly: Boolean,
+  server: String,
+};
+
+const volumeInfo = {
+  awsElasticBlockStore: {
+    fsType: String,
+    partition: {
+      type: Number,
+      default: 0
+    },
+    readOnly: Boolean,
+    volumeID: String,
+  },
+  azureDisk: {
+    cachingMode: String,
+    diskName: String,
+    diskURI: String,
+    fsType: String,
+    kind: String,
+    readOnly: Boolean,
+  },
+  azureFile: {
+    readOnly: Boolean,
+    secretName: String,
+    shareName: String,
+  },
+  cephfs: {
+    monitors: [String],
+    path: String,
+    readOnly: Boolean,
+    secretFile: String,
+    secretRef: {
+      name: String,
+    },
+    user: String,
+  },
+  cinder: {
+    fsType: String,
+    readOnly: Boolean,
+    secretRef: {
+      name: String,
+    },
+    volumeID: String,
+  },
+  csi: {
+    driver: String,
+    fsType: String,
+    nodePublishSecretRef: {
+      name: String,
+    },
+    readOnly: Boolean,
+    volumeAttributes: {
+      type: Map,
+      of: String,
+    },
+  },
+  fc: {
+    fsType: String,
+    lun: {
+      type: Number,
+      default: 0
+    },
+    readOnly: Boolean,
+    targetWWNs: [String],
+    wwids: [String],
+  },
+  flexVolume: {
+    driver: String,
+    fsType: String,
+    options: {
+      type: Map,
+      of: String,
+    },
+    readOnly: Boolean,
+    secretRef: {
+      name: String,
+    },
+  },
+  flocker: {
+    datasetName: String,
+    datasetUUID: String,
+  },
+  gcePersistentDisk: {
+    fsType: String,
+    partition: {
+      type: Number,
+      default: 0
+    },
+    pdName: String,
+    readOnly: Boolean,
+  },
+  glusterfs,
+  hostPath: {
+    path: String,
+    type: String,
+  },
+  iscsi,
+  nfs,
+  photonPersistentDisk: {
+    fsType: String,
+    pdID: String,
+  },
+  portworxVolume: {
+    fsType: String,
+    readOnly: Boolean,
+    volumeID: String,
+  },
+  quobyte: {
+    group: String,
+    readOnly: Boolean,
+    registry: String,
+    tenant: String,
+    user: String,
+    volume: String,
+  },
+  rbd: {
+    fsType: String,
+    image: String,
+    keyring: String,
+    monitors: [String],
+    pool: String,
+    readOnly: Boolean,
+    secretRef: {
+      name: String,
+    },
+    user: String,
+  },
+  scaleIO: {
+    fsType: String,
+    gateway: String,
+    protectionDomain: String,
+    readOnly: Boolean,
+    secretRef: {
+      name: String,
+    },
+    sslEnabled: Boolean,
+    storageMode: String,
+    storagePool: String,
+    system: String,
+    volumeName: String,
+  },
+  storageos: {
+    fsType: String,
+    readOnly: Boolean,
+    secretRef: {
+      name: String,
+    },
+    volumeName: String,
+    volumeNamespace: String,
+  },
+  vsphereVolume: {
+    fsType: String,
+    storagePolicyID: String,
+    storagePolicyName: String,
+    volumePath: String,
+  },
+}
+
+const podAffinity = {
+  preferredDuringSchedulingIgnoredDuringExecution: [{
+    podAffinityTerm: {
+      labelSelector,
+      namespaceSelector: labelSelector,
+      namespaces: [String],
+      topologyKey: String,
+    },
+    weight: {
+      type: Number,
+      default: 0
+    },
+  }],
+  requiredDuringSchedulingIgnoredDuringExecution: [{
+    labelSelector: labelSelector,
+    namespaceSelector: labelSelector,
+    namespaces: [String],
+    topologyKey: String,
+  }]
+}
+
+const volumeSchema = Schema({
+  ...volumeInfo,
+  configMap: {
+    defaultMode: {
+      type: Number,
+      default: 0
+    },
+    items: [{
+      key: String,
+      mode: {
+        type: Number,
+        default: 0
+      },
+      path: String,
+    }],
+    name: String,
+    optional: Boolean,
+  },
+  downwardAPI: {
+    defaultMode: {
+      type: Number,
+      default: 0
+    },
+    items: [{
+      fieldRef: {
+        apiVersion: String,
+        fieldPath: String,
+      },
+      mode: {
+        type: Number,
+        default: 0
+      },
+      path: String,
+      resourceFieldRef: {
+        containerName: String,
+        divisor: String,
+        resource: String,
+      },
+    }],
+  },
+  emptyDir: {
+    medium: String,
+    sizeLimit: String,
+  },
+  ephemeral: {
+    volumeClaimTemplate: {
+      metadata: {
+        annotations: {
+          type: Map,
+          of: String,
+        },
+        creationTimestamp: String,
+        deletionGracePeriodSeconds: {
+          type: Number,
+          default: 0
+        },
+        deletionTimestamp: String,
+        finalizers: [String],
+        generateName: String,
+        generation: {
+          type: Number,
+          default: 0
+        },
+        labels: {
+          type: Map,
+          of: String,
+        },
+        managedFields: [{
+          apiVersion: String,
+          fieldsType: String,
+          fieldsV1: String,
+          manager: String,
+          operation: String,
+          subresource: String,
+          time: String,
+        }],
+        name: String,
+        namespace: String,
+        ownerReferences: [{
+          apiVersion: String,
+          blockOwnerDeletion: Boolean,
+          controller: Boolean,
+          kind: String,
+          name: String,
+          uid: String,
+        }],
+        resourceVersion: String,
+        selfLink: String,
+        uid: String,
+      },
+      spec: {
+        accessModes: [String],
+        dataSource: {
+          apiGroup: String,
+          kind: String,
+          name: String,
+        },
+        dataSourceRef: {
+          apiGroup: String,
+          kind: String,
+          name: String,
+          namespace: String,
+        },
+        resources: {
+          claims: [{
+            name: String,
+          }],
+          limits: {
+            type: Map,
+            of: String,
+          },
+          requests: {
+            type: Map,
+            of: String,
+          },
+        },
+        selector: {
+          matchExpressions: [{
+            key: String,
+            operator: String,
+            values: [String],
+          }],
+          matchLabels: {
+            type: Map,
+            of: String,
+          },
+        },
+        storageClassName: String,
+        volumeMode: String,
+        volumeName: String,
+      },
+    },
+  },
+  gitRepo: {
+    directory: String,
+    repository: String,
+    revision: String,
+  },
+  name: String,
+  persistentVolumeClaim: {
+    claimName: String,
+    readOnly: Boolean,
+  },
+  projected: {
+    defaultMode: {
+      type: Number,
+      default: 0
+    },
+    sources: [{
+      configMap: {
+        items: [{
+          key: String,
+          mode: {
+            type: Number,
+            default: 0
+          },
+          path: String,
+        }],
+        name: String,
+        optional: Boolean,
+      },
+      downwardAPI: {
+        items: [{
+          fieldRef: {
+            apiVersion: String,
+            fieldPath: String,
+          },
+          mode: {
+            type: Number,
+            default: 0
+          },
+          path: String,
+          resourceFieldRef: {
+            containerName: String,
+            divisor: String,
+            resource: String,
+          },
+        }],
+      },
+      secret: {
+        items: [{
+          key: String,
+          mode: {
+            type: Number,
+            default: 0
+          },
+          path: String,
+        }],
+        name: String,
+        optional: Boolean,
+      },
+      serviceAccountToken: {
+        audience: String,
+        expirationSeconds: {
+          type: Number,
+          default: 0
+        },
+        path: String,
+      },
+    }],
+  },
+  secret: {
+    defaultMode: {
+      type: Number,
+      default: 0
+    },
+    items: [{
+      key: String,
+      mode: {
+        type: Number,
+        default: 0
+      },
+      path: String,
+    }],
+    optional: Boolean,
+    secretName: String,
+  },
+});
+
 const pod = {
   apiVersion: String,
   kind: String,
@@ -546,46 +988,8 @@ const pod = {
           nodeSelectorTerms: [fieldSelector],
         },
       },
-      podAffinity: {
-        preferredDuringSchedulingIgnoredDuringExecution: [{
-          podAffinityTerm: {
-            labelSelector: fieldSelector,
-            namespaceSelector: fieldSelector,
-            namespaces: [String],
-            topologyKey: String,
-          },
-          weight: {
-            type: Number,
-            default: 0
-          },
-        }],
-        requiredDuringSchedulingIgnoredDuringExecution: [{
-          labelSelector: fieldSelector,
-          namespaceSelector: fieldSelector,
-          namespaces: [String],
-          topologyKey: String,
-        }],
-      },
-      podAntiAffinity: {
-        preferredDuringSchedulingIgnoredDuringExecution: [{
-          podAffinityTerm: {
-            labelSelector: fieldSelector,
-            namespaceSelector: fieldSelector,
-            namespaces: [String],
-            topologyKey: String,
-          },
-          weight: {
-            type: Number,
-            default: 0
-          },
-        }],
-        requiredDuringSchedulingIgnoredDuringExecution: [{
-          labelSelector: fieldSelector,
-          namespaceSelector: fieldSelector,
-          namespaces: [String],
-          topologyKey: String,
-        }],
-      },
+      podAffinity: podAffinity,
+      podAntiAffinity: podAffinity,
     },
     automountServiceAccountToken: Boolean,
     containers: [container],
@@ -613,41 +1017,148 @@ const pod = {
       name: String,
     }],
     initContainers: [container],
-    status: {
-      nominatedNodeName: String,
-      phase: {
-        type: String,
-        enum: ['Pending', 'Running', 'Succeeded', 'Failed', 'Unknown'],
-        default: 'Pending'
+    nodeName: String,
+    nodeSelector: {
+      type: Map,
+      of: String,
+    },
+    os: {
+      name: String,
+    },
+    overhead: {
+      type: Map,
+      of: String,
+    },
+    preemptionPolicy: String,
+    priority: {
+      type: Number,
+      default: 0
+    },
+    priorityClassName: String,
+    readinessGates: [{
+      conditionType: String,
+    }],
+    resourceClaims: [{
+      name: String,
+      source: {
+        resourceClaimName: String,
+        resourceClaimTemplateName: String,
       },
-      conditions: [{
-        ...statusConditions,
-        lastTransitionTime: {
-          type: String,
-          default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
-        }
+    }],
+    restartPolicy: String,
+    runtimeClassName: String,
+    schedulerName: String,
+    schedulingGates: [{
+      name: String,
+    }],
+    securityContext: {
+      fsGroup: {
+        type: Number,
+        default: 0
+      },
+      fsGroupChangePolicy: String,
+      runAsGroup: {
+        type: Number,
+        default: 0
+      },
+      runAsNonRoot: Boolean,
+      runAsUser: {
+        type: Number,
+        default: 0
+      },
+      seLinuxOptions: {
+        level: String,
+        role: String,
+        type: String,
+        user: String,
+      },
+      seccompProfile: {
+        localhostProfile: String,
+        type: String,
+      },
+      supplementalGroups: [Number],
+      sysctls: [{
+        name: String,
+        value: String,
       }],
-      containerStatuses: [containerStatus],
-      ephemeralContainerStatuses: [containerStatus],
-      hostIP: String,
-      initContainerStatuses: [containerStatus],
-      message: String,
-      podIP: {
-        type: String,
-        default: null
+      windowsOptions: {
+        gmsaCredentialSpec: String,
+        gmsaCredentialSpecName: String,
+        hostProcess: Boolean,
+        runAsUserName: String,
       },
-      podIPs: [{
-        ip: String
-      }],
-      qosClass: String,
-      reason: String,
-      resize: String,
-      startTime: {
-        type: String,
-        default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    },
+    serviceAccount: String,
+    serviceAccountName: String,
+    setHostnameAsFQDN: Boolean,
+    shareProcessNamespace: Boolean,
+    subdomain: String,
+    terminationGracePeriodSeconds: {
+      type: Number,
+      default: 0
+    },
+    tolerations: [{
+      effect: String,
+      key: String,
+      operator: String,
+      tolerationSeconds: {
+        type: Number,
+        default: 0
       },
-    }
-  }
+      value: String,
+    }],
+    topologySpreadConstraints: [{
+      labelSelector: {
+        matchExpressions: [{
+          key: String,
+          operator: String,
+          values: [String],
+        }],
+        matchLabels: {
+          type: Map,
+          of: String,
+        },
+      },
+      matchLabelKeys: [String],
+      maxSkew: {
+        type: Number,
+        default: 0
+      },
+      minDomains: {
+        type: Number,
+        default: 0
+      },
+      nodeAffinityPolicy: String,
+      nodeTaintsPolicy: String,
+      topologyKey: String,
+      whenUnsatisfiable: String,
+    }],
+    volumes: [volumeSchema],
+  },
+  status: {
+    conditions: [{
+      ...statusConditions,
+      lastTransitionTime: String,
+    }],
+    containerStatuses: [containerStatus],
+    ephemeralContainerStatuses: [containerStatus],
+    hostIP: String,
+    initContainerStatuses: [containerStatus],
+    message: String,
+    nominatedNodeName: String,
+    phase: String,
+    podIP: {
+      type: String,
+      default: null
+    },
+    podIPs: [{
+      ip: String,
+    }],
+    qosClass: String,
+    reason: String,
+    resize: String,
+    startTime: String,
+  },
 }
 
 const typedLocalObjectReference = {
@@ -879,26 +1390,6 @@ const apiServiceSchema = Schema({
   },
 });
 
-const iscsi = {
-  chapAuthDiscovery: Boolean,
-  chapAuthSession: Boolean,
-  fsType: String,
-  initiatorName: String,
-  iqn: String,
-  iscsiInterface: String,
-  lun: {
-    type: Number,
-    default: 0
-  },
-  portals: [String],
-  readOnly: Boolean,
-  secretRef: {
-    name: String,
-    namespace: String,
-  },
-  targetPortal: String,
-};
-
 const ingressSchema = Schema({
   apiVersion: String,
   kind: String,
@@ -1048,7 +1539,10 @@ const endpointsSchema = Schema({
         kind: String,
         namespace: String,
         name: String,
-        uid: String
+        uid: {
+          type: String,
+          default: uuid()
+        }
       }
     }],
     notReadyAddresses: [{
@@ -1058,7 +1552,10 @@ const endpointsSchema = Schema({
         kind: String,
         namespace: String,
         name: String,
-        uid: String
+        uid: {
+          type: String,
+          default: uuid()
+        }
       }
     }],
     ports: [{
@@ -1090,7 +1587,7 @@ const roleSchema = Schema(role);
 const clusterRoleSchema = Schema({
   ...role,
   aggregationRule: {
-    clusterRoleSelectors: [fieldSelector]
+    clusterRoleSelectors: [labelSelector]
   }
 })
 
@@ -1129,7 +1626,10 @@ const certificateSigningRequestSchema = Schema({
     groups: [String],
     request: String,
     signerName: String,
-    uid: String,
+    uid: {
+      type: String,
+      default: uuid()
+    },
     usages: [String],
     username: String,
   },
@@ -1147,13 +1647,7 @@ const nodeSchema = Schema({
   metadata,
   spec: {
     configSource: {
-      configMap: {
-        kubeletConfigKey: String,
-        name: String,
-        namespace: String,
-        resourceVersion: String,
-        uid: String,
-      },
+      configMap: configMapInfo,
     },
     externalID: String,
     podCIDR: String,
@@ -1202,33 +1696,15 @@ const nodeSchema = Schema({
     }],
     config: {
       active: {
-        configMap: {
-          kubeletConfigKey: String,
-          name: String,
-          namespace: String,
-          resourceVersion: String,
-          uid: String,
-        },
+        configMap: configMapInfo,
       },
     },
     assigned: {
-      configMap: {
-        kubeletConfigKey: String,
-        name: String,
-        namespace: String,
-        resourceVersion: String,
-        uid: String,
-      },
+      configMap: configMapInfo,
     },
     error: String,
     lastKnownGood: {
-      configMap: {
-        kubeletConfigKey: String,
-        name: String,
-        namespace: String,
-        resourceVersion: String,
-        uid: String,
-      },
+      configMap: configMapInfo,
     },
     daemonEndpoints: {
       kubeletEndpoint: {
@@ -1270,7 +1746,10 @@ const objectReferenceSchema = Schema({
   kind: String,
   namespace: String,
   name: String,
-  uid: String,
+  uid: {
+    type: String,
+    default: uuid()
+  },
   apiVersion: String,
   resourceVersion: String,
   fieldPath: String,
@@ -1510,11 +1989,14 @@ const bindingSchema = Schema({
     name: String,
     namespace: String,
     resourceVersion: String,
-    uid: String,
+    uid: {
+      type: String,
+      default: uuid()
+    },
   },
 });
 
-const cSIDriverSchema = Schema({
+const csiDriverSchema = Schema({
   apiVersion: String,
   kind: String,
   metadata,
@@ -1536,7 +2018,7 @@ const cSIDriverSchema = Schema({
   },
 });
 
-const cSINodeSchema = Schema({
+const csiNodeSchema = Schema({
   apiVersion: String,
   kind: String,
   metadata,
@@ -1555,7 +2037,7 @@ const cSINodeSchema = Schema({
   },
 });
 
-const cSIStorageCapacitySchema = Schema({
+const csiStorageCapacitySchema = Schema({
   apiVersion: String,
   capacity: String,
   kind: String,
@@ -1648,7 +2130,10 @@ const cronJobSchema = Schema({
       name: String,
       namespace: String,
       resourceVersion: String,
-      uid: String,
+      uid: {
+        type: String,
+        default: uuid()
+      },
     }],
     lastScheduleTime: {
       type: String,
@@ -1825,7 +2310,10 @@ const endpointSliceSchema = Schema({
       name: String,
       namespace: String,
       resourceVersion: String,
-      uid: String,
+      uid: {
+        type: String,
+        default: uuid()
+      },
     },
     zone: String,
   }],
@@ -2080,7 +2568,10 @@ const localSubjectAccessReviewSchema = Schema({
       verb: String,
       version: String,
     },
-    uid: String,
+    uid: {
+      type: String,
+      default: uuid()
+    },
     user: String,
   },
   status: {
@@ -2189,53 +2680,29 @@ const persistentVolumeSchema = Schema({
   kind: String,
   metadata,
   spec: {
+    ...volumeInfo,
     accessModes: [String],
-    awsElasticBlockStore: {
-      fsType: String,
-      partition: {
-        type: Number,
-        default: 0
-      },
-      readOnly: Boolean,
-      volumeID: String,
-    },
-    azureDisk: {
-      cachingMode: String,
-      diskName: String,
-      diskURI: String,
-      fsType: String,
-      kind: String,
-      readOnly: Boolean,
-    },
     azureFile: {
-      readOnly: Boolean,
-      secretName: String,
+      ...volumeInfo.azureFile,
       secretNamespace: String,
-      shareName: String,
     },
     capacity: {
       type: Map,
       of: String,
     },
     cephfs: {
-      monitors: [String],
-      path: String,
-      readOnly: Boolean,
-      secretFile: String,
+      ...volumeInfo.cephfs,
       secretRef: {
-        name: String,
+        ...volumeInfo.cephfs.secretRef,
         namespace: String,
       },
-      user: String,
     },
     cinder: {
-      fsType: String,
-      readOnly: Boolean,
+      ...volumeInfo.cinder,
       secretRef: {
-        name: String,
+        ...volumeInfo.cinder.secretRef,
         namespace: String,
       },
-      volumeID: String,
     },
     claimRef: {
       apiVersion: String,
@@ -2244,9 +2711,13 @@ const persistentVolumeSchema = Schema({
       name: String,
       namespace: String,
       resourceVersion: String,
-      uid: String,
+      uid: {
+        type: String,
+        default: uuid()
+      },
     },
     csi: {
+      ...volumeInfo.csi,
       controllerExpandSecretRef: {
         name: String,
         namespace: String,
@@ -2255,142 +2726,62 @@ const persistentVolumeSchema = Schema({
         name: String,
         namespace: String,
       },
-      driver: String,
-      fsType: String,
       nodeExpandSecretRef: {
         name: String,
         namespace: String,
       },
       nodePublishSecretRef: {
-        name: String,
+        ...volumeInfo.csi.nodePublishSecretRef,
         namespace: String,
       },
       nodeStageSecretRef: {
         name: String,
         namespace: String,
       },
-      readOnly: Boolean,
-      volumeAttributes: {
-        type: Map,
-        of: String,
-      },
       volumeHandle: String,
     },
-    fc: {
-      fsType: String,
-      lun: {
-        type: Number,
-        default: 0
-      },
-      readOnly: Boolean,
-      targetWWNs: [String],
-      wwids: [String],
-    },
     flexVolume: {
-      driver: String,
-      fsType: String,
-      options: {
-        type: Map,
-        of: String,
-      },
-      readOnly: Boolean,
+      ...volumeInfo.flexVolume,
       secretRef: {
-        name: String,
+        ...volumeInfo.flexVolume.secretRef,
         namespace: String,
       },
     },
-    flocker: {
-      datasetName: String,
-      datasetUUID: String,
-    },
-    gcePersistentDisk: {
-      fsType: String,
-      partition: {
-        type: Number,
-        default: 0
-      },
-      pdName: String,
-      readOnly: Boolean,
-    },
     glusterfs: {
-      endpoints: String,
+      ...glusterfs,
       endpointsNamespace: String,
-      path: String,
-      readOnly: Boolean,
     },
-    hostPath: {
-      path: String,
-      type: String,
-    },
-    iscsi,
     local: {
       fsType: String,
       path: String,
     },
     mountOptions: [String],
-    nfs: {
-      path: String,
-      readOnly: Boolean,
-      server: String,
-    },
     nodeAffinity,
     persistentVolumeReclaimPolicy: String,
-    photonPersistentDisk: {
-      fsType: String,
-      pdID: String,
-    },
-    portworxVolume: {
-      fsType: String,
-      readOnly: Boolean,
-      volumeID: String,
-    },
-    quobyte: {
-      group: String,
-      readOnly: Boolean,
-      registry: String,
-      tenant: String,
-      user: String,
-      volume: String,
-    },
-    rbd,
     scaleIO: {
-      fsType: String,
-      gateway: String,
-      protectionDomain: String,
-      readOnly: Boolean,
+      ...volumeInfo.scaleIO,
       secretRef: {
-        name: String,
+        ...volumeInfo.scaleIO.secretRef,
         namespace: String,
       },
-      sslEnabled: Boolean,
-      storageMode: String,
-      storagePool: String,
-      system: String,
-      volumeName: String,
     },
     storageClassName: String,
     storageos: {
-      fsType: String,
-      readOnly: Boolean,
+      ...volumeInfo.storageos,
       secretRef: {
+        ...volumeInfo.storageos.secretRef,
         apiVersion: String,
         fieldPath: String,
         kind: String,
-        name: String,
         namespace: String,
         resourceVersion: String,
-        uid: String,
+        uid: {
+          type: String,
+          default: uuid()
+        },
       },
-      volumeName: String,
-      volumeNamespace: String,
     },
     volumeMode: String,
-    vsphereVolume: {
-      fsType: String,
-      storagePolicyID: String,
-      storagePolicyName: String,
-      volumePath: String,
-    },
   },
   status: {
     message: String,
@@ -2600,7 +2991,25 @@ const selfSubjectAccessReviewSchema = Schema({
   },
 });
 
-// const selfSubjectReviewSchema = Schema({});
+const selfSubjectReviewSchema = Schema({
+  apiVersion: String,
+  kind: String,
+  metadata,
+  status: {
+    userInfo: {
+      extra: [{
+        type: Map,
+        of: [String],
+      }],
+      groups: [String],
+      uid: {
+        type: String,
+        default: uuid()
+      },
+      username: String,
+    }
+  }
+});
 
 const selfSubjectRulesReviewSchema = Schema({
   apiVersion: String,
@@ -2641,7 +3050,10 @@ const serviceAccountSchema = Schema({
       name: String,
       namespace: String,
       resourceVersion: String,
-      uid: String,
+      uid: {
+        type: String,
+        default: uuid()
+      },
     }],
   },
 })
@@ -2820,7 +3232,10 @@ const subjectAccessReviewSchema = Schema({
       verb: String,
       version: String,
     },
-    uid: String,
+    uid: {
+      type: String,
+      default: uuid()
+    },
     user: String,
   },
   status: {
@@ -2831,7 +3246,37 @@ const subjectAccessReviewSchema = Schema({
   },
 });
 
-// const tokenRequestSchema = Schema({});
+const tokenRequestSchema = Schema({
+  spec: {
+    audiences: {
+      type: [String],
+      required: true,
+    },
+    boundObjectRef: {
+      apiVersion: String,
+      kind: {
+        type: String,
+        enum: ['Pod', 'Secret']
+      },
+      name: String,
+      uid: {
+        type: String,
+        default: uuid()
+      },
+    },
+    expirationSeconds: Number
+  },
+  status: {
+    expirationTimestamp: {
+      type: [String],
+      required: true,
+    },
+    token: {
+      type: [String],
+      required: true,
+    }
+  }
+});
 
 const tokenReviewSchema = Schema({
   apiVersion: String,
@@ -2848,7 +3293,10 @@ const tokenReviewSchema = Schema({
     user: {
       extra: [String],
       groups: [String],
-      uid: String,
+      uid: {
+        type: String,
+        default: uuid()
+      },
       username: String,
     },
   },
@@ -2897,8 +3345,6 @@ const validatingWebhookConfigurationSchema = Schema({
   }],
 });
 
-// const volumeSchema = Schema({});
-
 const volumeAttachmentSchema = Schema({
   apiVersion: String,
   kind: String,
@@ -2944,9 +3390,9 @@ module.exports = {
   ConfigMap: model('ConfigMap', configMapSchema),
   ControllerRevision: model('ControllerRevision', controllerRevisionSchema),
   CronJob: model('CronJob', cronJobSchema),
-  CSIDriver: model('CSIDriver', cSIDriverSchema),
-  CSINode: model('CSINode', cSINodeSchema),
-  CSIStorageCapacity: model('CSIStorageCapacity', cSIStorageCapacitySchema),
+  CSIDriver: model('CSIDriver', csiDriverSchema),
+  CSINode: model('CSINode', csiNodeSchema),
+  CSIStorageCapacity: model('CSIStorageCapacity', csiStorageCapacitySchema),
   // CustomResourceDefinition: model('CustomResourceDefinition', customResourceDefinitionSchema),
   DaemonSet: model('DaemonSet', daemonSetSchema),
   Deployment: model('Deployment', deploymentSchema),
@@ -2978,17 +3424,17 @@ module.exports = {
   RuntimeClass: model('RuntimeClass', runtimeClassSchema),
   Secret: model('Secret', secretSchema),
   SelfSubjectAccessReview: model('SelfSubjectAccessReview', selfSubjectAccessReviewSchema),
-  // SelfSubjectReview: model('SelfSubjectReview', selfSubjectReviewSchema),
+  SelfSubjectReview: model('SelfSubjectReview', selfSubjectReviewSchema),
   SelfSubjectRulesReview: model('SelfSubjectRulesReview', selfSubjectRulesReviewSchema),
   Service: model('Service', serviceSchema),
   ServiceAccount: model('ServiceAccount', serviceAccountSchema),
   StatefulSet: model('StatefulSet', statefulSetSchema),
   StorageClass: model('StorageClass', storageClassSchema),
   SubjectAccessReview: model('SubjectAccessReview', subjectAccessReviewSchema),
-  // TokenRequest: model('TokenRequest', tokenRequestSchema),
+  TokenRequest: model('TokenRequest', tokenRequestSchema),
   TokenReview: model('TokenReview', tokenReviewSchema),
   ValidatingWebhookConfiguration: model('ValidatingWebhookConfiguration', validatingWebhookConfigurationSchema),
-  // Volume: model('Volume', volumeSchema),
+  Volume: model('Volume', volumeSchema),
   VolumeAttachment: model('VolumeAttachment', volumeAttachmentSchema),
   DNS: model('DNS', dns),
 };
