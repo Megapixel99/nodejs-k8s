@@ -1178,6 +1178,70 @@ const ingressServiceBackend = {
   }
 };
 
+const jobInfo = {
+  metadata,
+  spec: {
+    activeDeadlineSeconds: {
+      type: Number,
+      default: 0
+    },
+    backoffLimit: {
+      type: Number,
+      default: 0
+    },
+    completionMode: String,
+    completions: {
+      type: Number,
+      default: 0
+    },
+    manualSelector: Boolean,
+    parallelism: {
+      type: Number,
+      default: 0
+    },
+    podFailurePolicy,
+    selector: labelSelector,
+    suspend: Boolean,
+    template: pod,
+    ttlSecondsAfterFinished: {
+      type: Number,
+      default: 0
+    },
+  },
+  status: {
+    active: {
+      type: Number,
+      default: 0
+    },
+    completedIndexes: String,
+    completionTime: {
+      type: String,
+      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    },
+    conditions: [statusConditions],
+    failed: {
+      type: Number,
+      default: 0
+    },
+    ready: {
+      type: Number,
+      default: 0
+    },
+    startTime: {
+      type: String,
+      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    },
+    succeeded: {
+      type: Number,
+      default: 0
+    },
+    uncountedTerminatedPods: {
+      failed: [String],
+      succeeded: [String],
+    },
+  },
+}
+
 const podTemplateSchema = Schema({
   apiVersion: String,
   kind: String,
@@ -2069,6 +2133,45 @@ const controllerRevisionSchema = Schema({
   },
 });
 
+const jobSchema = Schema({
+  apiVersion: String,
+  kind: String,
+  metadata,
+  spec: jobInfo,
+  status: {
+    active: {
+      type: Number,
+      default: 0
+    },
+    completedIndexes: String,
+    completionTime: {
+      type: String,
+      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    },
+    conditions: [statusConditions],
+    failed: {
+      type: Number,
+      default: 0
+    },
+    ready: {
+      type: Number,
+      default: 0
+    },
+    startTime: {
+      type: String,
+      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    },
+    succeeded: {
+      type: Number,
+      default: 0
+    },
+    uncountedTerminatedPods: {
+      failed: [String],
+      succeeded: [String],
+    },
+  },
+});
+
 const cronJobSchema = Schema({
   apiVersion: String,
   kind: String,
@@ -2079,37 +2182,7 @@ const cronJobSchema = Schema({
       type: Number,
       default: 0
     },
-    jobTemplate: {
-      metadata,
-      spec: {
-        activeDeadlineSeconds: {
-          type: Number,
-          default: 0
-        },
-        backoffLimit: {
-          type: Number,
-          default: 0
-        },
-        completionMode: String,
-        completions: {
-          type: Number,
-          default: 0
-        },
-        manualSelector: Boolean,
-        parallelism: {
-          type: Number,
-          default: 0
-        },
-        podFailurePolicy,
-        selector: labelSelector,
-        suspend: Boolean,
-        template: pod,
-        ttlSecondsAfterFinished: {
-          type: Number,
-          default: 0
-        },
-      },
-    },
+    jobTemplate: jobInfo,
     schedule: String,
     startingDeadlineSeconds: {
       type: Number,
@@ -2422,72 +2495,6 @@ const ingressClassSchema = Schema({
       name: String,
       namespace: String,
       scope: String,
-    },
-  },
-});
-
-const jobSchema = Schema({
-  apiVersion: String,
-  kind: String,
-  metadata,
-  spec: {
-    activeDeadlineSeconds: {
-      type: Number,
-      default: 0
-    },
-    backoffLimit: {
-      type: Number,
-      default: 0
-    },
-    completionMode: String,
-    completions: {
-      type: Number,
-      default: 0
-    },
-    manualSelector: Boolean,
-    parallelism: {
-      type: Number,
-      default: 0
-    },
-    podFailurePolicy,
-    selector: labelSelector,
-    suspend: Boolean,
-    template: pod,
-    ttlSecondsAfterFinished: {
-      type: Number,
-      default: 0
-    },
-  },
-  status: {
-    active: {
-      type: Number,
-      default: 0
-    },
-    completedIndexes: String,
-    completionTime: {
-      type: String,
-      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
-    },
-    conditions: [statusConditions],
-    failed: {
-      type: Number,
-      default: 0
-    },
-    ready: {
-      type: Number,
-      default: 0
-    },
-    startTime: {
-      type: String,
-      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
-    },
-    succeeded: {
-      type: Number,
-      default: 0
-    },
-    uncountedTerminatedPods: {
-      failed: [String],
-      succeeded: [String],
     },
   },
 });
