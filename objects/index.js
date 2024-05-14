@@ -8,7 +8,7 @@ module.exports = {
   ConfigMap: require('./configMap.js'),
   ControllerRevision: require('./controllerRevision.js'),
   CronJob: require('./cronJob.js'),
-  CSIDriver: require('./csidriver.js'),
+  CSIDriver: require('./csiDriver.js'),
   CSINode: require('./csiNode.js'),
   CSIStorageCapacity: require('./csiStorageCapacity.js'),
   DaemonSet: require('./daemonSet.js'),
