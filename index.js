@@ -1,7 +1,64 @@
 require('dotenv').config();
 const express = require('express');
 const db = require('./database/connection.js');
-const { api, namespace, namespaceCheck, deployment, events, endpoints, pod, service, ingress, secret, configMap, replicaset, daemonset, certificatesigningrequest, clusterRole, role, clusterRoleBinding, roleBinding, openapi, serviceAccount, node, version } = require('./routes/index.js');
+const {
+  api,
+  apiService,
+  binding,
+  certificateSigningRequest,
+  clusterRole,
+  clusterRoleBinding,
+  componentStatus,
+  configMap,
+  controllerRevision,
+  cronJob,
+  csidriver,
+  csiNode,
+  csiStorageCapacity,
+  daemonset,
+  deployment,
+  endpoints,
+  endpointSlice,
+  events,
+  horizontalPodAutoscaler,
+  ingress,
+  ingressClass,
+  job,
+  lease,
+  limitRange,
+  localSubjectAccessReview,
+  mutatingWebhookConfiguration,
+  namespace,
+  namespaceCheck,
+  networkPolicy,
+  node,
+  openapi,
+  persistentVolume,
+  persistentVolumeClaim,
+  pod,
+  podDisruptionBudget,
+  podTemplate,
+  priorityClass,
+  replicaset,
+  resourceQuota,
+  role,
+  roleBinding,
+  runtimeClass,
+  secret,
+  selfSubjectReview,
+  selfSubjectAccessReview,
+  selfSubjectRulesReview,
+  service,
+  serviceAccount,
+  statefulSet,
+  storageClass,
+  subjectAccessReview,
+  tokenRequest,
+  tokenReview,
+  validatingWebhookConfiguration,
+  version,
+  volumeAttachment,
+} = require('./routes/index.js');
 const { killContainer, removeContainer } = require('./functions.js');
 const Status = require('./objects/status.js');
 const Object = require('./objects/object.js');
@@ -39,21 +96,64 @@ app.use((req, res, next) => {
 app.use(api);
 app.use(openapi);
 app.use(node);
+app.use(apiService);
+app.use(binding);
+app.use(componentStatus);
+app.use(lease);
+app.use(runtimeClass);
+app.use(version);
 
 app.use(namespace);
 app.use(namespaceCheck);
-app.use(events);
-app.use(pod);
-app.use(service);
-app.use(ingress);
-app.use(endpoints);
-app.use(deployment);
-app.use(secret);
-app.use(configMap);
-app.use(clusterRoleBinding);
+app.use(certificateSigningRequest);
 app.use(clusterRole);
+app.use(clusterRoleBinding);
+app.use(configMap);
+app.use(controllerRevision);
+app.use(cronJob);
+app.use(csidriver);
+app.use(csiNode);
+app.use(csiStorageCapacity);
+app.use(daemonset);
+app.use(deployment);
+app.use(endpoints);
+app.use(endpointSlice);
+app.use(events);
+app.use(horizontalPodAutoscaler);
+app.use(ingress);
+app.use(ingressClass);
+app.use(job);
+app.use(limitRange);
+app.use(localSubjectAccessReview);
+app.use(mutatingWebhookConfiguration);
+app.use(namespace);
+app.use(namespaceCheck);
+app.use(networkPolicy);
+app.use(node);
+app.use(openapi);
+app.use(persistentVolume);
+app.use(persistentVolumeClaim);
+app.use(pod);
+app.use(podDisruptionBudget);
+app.use(podTemplate);
+app.use(priorityClass);
+app.use(replicaset);
+app.use(resourceQuota);
+app.use(role);
+app.use(roleBinding);
+app.use(secret);
+app.use(selfSubjectReview)
+app.use(selfSubjectAccessReview);
+app.use(selfSubjectRulesReview);
+app.use(service);
 app.use(serviceAccount);
-app.use(version);
+app.use(statefulSet);
+app.use(storageClass);
+app.use(subjectAccessReview);
+app.use(tokenRequest)
+app.use(tokenReview);
+app.use(validatingWebhookConfiguration);
+app.use(volumeAttachment);
 
 app.get('/', (req, res, next) => {
   let routes = app._router.stack.map((middleware) => {
