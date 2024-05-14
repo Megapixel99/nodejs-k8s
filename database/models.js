@@ -1,22 +1,41 @@
-const { Schema, model } = require('mongoose');
-const { DateTime } = require('luxon');
-const { v4: uuid } = require('uuid');
+const {
+  Schema,
+  model
+} = require('mongoose');
+const {
+  DateTime
+} = require('luxon');
+const {
+  v4: uuid
+} = require('uuid');
 
 const metadata = {
-  creationTimestamp: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") },
-  uid: { type: String, default: uuid() },
-  name: { type: String, required: true },
+  creationTimestamp: {
+    type: String,
+    default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+  },
+  uid: {
+    type: String,
+    default: uuid()
+  },
+  name: {
+    type: String,
+    required: true
+  },
   generateName: String,
-  resourceVersion: { type: String, default: "1" },
+  resourceVersion: {
+    type: String,
+    default: "1"
+  },
   annotations: {
     type: Map,
     of: String
   },
-  deletionGracePeriodSeconds: Number,
-  deletionTimestamp: Number,
-  finalizers: [ String ],
+  deletionGracePeriodSeconds: { type: Number, default: 0 },
+  deletionTimestamp: { type: Number, default: 0 },
+  finalizers: [String],
   generateName: String,
-  generation: Number,
+  generation: { type: Number, default: 0 },
   namespace: String,
   managedFields: [{
     apiVersion: String,
@@ -25,7 +44,10 @@ const metadata = {
     manager: String,
     operation: String,
     subresource: String,
-    time: String,
+    time: {
+      type: String,
+      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    },
   }],
   ownerReferences: [{
     apiVersion: String,
@@ -48,9 +70,16 @@ const metadata = {
 
 const labelSelector = {
   matchExpressions: [{
-    key: { type: String },
-    operator: { type: String },
-    values: { type: [ String ], default: undefined },
+    key: {
+      type: String
+    },
+    operator: {
+      type: String
+    },
+    values: {
+      type: [String],
+      default: undefined
+    },
   }],
   matchLabels: {
     type: Map,
@@ -71,8 +100,11 @@ const resourceFieldSelector = {
 
 const lifecycleHandler = {
   exec: {
-    command: { type: [ String ], default: undefined },
-    httpGet : {
+    command: {
+      type: [String],
+      default: undefined
+    },
+    httpGet: {
       port: Schema.Types.Mixed,
       host: String,
       httpHeaders: {
@@ -89,71 +121,103 @@ const lifecycleHandler = {
   }
 }
 
+const lifecycle = {
+  postStart: lifecycleHandler,
+  preStop: lifecycleHandler,
+};
+
+const statusConditions = {
+  status: {
+    type: String,
+    enum: ['True', 'False', 'Unknown'],
+    default: 'False'
+  },
+  type: {
+    type: String
+  },
+  lastTransitionTime: {
+    type: String,
+    default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+  },
+  message: String,
+  reason: String,
+};
+
+const volumeDevices = [{
+  devicePath: String,
+  name: String,
+}];
+
+const volumeMounts = [{
+  mountPath: String,
+  mountPropagation: String,
+  name: String,
+  readOnly: Boolean,
+  subPath: String,
+  subPathExpr: String,
+}]
+
 const probe = {
   ...lifecycleHandler,
-  initialDelaySeconds: Number,
-  terminationGracePeriodSeconds: Number,
-  periodSeconds: Number,
-  timeoutSeconds: Number,
-  failureThreshol: Number,
-  dsuccessThreshold: Number,
+  initialDelaySeconds: { type: Number, default: 0 },
+  terminationGracePeriodSeconds: { type: Number, default: 0 },
+  periodSeconds: { type: Number, default: 0 },
+  timeoutSeconds: { type: Number, default: 0 },
+  failureThreshold: { type: Number, default: 0 },
+  dsuccessThreshold: { type: Number, default: 0 },
   grpc: {
     port: Schema.Types.Mixed,
     service: String,
   }
 }
 
-const container = {
+const containerPortInfo = {
+  containerPort: { type: Number, default: 0 },
+  protocol: String,
+  hostIP: String,
+  hostPort: { type: Number, default: 0 },
   name: String,
-  image: String,
-  ports: [{
-    containerPort: Number,
-    protocol: String,
-    hostIP: String,
-    hostPort: Number,
-    name: String,
-  }],
-  env: [{
-    name: String,
-    value: String,
-    valueFrom: {
-      configMapKeyRef: {
-        key: String,
-        name: String,
-        optional: Boolean,
-      },
-      fieldRef: objectFieldSelector,
-      resourceFieldRef: resourceFieldSelector,
-      secretKeyRef: {
-        key: String,
-        name: String,
-        optional: Boolean,
-      }
-    }
-  }],
-  envFrom: [{
-    configMapRef: {
+};
+
+const env = {
+  name: String,
+  value: String,
+  valueFrom: {
+    configMapKeyRef: {
+      key: String,
       name: String,
       optional: Boolean,
     },
-    prefix: String,
-    secretRef: {
+    fieldRef: objectFieldSelector,
+    resourceFieldRef: resourceFieldSelector,
+    secretKeyRef: {
+      key: String,
       name: String,
       optional: Boolean,
     }
-  }],
-  volumeMounts: [{
-    mountPath: String,
+  }
+};
+
+const envFrom = {
+  configMapRef: {
     name: String,
-    mountPropagation: String,
-    readOnly: Boolean,
-    subPath: String,
-    subPathExpr: String,
-  }],
-  volumeDevices: [{
-    devicePath: String,
+    optional: Boolean,
+  },
+  prefix: String,
+  secretRef: {
     name: String,
-  }],
+    optional: Boolean,
+  }
+};
+
+const container = {
+  name: String,
+  image: String,
+  ports: [containerPortInfo],
+  env: [env],
+  envFrom: [envFrom],
+  volumeMounts,
+  volumeDevices,
   resources: {
     claims: [{
       name: String,
@@ -171,10 +235,7 @@ const container = {
     resourceName: String,
     restartPolicy: String,
   }],
-  lifecycle: {
-    postStart: lifecycleHandler,
-    preStop: lifecycleHandler,
-  },
+  lifecycle,
   terminationMessagePath: String,
   terminationMessagePolicy: String,
   livenessProbe: probe,
@@ -182,16 +243,22 @@ const container = {
   startupProbe: probe,
   restartPolicy: String,
   securityContext: {
-    runAsUser: Number,
+    runAsUser: { type: Number, default: 0 },
     runAsNonRoot: Boolean,
-    runAsGroup: Number,
+    runAsGroup: { type: Number, default: 0 },
     readOnlyRootFilesystem: Boolean,
     procMount: String,
     privileged: Boolean,
     allowPrivilegeEscalation: Boolean,
     capabilities: {
-      add: { type: [ String ], default: undefined },
-      drop: { type: [ String ], default: undefined },
+      add: {
+        type: [String],
+        default: undefined
+      },
+      drop: {
+        type: [String],
+        default: undefined
+      },
     },
     seccompProfile: {
       type: String,
@@ -212,7 +279,7 @@ const container = {
   stdin: Boolean,
   stdinOnce: Boolean,
   tty: Boolean,
-  command: [ String ],
+  command: [String],
   args: String,
   workingDir: String,
   terminationMessagePath: String,
@@ -220,1538 +287,308 @@ const container = {
   imagePullPolicy: String,
 };
 
-const ephemeralContainer = {
+const metricInfo = {
+  metric: {
+    name: String,
+    selector: labelSelector,
+  },
+};
+
+const targetMetricInfo = {
+  ...metricInfo,
+  target: {
+    averageUtilization: { type: Number, default: 0 },
+    averageValue: String,
+    type: String,
+    value: String,
+  },
+};
+
+const currentMetricInfo = {
+  ...metricInfo,
+  current: {
+    averageUtilization: { type: Number, default: 0 },
+    averageValue: String,
+    value: String,
+  },
+};
+
+const podFailurePolicy = {
+  rules: [{
+    action: String,
+    onExitCodes: {
+      containerName: String,
+      operator: String,
+      values: [{ type: Number, default: 0 }],
+    },
+    onPodConditions: [{
+      status: String,
+      type: String,
+    }],
+  }],
+};
+
+const metrics = {
+  containerResource: {
+    container: String,
+    current: {
+      averageUtilization: { type: Number, default: 0 },
+      averageValue: String,
+      value: String,
+    },
+    name: String,
+  },
+  external: currentMetricInfo,
+  object: {
+    describedObject: {
+      apiVersion: String,
+      kind: String,
+      name: String,
+    },
+    ...currentMetricInfo
+  },
+  pods: currentMetricInfo,
+  resource: {
+    current: {
+      averageUtilization: { type: Number, default: 0 },
+      averageValue: String,
+      value: String,
+    },
+    name: String,
+  },
+  type: String,
+};
+
+const fieldSelector = {
+  matchExpressions: [{
+    key: String,
+    operator: String,
+    values: [String],
+  }],
+  matchFields: [{
+    key: String,
+    operator: String,
+    values: [String],
+  }],
+};
+
+const nodeAffinity = {
+  required: {
+    nodeSelectorTerms: [fieldSelector],
+  },
+};
+
+const rbd = {
+  fsType: String,
+  image: String,
+  keyring: String,
+  monitors: [String],
+  pool: String,
+  readOnly: Boolean,
+  secretRef: {
+    name: String,
+    namespace: String,
+  },
+  user: String,
+};
+
+const containerStatus = {
+  allocatedResources: {
+    type: Map,
+    of: String,
+  },
+  containerID: String,
+  image: String,
+  imageID: String,
+  lastState: {
+    running: {
+      startedAt: String,
+    },
+    terminated: {
+      containerID: String,
+      exitCode: { type: Number, default: 0 },
+      finishedAt: String,
+      message: String,
+      reason: String,
+      signal: { type: Number, default: 0 },
+      startedAt: String,
+    },
+    waiting: {
+      message: String,
+      reason: String,
+    },
+  },
   name: String,
-  targetContainerName: String,
-}
+  ready: Boolean,
+  resources: {
+    claims: [{
+      name: String,
+    }],
+    limits: {
+      type: Map,
+      of: String,
+    },
+    requests: {
+      type: Map,
+      of: String,
+    },
+  },
+  restartCount: { type: Number, default: 0 },
+  started: Boolean,
+  state: {
+    running: {
+      startedAt: String,
+    },
+    terminated: {
+      containerID: String,
+      exitCode: { type: Number, default: 0 },
+      finishedAt: String,
+      message: String,
+      reason: String,
+      signal: { type: Number, default: 0 },
+      startedAt: String,
+    },
+    waiting: {
+      message: String,
+      reason: String,
+    },
+  },
+};
 
 const pod = {
   apiVersion: String,
   kind: String,
   metadata,
   spec: {
-   activeDeadlineSeconds: Number,
-   affinity: {
-     nodeAffinity: {
-       preferredDuringSchedulingIgnoredDuringExecution: [{
-         preference: {
-           matchExpressions: [{
-             key: String,
-             operator: String,
-             values: [ String ],
-           }],
-           matchFields: [{
-             key: String,
-             operator: String,
-             values: [ String ],
-           }],
-           },
-         weight: Number,
-       }],
-       requiredDuringSchedulingIgnoredDuringExecution: {
-         nodeSelectorTerms: [{
-           matchExpressions: [{
-             key: String,
-             operator: String,
-             values: [ String ],
-           }],
-           matchFields: [{
-             key: String,
-             operator: String,
-             values: [ String ],
-           }],
-         }],
-         },
-       },
-     podAffinity: {
-       preferredDuringSchedulingIgnoredDuringExecution: [{
-         podAffinityTerm: {
-           labelSelector: {
-             matchExpressions: [{
-               key: String,
-               operator: String,
-               values: [ String ],
-             }],
-             matchLabels: {
-               type: Map,
-               of: String,
-             },
-             },
-           namespaceSelector: {
-             matchExpressions: [{
-               key: String,
-               operator: String,
-               values: [ String ],
-             }],
-             matchLabels: {
-               type: Map,
-               of: String,
-             },
-             },
-           namespaces: [ String ],
-           topologyKey: String,
-           },
-         weight: Number,
-       }],
-       requiredDuringSchedulingIgnoredDuringExecution: [{
-         labelSelector: {
-           matchExpressions: [{
-             key: String,
-             operator: String,
-             values: [ String ],
-           }],
-           matchLabels: {
-             type: Map,
-             of: String,
-           },
-           },
-         namespaceSelector: {
-           matchExpressions: [{
-             key: String,
-             operator: String,
-             values: [ String ],
-           }],
-           matchLabels: {
-             type: Map,
-             of: String,
-           },
-           },
-         namespaces: [ String ],
-         topologyKey: String,
-       }],
-       },
-     podAntiAffinity: {
-       preferredDuringSchedulingIgnoredDuringExecution: [{
-         podAffinityTerm: {
-           labelSelector: {
-             matchExpressions: [{
-               key: String,
-               operator: String,
-               values: [ String ],
-             }],
-             matchLabels: {
-               type: Map,
-               of: String,
-             },
-             },
-           namespaceSelector: {
-             matchExpressions: [{
-               key: String,
-               operator: String,
-               values: [ String ],
-             }],
-             matchLabels: {
-               type: Map,
-               of: String,
-             },
-             },
-           namespaces: [ String ],
-           topologyKey: String,
-           },
-         weight: Number,
-       }],
-       requiredDuringSchedulingIgnoredDuringExecution: [{
-         labelSelector: {
-           matchExpressions: [{
-             key: String,
-             operator: String,
-             values: [ String ],
-           }],
-           matchLabels: {
-             type: Map,
-             of: String,
-           },
-           },
-         namespaceSelector: {
-           matchExpressions: [{
-             key: String,
-             operator: String,
-             values: [ String ],
-           }],
-           matchLabels: {
-             type: Map,
-             of: String,
-           },
-           },
-         namespaces: [ String ],
-         topologyKey: String,
-       }],
-       },
-     },
-   automountServiceAccountToken: Boolean,
-   containers: [{
-     args: [ String ],
-     command: [ String ],
-     env: [{
-       name: String,
-       value: String,
-       valueFrom: {
-         configMapKeyRef: {
-           key: String,
-           name: String,
-           optional: Boolean,
-           },
-         fieldRef: {
-           apiVersion: String,
-           fieldPath: String,
-           },
-         resourceFieldRef: {
-           containerName: String,
-           divisor: String,
-           resource: String,
-           },
-         secretKeyRef: {
-           key: String,
-           name: String,
-           optional: Boolean,
-           },
-         },
-     }],
-     envFrom: [{
-       configMapRef: {
-         name: String,
-         optional: Boolean,
-         },
-       prefix: String,
-       secretRef: {
-         name: String,
-         optional: Boolean,
-         },
-     }],
-     image: String,
-     imagePullPolicy: String,
-     lifecycle: {
-       postStart: {
-         exec: {
-           command: [ String ],
-           },
-         httpGet: {
-           host: String,
-           httpHeaders: [{
-             name: String,
-             value: String,
-           }],
-           path: String,
-           port: String,
-           scheme: String,
-           },
-         tcpSocket: {
-           host: String,
-           port: String,
-           },
-         },
-       preStop: {
-         exec: {
-           command: [ String ],
-           },
-         httpGet: {
-           host: String,
-           httpHeaders: [{
-             name: String,
-             value: String,
-           }],
-           path: String,
-           port: String,
-           scheme: String,
-           },
-         tcpSocket: {
-           host: String,
-           port: String,
-           },
-         },
-       },
-     livenessProbe: {
-       exec: {
-         command: [ String ],
-         },
-       failureThreshold: Number,
-       grpc: {
-         port: Number,
-         service: String,
-         },
-       httpGet: {
-         host: String,
-         httpHeaders: [{
-           name: String,
-           value: String,
-         }],
-         path: String,
-         port: String,
-         scheme: String,
-         },
-       initialDelaySeconds: Number,
-       periodSeconds: Number,
-       successThreshold: Number,
-       tcpSocket: {
-         host: String,
-         port: String,
-         },
-       terminationGracePeriodSeconds: Number,
-       timeoutSeconds: Number,
-       },
-     name: String,
-     ports: [{
-       containerPort: Number,
-       hostIP: String,
-       hostPort: Number,
-       name: String,
-       protocol: String,
-     }],
-     readinessProbe: {
-       exec: {
-         command: [ String ],
-         },
-       failureThreshold: Number,
-       grpc: {
-         port: Number,
-         service: String,
-         },
-       httpGet: {
-         host: String,
-         httpHeaders: [{
-           name: String,
-           value: String,
-         }],
-         path: String,
-         port: String,
-         scheme: String,
-         },
-       initialDelaySeconds: Number,
-       periodSeconds: Number,
-       successThreshold: Number,
-       tcpSocket: {
-         host: String,
-         port: String,
-         },
-       terminationGracePeriodSeconds: Number,
-       timeoutSeconds: Number,
-       },
-     resizePolicy: [{
-       resourceName: String,
-       restartPolicy: String,
-     }],
-     resources: {
-       claims: [{
-         name: String,
-       }],
-       limits: {
-         type: Map,
-         of: String,
-       },
-       requests: {
-         type: Map,
-         of: String,
-       },
-       },
-     securityContext: {
-       allowPrivilegeEscalation: Boolean,
-       capabilities: {
-         add: [ String ],
-         drop: [ String ],
-         },
-       privileged: Boolean,
-       procMount: String,
-       readOnlyRootFilesystem: Boolean,
-       runAsGroup: Number,
-       runAsNonRoot: Boolean,
-       runAsUser: Number,
-       seLinuxOptions: {
-         level: String,
-         role: String,
-         type: String,
-         user: String,
-         },
-       seccompProfile: {
-         localhostProfile: String,
-         type: String,
-         },
-       windowsOptions: {
-         gmsaCredentialSpec: String,
-         gmsaCredentialSpecName: String,
-         hostProcess: Boolean,
-         runAsUserName: String,
-         },
-       },
-     startupProbe: {
-       exec: {
-         command: [ String ],
-         },
-       failureThreshold: Number,
-       grpc: {
-         port: Number,
-         service: String,
-         },
-       httpGet: {
-         host: String,
-         httpHeaders: [{
-           name: String,
-           value: String,
-         }],
-         path: String,
-         port: String,
-         scheme: String,
-         },
-       initialDelaySeconds: Number,
-       periodSeconds: Number,
-       successThreshold: Number,
-       tcpSocket: {
-         host: String,
-         port: String,
-         },
-       terminationGracePeriodSeconds: Number,
-       timeoutSeconds: Number,
-       },
-     stdin: Boolean,
-     stdinOnce: Boolean,
-     terminationMessagePath: String,
-     terminationMessagePolicy: String,
-     tty: Boolean,
-     volumeDevices: [{
-       devicePath: String,
-       name: String,
-     }],
-     volumeMounts: [{
-       mountPath: String,
-       mountPropagation: String,
-       name: String,
-       readOnly: Boolean,
-       subPath: String,
-       subPathExpr: String,
-     }],
-     workingDir: String,
-   }],
-   dnsConfig: {
-     nameservers: [ String ],
-     options: [{
-       name: String,
-       value: String,
-     }],
-     searches: [ String ],
-     },
-   dnsPolicy: String,
-   enableServiceLinks: Boolean,
-   ephemeralContainers: [{
-     args: [ String ],
-     command: [ String ],
-     env: [{
-       name: String,
-       value: String,
-       valueFrom: {
-         configMapKeyRef: {
-           key: String,
-           name: String,
-           optional: Boolean,
-           },
-         fieldRef: {
-           apiVersion: String,
-           fieldPath: String,
-           },
-         resourceFieldRef: {
-           containerName: String,
-           divisor: String,
-           resource: String,
-           },
-         secretKeyRef: {
-           key: String,
-           name: String,
-           optional: Boolean,
-           },
-         },
-     }],
-     envFrom: [{
-       configMapRef: {
-         name: String,
-         optional: Boolean,
-         },
-       prefix: String,
-       secretRef: {
-         name: String,
-         optional: Boolean,
-         },
-     }],
-     image: String,
-     imagePullPolicy: String,
-     lifecycle: {
-       postStart: {
-         exec: {
-           command: [ String ],
-           },
-         httpGet: {
-           host: String,
-           httpHeaders: [{
-             name: String,
-             value: String,
-           }],
-           path: String,
-           port: String,
-           scheme: String,
-           },
-         tcpSocket: {
-           host: String,
-           port: String,
-           },
-         },
-       preStop: {
-         exec: {
-           command: [ String ],
-           },
-         httpGet: {
-           host: String,
-           httpHeaders: [{
-             name: String,
-             value: String,
-           }],
-           path: String,
-           port: String,
-           scheme: String,
-           },
-         tcpSocket: {
-           host: String,
-           port: String,
-           },
-         },
-       },
-     livenessProbe: {
-       exec: {
-         command: [ String ],
-         },
-       failureThreshold: Number,
-       grpc: {
-         port: Number,
-         service: String,
-         },
-       httpGet: {
-         host: String,
-         httpHeaders: [{
-           name: String,
-           value: String,
-         }],
-         path: String,
-         port: String,
-         scheme: String,
-         },
-       initialDelaySeconds: Number,
-       periodSeconds: Number,
-       successThreshold: Number,
-       tcpSocket: {
-         host: String,
-         port: String,
-         },
-       terminationGracePeriodSeconds: Number,
-       timeoutSeconds: Number,
-       },
-     name: String,
-     ports: [{
-       containerPort: Number,
-       hostIP: String,
-       hostPort: Number,
-       name: String,
-       protocol: String,
-     }],
-     readinessProbe: {
-       exec: {
-         command: [ String ],
-         },
-       failureThreshold: Number,
-       grpc: {
-         port: Number,
-         service: String,
-         },
-       httpGet: {
-         host: String,
-         httpHeaders: [{
-           name: String,
-           value: String,
-         }],
-         path: String,
-         port: String,
-         scheme: String,
-         },
-       initialDelaySeconds: Number,
-       periodSeconds: Number,
-       successThreshold: Number,
-       tcpSocket: {
-         host: String,
-         port: String,
-         },
-       terminationGracePeriodSeconds: Number,
-       timeoutSeconds: Number,
-       },
-     resizePolicy: [{
-       resourceName: String,
-       restartPolicy: String,
-     }],
-     resources: {
-       claims: [{
-         name: String,
-       }],
-       limits: {
-         type: Map,
-         of: String,
-       },
-       requests: {
-         type: Map,
-         of: String,
-       },
-       },
-     securityContext: {
-       allowPrivilegeEscalation: Boolean,
-       capabilities: {
-         add: [ String ],
-         drop: [ String ],
-         },
-       privileged: Boolean,
-       procMount: String,
-       readOnlyRootFilesystem: Boolean,
-       runAsGroup: Number,
-       runAsNonRoot: Boolean,
-       runAsUser: Number,
-       seLinuxOptions: {
-         level: String,
-         role: String,
-         type: String,
-         user: String,
-         },
-       seccompProfile: {
-         localhostProfile: String,
-         type: String,
-         },
-       windowsOptions: {
-         gmsaCredentialSpec: String,
-         gmsaCredentialSpecName: String,
-         hostProcess: Boolean,
-         runAsUserName: String,
-         },
-       },
-     startupProbe: {
-       exec: {
-         command: [ String ],
-         },
-       failureThreshold: Number,
-       grpc: {
-         port: Number,
-         service: String,
-         },
-       httpGet: {
-         host: String,
-         httpHeaders: [{
-           name: String,
-           value: String,
-         }],
-         path: String,
-         port: String,
-         scheme: String,
-         },
-       initialDelaySeconds: Number,
-       periodSeconds: Number,
-       successThreshold: Number,
-       tcpSocket: {
-         host: String,
-         port: String,
-         },
-       terminationGracePeriodSeconds: Number,
-       timeoutSeconds: Number,
-       },
-     stdin: Boolean,
-     stdinOnce: Boolean,
-     targetContainerName: String,
-     terminationMessagePath: String,
-     terminationMessagePolicy: String,
-     tty: Boolean,
-     volumeDevices: [{
-       devicePath: String,
-       name: String,
-     }],
-     volumeMounts: [{
-       mountPath: String,
-       mountPropagation: String,
-       name: String,
-       readOnly: Boolean,
-       subPath: String,
-       subPathExpr: String,
-     }],
-     workingDir: String,
-   }],
-   hostAliases: [{
-     hostnames: [ String ],
-     ip: String,
-   }],
-   hostIPC: Boolean,
-   hostNetwork: Boolean,
-   hostPID: Boolean,
-   hostUsers: Boolean,
-   hostname: String,
-   imagePullSecrets: [{
-     name: String,
-   }],
-   initContainers: [{
-     args: [ String ],
-     command: [ String ],
-     env: [{
-       name: String,
-       value: String,
-       valueFrom: {
-         configMapKeyRef: {
-           key: String,
-           name: String,
-           optional: Boolean,
-           },
-         fieldRef: {
-           apiVersion: String,
-           fieldPath: String,
-           },
-         resourceFieldRef: {
-           containerName: String,
-           divisor: String,
-           resource: String,
-           },
-         secretKeyRef: {
-           key: String,
-           name: String,
-           optional: Boolean,
-           },
-         },
-     }],
-     envFrom: [{
-       configMapRef: {
-         name: String,
-         optional: Boolean,
-         },
-       prefix: String,
-       secretRef: {
-         name: String,
-         optional: Boolean,
-         },
-     }],
-     image: String,
-     imagePullPolicy: String,
-     lifecycle: {
-       postStart: {
-         exec: {
-           command: [ String ],
-           },
-         httpGet: {
-           host: String,
-           httpHeaders: [{
-             name: String,
-             value: String,
-           }],
-           path: String,
-           port: String,
-           scheme: String,
-           },
-         tcpSocket: {
-           host: String,
-           port: String,
-           },
-         },
-       preStop: {
-         exec: {
-           command: [ String ],
-           },
-         httpGet: {
-           host: String,
-           httpHeaders: [{
-             name: String,
-             value: String,
-           }],
-           path: String,
-           port: String,
-           scheme: String,
-           },
-         tcpSocket: {
-           host: String,
-           port: String,
-           },
-         },
-       },
-     livenessProbe: {
-       exec: {
-         command: [ String ],
-         },
-       failureThreshold: Number,
-       grpc: {
-         port: Number,
-         service: String,
-         },
-       httpGet: {
-         host: String,
-         httpHeaders: [{
-           name: String,
-           value: String,
-         }],
-         path: String,
-         port: String,
-         scheme: String,
-         },
-       initialDelaySeconds: Number,
-       periodSeconds: Number,
-       successThreshold: Number,
-       tcpSocket: {
-         host: String,
-         port: String,
-         },
-       terminationGracePeriodSeconds: Number,
-       timeoutSeconds: Number,
-       },
-     name: String,
-     ports: [{
-       containerPort: Number,
-       hostIP: String,
-       hostPort: Number,
-       name: String,
-       protocol: String,
-     }],
-     readinessProbe: {
-       exec: {
-         command: [ String ],
-         },
-       failureThreshold: Number,
-       grpc: {
-         port: Number,
-         service: String,
-         },
-       httpGet: {
-         host: String,
-         httpHeaders: [{
-           name: String,
-           value: String,
-         }],
-         path: String,
-         port: String,
-         scheme: String,
-         },
-       initialDelaySeconds: Number,
-       periodSeconds: Number,
-       successThreshold: Number,
-       tcpSocket: {
-         host: String,
-         port: String,
-         },
-       terminationGracePeriodSeconds: Number,
-       timeoutSeconds: Number,
-       },
-     resizePolicy: [{
-       resourceName: String,
-       restartPolicy: String,
-     }],
-     resources: {
-       claims: [{
-         name: String,
-       }],
-       limits: {
-         type: Map,
-         of: String,
-       },
-       requests: {
-         type: Map,
-         of: String,
-       },
-       },
-     securityContext: {
-       allowPrivilegeEscalation: Boolean,
-       capabilities: {
-         add: [ String ],
-         drop: [ String ],
-         },
-       privileged: Boolean,
-       procMount: String,
-       readOnlyRootFilesystem: Boolean,
-       runAsGroup: Number,
-       runAsNonRoot: Boolean,
-       runAsUser: Number,
-       seLinuxOptions: {
-         level: String,
-         role: String,
-         type: String,
-         user: String,
-         },
-       seccompProfile: {
-         localhostProfile: String,
-         type: String,
-         },
-       windowsOptions: {
-         gmsaCredentialSpec: String,
-         gmsaCredentialSpecName: String,
-         hostProcess: Boolean,
-         runAsUserName: String,
-         },
-       },
-     startupProbe: {
-       exec: {
-         command: [ String ],
-         },
-       failureThreshold: Number,
-       grpc: {
-         port: Number,
-         service: String,
-         },
-       httpGet: {
-         host: String,
-         httpHeaders: [{
-           name: String,
-           value: String,
-         }],
-         path: String,
-         port: String,
-         scheme: String,
-         },
-       initialDelaySeconds: Number,
-       periodSeconds: Number,
-       successThreshold: Number,
-       tcpSocket: {
-         host: String,
-         port: String,
-         },
-       terminationGracePeriodSeconds: Number,
-       timeoutSeconds: Number,
-       },
-     stdin: Boolean,
-     stdinOnce: Boolean,
-     terminationMessagePath: String,
-     terminationMessagePolicy: String,
-     tty: Boolean,
-     volumeDevices: [{
-       devicePath: String,
-       name: String,
-     }],
-     volumeMounts: [{
-       mountPath: String,
-       mountPropagation: String,
-       name: String,
-       readOnly: Boolean,
-       subPath: String,
-       subPathExpr: String,
-     }],
-     workingDir: String,
-   }],
-   nodeName: String,
-   nodeSelector: {
-     type: Map,
-     of: String,
-   },
-   os: {
-     name: String,
-     },
-   overhead: {
-     type: Map,
-     of: String,
-   },
-   preemptionPolicy: String,
-   priority: Number,
-   priorityClassName: String,
-   readinessGates: [{
-     conditionType: String,
-   }],
-   resourceClaims: [{
-     name: String,
-     source: {
-       resourceClaimName: String,
-       resourceClaimTemplateName: String,
-       },
-   }],
-   restartPolicy: String,
-   runtimeClassName: String,
-   schedulerName: String,
-   schedulingGates: [{
-     name: String,
-   }],
-   securityContext: {
-     fsGroup: Number,
-     fsGroupChangePolicy: String,
-     runAsGroup: Number,
-     runAsNonRoot: Boolean,
-     runAsUser: Number,
-     seLinuxOptions: {
-       level: String,
-       role: String,
-       type: String,
-       user: String,
-       },
-     seccompProfile: {
-       localhostProfile: String,
-       type: String,
-       },
-     supplementalGroups: [ Number ],
-     sysctls: [{
-       name: String,
-       value: String,
-     }],
-     windowsOptions: {
-       gmsaCredentialSpec: String,
-       gmsaCredentialSpecName: String,
-       hostProcess: Boolean,
-       runAsUserName: String,
-       },
-     },
-   serviceAccount: String,
-   serviceAccountName: String,
-   setHostnameAsFQDN: Boolean,
-   shareProcessNamespace: Boolean,
-   subdomain: String,
-   terminationGracePeriodSeconds: Number,
-   tolerations: [{
-     effect: String,
-     key: String,
-     operator: String,
-     tolerationSeconds: Number,
-     value: String,
-   }],
-   topologySpreadConstraints: [{
-     labelSelector: {
-       matchExpressions: [{
-         key: String,
-         operator: String,
-         values: [ String ],
-       }],
-       matchLabels: {
-         type: Map,
-         of: String,
-       },
-       },
-     matchLabelKeys: [ String ],
-     maxSkew: Number,
-     minDomains: Number,
-     nodeAffinityPolicy: String,
-     nodeTaintsPolicy: String,
-     topologyKey: String,
-     whenUnsatisfiable: String,
-   }],
-   volumes: [{
-     awsElasticBlockStore: {
-       fsType: String,
-       partition: Number,
-       readOnly: Boolean,
-       volumeID: String,
-       },
-     azureDisk: {
-       cachingMode: String,
-       diskName: String,
-       diskURI: String,
-       fsType: String,
-       kind: String,
-       readOnly: Boolean,
-       },
-     azureFile: {
-       readOnly: Boolean,
-       secretName: String,
-       shareName: String,
-       },
-     cephfs: {
-       monitors: [ String ],
-       path: String,
-       readOnly: Boolean,
-       secretFile: String,
-       secretRef: {
-         name: String,
-         },
-       user: String,
-       },
-     cinder: {
-       fsType: String,
-       readOnly: Boolean,
-       secretRef: {
-         name: String,
-         },
-       volumeID: String,
-       },
-     configMap: {
-       defaultMode: Number,
-       items: [{
-         key: String,
-         mode: Number,
-         path: String,
-       }],
-       name: String,
-       optional: Boolean,
-       },
-     csi: {
-       driver: String,
-       fsType: String,
-       nodePublishSecretRef: {
-         name: String,
-         },
-       readOnly: Boolean,
-       volumeAttributes: {
-         type: Map,
-         of: String,
-       },
-       },
-     downwardAPI: {
-       defaultMode: Number,
-       items: [{
-         fieldRef: {
-           apiVersion: String,
-           fieldPath: String,
-           },
-         mode: Number,
-         path: String,
-         resourceFieldRef: {
-           containerName: String,
-           divisor: String,
-           resource: String,
-           },
-       }],
-       },
-     emptyDir: {
-       medium: String,
-       sizeLimit: String,
-       },
-     ephemeral: {
-       volumeClaimTemplate: {
-         metadata,
-         spec: {
-           accessModes: [ String ],
-           dataSource: {
-             apiGroup: String,
-             kind: String,
-             name: String,
-             },
-           dataSourceRef: {
-             apiGroup: String,
-             kind: String,
-             name: String,
-             namespace: String,
-             },
-           resources: {
-             claims: [{
-               name: String,
-             }],
-             limits: {
-               type: Map,
-               of: String,
-             },
-             requests: {
-               type: Map,
-               of: String,
-             },
-             },
-           selector: {
-             matchExpressions: [{
-               key: String,
-               operator: String,
-               values: [ String ],
-             }],
-             matchLabels: {
-               type: Map,
-               of: String,
-             },
-             },
-           storageClassName: String,
-           volumeMode: String,
-           volumeName: String,
-           },
-         },
-       },
-     fc: {
-       fsType: String,
-       lun: Number,
-       readOnly: Boolean,
-       targetWWNs: [ String ],
-       wwids: [ String ],
-       },
-     flexVolume: {
-       driver: String,
-       fsType: String,
-       options: {
-         type: Map,
-         of: String,
-       },
-       readOnly: Boolean,
-       secretRef: {
-         name: String,
-         },
-       },
-     flocker: {
-       datasetName: String,
-       datasetUUID: String,
-       },
-     gcePersistentDisk: {
-       fsType: String,
-       partition: Number,
-       pdName: String,
-       readOnly: Boolean,
-       },
-     gitRepo: {
-       directory: String,
-       repository: String,
-       revision: String,
-       },
-     glusterfs: {
-       endpoints: String,
-       path: String,
-       readOnly: Boolean,
-       },
-     hostPath: {
-       path: String,
-       type: String,
-       },
-     iscsi: {
-       chapAuthDiscovery: Boolean,
-       chapAuthSession: Boolean,
-       fsType: String,
-       initiatorName: String,
-       iqn: String,
-       iscsiInterface: String,
-       lun: Number,
-       portals: [ String ],
-       readOnly: Boolean,
-       secretRef: {
-         name: String,
-         },
-       targetPortal: String,
-       },
-     name: String,
-     nfs: {
-       path: String,
-       readOnly: Boolean,
-       server: String,
-       },
-     persistentVolumeClaim: {
-       claimName: String,
-       readOnly: Boolean,
-       },
-     photonPersistentDisk: {
-       fsType: String,
-       pdID: String,
-       },
-     portworxVolume: {
-       fsType: String,
-       readOnly: Boolean,
-       volumeID: String,
-       },
-     projected: {
-       defaultMode: Number,
-       sources: [{
-         configMap: {
-           items: [{
-             key: String,
-             mode: Number,
-             path: String,
-           }],
-           name: String,
-           optional: Boolean,
-           },
-         downwardAPI: {
-           items: [{
-             fieldRef: {
-               apiVersion: String,
-               fieldPath: String,
-               },
-             mode: Number,
-             path: String,
-             resourceFieldRef: {
-               containerName: String,
-               divisor: String,
-               resource: String,
-               },
-           }],
-           },
-         secret: {
-           items: [{
-             key: String,
-             mode: Number,
-             path: String,
-           }],
-           name: String,
-           optional: Boolean,
-           },
-         serviceAccountToken: {
-           audience: String,
-           expirationSeconds: Number,
-           path: String,
-           },
-       }],
-       },
-     quobyte: {
-       group: String,
-       readOnly: Boolean,
-       registry: String,
-       tenant: String,
-       user: String,
-       volume: String,
-       },
-     rbd: {
-       fsType: String,
-       image: String,
-       keyring: String,
-       monitors: [ String ],
-       pool: String,
-       readOnly: Boolean,
-       secretRef: {
-         name: String,
-         },
-       user: String,
-       },
-     scaleIO: {
-       fsType: String,
-       gateway: String,
-       protectionDomain: String,
-       readOnly: Boolean,
-       secretRef: {
-         name: String,
-         },
-       sslEnabled: Boolean,
-       storageMode: String,
-       storagePool: String,
-       system: String,
-       volumeName: String,
-       },
-     secret: {
-       defaultMode: Number,
-       items: [{
-         key: String,
-         mode: Number,
-         path: String,
-       }],
-       optional: Boolean,
-       secretName: String,
-       },
-     storageos: {
-       fsType: String,
-       readOnly: Boolean,
-       secretRef: {
-         name: String,
-         },
-       volumeName: String,
-       volumeNamespace: String,
-       },
-     vsphereVolume: {
-       fsType: String,
-       storagePolicyID: String,
-       storagePolicyName: String,
-       volumePath: String,
-       },
-   }],
-  },
+    activeDeadlineSeconds: { type: Number, default: 0 },
+    affinity: {
+      nodeAffinity: {
+        preferredDuringSchedulingIgnoredDuringExecution: [{
+          preference: fieldSelector,
+          weight: { type: Number, default: 0 },
+        }],
+        requiredDuringSchedulingIgnoredDuringExecution: {
+          nodeSelectorTerms: [fieldSelector],
+        },
+      },
+      podAffinity: {
+        preferredDuringSchedulingIgnoredDuringExecution: [{
+          podAffinityTerm: {
+            labelSelector: fieldSelector,
+            namespaceSelector: fieldSelector,
+            namespaces: [String],
+            topologyKey: String,
+          },
+          weight: { type: Number, default: 0 },
+        }],
+        requiredDuringSchedulingIgnoredDuringExecution: [{
+          labelSelector: fieldSelector,
+          namespaceSelector: fieldSelector,
+          namespaces: [String],
+          topologyKey: String,
+        }],
+      },
+      podAntiAffinity: {
+        preferredDuringSchedulingIgnoredDuringExecution: [{
+          podAffinityTerm: {
+            labelSelector: fieldSelector,
+            namespaceSelector: fieldSelector,
+            namespaces: [String],
+            topologyKey: String,
+          },
+          weight: { type: Number, default: 0 },
+        }],
+        requiredDuringSchedulingIgnoredDuringExecution: [{
+          labelSelector: fieldSelector,
+          namespaceSelector: fieldSelector,
+          namespaces: [String],
+          topologyKey: String,
+        }],
+      },
+    },
+    automountServiceAccountToken: Boolean,
+    containers: [container],
+    dnsConfig: {
+      nameservers: [String],
+      options: [{
+        name: String,
+        value: String,
+      }],
+      searches: [String],
+    },
+    dnsPolicy: String,
+    enableServiceLinks: Boolean,
+    ephemeralContainers: [container],
+    hostAliases: [{
+      hostnames: [String],
+      ip: String,
+    }],
+    hostIPC: Boolean,
+    hostNetwork: Boolean,
+    hostPID: Boolean,
+    hostUsers: Boolean,
+    hostname: String,
+    imagePullSecrets: [{
+      name: String,
+    }],
+    initContainers: [container],
   status: {
     nominatedNodeName: String,
     phase: {
       type: String,
-      enum: [ 'Pending', 'Running', 'Succeeded', 'Failed', 'Unknown' ],
+      enum: ['Pending', 'Running', 'Succeeded', 'Failed', 'Unknown'],
       default: 'Pending'
     },
     conditions: [{
       ...statusConditions,
-      lastTransitionTime: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") }
+      lastTransitionTime: {
+        type: String,
+        default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      }
     }],
-    containerStatuses: [{
-      allocatedResources: {
-        type: Map,
-        of: String,
-      },
-      containerID: String,
-      image: String,
-      imageID: String,
-      lastState: {
-        running: {
-          startedAt: String,
-          },
-        terminated: {
-          containerID: String,
-          exitCode: Number,
-          finishedAt: String,
-          message: String,
-          reason: String,
-          signal: Number,
-          startedAt: String,
-          },
-        waiting: {
-          message: String,
-          reason: String,
-          },
-        },
-      name: String,
-      ready: Boolean,
-      resources: {
-        claims: [{
-          name: String,
-        }],
-        limits: {
-          type: Map,
-          of: String,
-        },
-        requests: {
-          type: Map,
-          of: String,
-        },
-        },
-      restartCount: Number,
-      started: Boolean,
-      state: {
-        running: {
-          startedAt: String,
-          },
-        terminated: {
-          containerID: String,
-          exitCode: Number,
-          finishedAt: String,
-          message: String,
-          reason: String,
-          signal: Number,
-          startedAt: String,
-          },
-        waiting: {
-          message: String,
-          reason: String,
-          },
-        },
-    }],
-    ephemeralContainerStatuses: [{
-      allocatedResources: {
-        type: Map,
-        of: String,
-      },
-      containerID: String,
-      image: String,
-      imageID: String,
-      lastState: {
-        running: {
-          startedAt: String,
-          },
-        terminated: {
-          containerID: String,
-          exitCode: Number,
-          finishedAt: String,
-          message: String,
-          reason: String,
-          signal: Number,
-          startedAt: String,
-          },
-        waiting: {
-          message: String,
-          reason: String,
-          },
-        },
-      name: String,
-      ready: Boolean,
-      resources: {
-        claims: [{
-          name: String,
-        }],
-        limits: {
-          type: Map,
-          of: String,
-        },
-        requests: {
-          type: Map,
-          of: String,
-        },
-        },
-      restartCount: Number,
-      started: Boolean,
-      state: {
-        running: {
-          startedAt: String,
-          },
-        terminated: {
-          containerID: String,
-          exitCode: Number,
-          finishedAt: String,
-          message: String,
-          reason: String,
-          signal: Number,
-          startedAt: String,
-          },
-        waiting: {
-          message: String,
-          reason: String,
-          },
-        },
-    }],
+    containerStatuses: [containerStatus],
+    ephemeralContainerStatuses: [containerStatus],
     hostIP: String,
-    initContainerStatuses: [{
-      allocatedResources: {
-        type: Map,
-        of: String,
-      },
-      containerID: String,
-      image: String,
-      imageID: String,
-      lastState: {
-        running: {
-          startedAt: String,
-          },
-        terminated: {
-          containerID: String,
-          exitCode: Number,
-          finishedAt: String,
-          message: String,
-          reason: String,
-          signal: Number,
-          startedAt: String,
-          },
-        waiting: {
-          message: String,
-          reason: String,
-          },
-        },
-      name: String,
-      ready: Boolean,
-      resources: {
-        claims: [{
-          name: String,
-        }],
-        limits: {
-          type: Map,
-          of: String,
-        },
-        requests: {
-          type: Map,
-          of: String,
-        },
-        },
-      restartCount: Number,
-      started: Boolean,
-      state: {
-        running: {
-          startedAt: String,
-          },
-        terminated: {
-          containerID: String,
-          exitCode: Number,
-          finishedAt: String,
-          message: String,
-          reason: String,
-          signal: Number,
-          startedAt: String,
-          },
-        waiting: {
-          message: String,
-          reason: String,
-          },
-        },
-    }],
+    initContainerStatuses: [containerStatus],
     message: String,
-    podIP: { type: String, default: null },
+    podIP: {
+      type: String,
+      default: null
+    },
     podIPs: [{
       ip: String
     }],
     qosClass: String,
     reason: String,
     resize: String,
-    startTime: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") },
+    startTime: {
+      type: String,
+      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    },
   }
 }
+}
+
+const typedLocalObjectReference = {
+  apiGroup: String,
+  kind: String,
+  name: String,
+}
+
+const ingressServiceBackend = {
+  name: String,
+  port: {
+    name: String,
+    number: { type: Number, default: 0 },
+  }
+};
 
 const podTemplateSchema = Schema({
   apiVersion: String,
   kind: String,
   metadata,
   template: pod
-})
-
-const statusConditions = {
-  status: {
-    type: String,
-    enum: [ 'True', 'False', 'Unknown' ],
-    default: 'False'
-  },
-  type: { type: String },
-  lastTransitionTime: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") },
-  message: String,
-  reason: String,
-};
+});
 
 const namespaceSchema = Schema({
   apiVersion: String,
@@ -1759,12 +596,15 @@ const namespaceSchema = Schema({
   metadata,
   spec: {
     finalizers: {
-      type: [ String ],
-      default: [ 'kubernetes' ]
+      type: [String],
+      default: ['kubernetes']
     },
   },
   status: {
-    phase: { type: String, default: 'Active' },
+    phase: {
+      type: String,
+      default: 'Active'
+    },
   },
 });
 
@@ -1773,22 +613,12 @@ const deploymentSchema = Schema({
   kind: String,
   metadata,
   spec: {
-    minReadySeconds: Number,
+    minReadySeconds: { type: Number, default: 0 },
     paused: Boolean,
-    progressDeadlineSeconds: Number,
-    replicas: Number,
-    revisionHistoryLimit: Number,
-    selector: {
-      matchExpressions: [{
-        key: String,
-        operator: String,
-        values: [String],
-      }],
-      matchLabels: {
-        type: Map,
-        of: String,
-      },
-    },
+    progressDeadlineSeconds: { type: Number, default: 0 },
+    replicas: { type: Number, default: 0 },
+    revisionHistoryLimit: { type: Number, default: 0 },
+    fieldSelector,
     strategy: {
       rollingUpdate: {
         maxSurge: String,
@@ -1799,17 +629,17 @@ const deploymentSchema = Schema({
     template: pod,
   },
   status: {
-    availableReplicas: Number,
-    collisionCount: Number,
+    availableReplicas: { type: Number, default: 0 },
+    collisionCount: { type: Number, default: 0 },
     conditions: [{
       ...statusConditions,
       lastUpdateTime: String,
     }],
-    observedGeneration: Number,
-    readyReplicas: Number,
-    replicas: Number,
-    unavailableReplicas: Number,
-    updatedReplicas: Number,
+    observedGeneration: { type: Number, default: 0 },
+    readyReplicas: { type: Number, default: 0 },
+    replicas: { type: Number, default: 0 },
+    unavailableReplicas: { type: Number, default: 0 },
+    updatedReplicas: { type: Number, default: 0 },
   },
 });
 
@@ -1821,7 +651,7 @@ const ingressLoadBalancerStatus = {
     ip: String,
     ports: [{
       error: String,
-      port: Number,
+      port: { type: Number, default: 0 },
       protocol: String,
     }],
   }]
@@ -1834,22 +664,37 @@ const serviceSchema = Schema({
   spec: {
     allocateLoadBalancerNodePorts: Boolean,
     clusterIP: String,
-    clusterIPs: { type: [ String ], default: [ ] },
-    externalIPs: { type: [ String ], default: [ ] },
+    clusterIPs: {
+      type: [String],
+      default: []
+    },
+    externalIPs: {
+      type: [String],
+      default: []
+    },
     externalName: String,
     externalTrafficPolicy: String,
     healthCheckNodePort: String,
-    internalTrafficPolicy: { type: String, default: "Cluster" },
-    ipFamilies: { type: [ String ], default: [ "IPv4" ] },
+    internalTrafficPolicy: {
+      type: String,
+      default: "Cluster"
+    },
+    ipFamilies: {
+      type: [String],
+      default: ["IPv4"]
+    },
     ipFamilyPolicy: String,
     loadBalancerClass: String,
     loadBalancerIP: String,
-    loadBalancerSourceRanges: [ String ],
+    loadBalancerSourceRanges: [String],
     ports: [{
       appProtocol: String,
       name: String,
-      nodePort: Number,
-      port: { type: Number, required: true },
+      nodePort: { type: Number, default: 0 },
+      port: {
+        type: Number,
+        required: true
+      },
       protocol: String,
       targetPort: Schema.Types.Mixed,
     }],
@@ -1858,13 +703,18 @@ const serviceSchema = Schema({
       type: Map,
       of: String
     },
-    sessionAffinity: { type: String, default: "None" },
+    sessionAffinity: {
+      type: String,
+      default: "None"
+    },
     sessionAffinityConfig: {
       clientIP: {
-        timeoutSeconds: Number,
+        timeoutSeconds: { type: Number, default: 0 },
       }
     },
-    type: { type: String },
+    type: {
+      type: String
+    },
   },
   status: {
     ...statusConditions,
@@ -1872,18 +722,43 @@ const serviceSchema = Schema({
   },
 });
 
-const typedLocalObjectReference = {
-  apiGroup: String,
+const apiServiceSchema = Schema({
+  apiVersion: String,
   kind: String,
-  name: String,
-}
+  metadata,
+  spec: {
+    caBundle: String,
+    group: String,
+    groupPriorityMinimum: { type: Number, default: 0 },
+    insecureSkipTLSVerify: Boolean,
+    service: {
+      name: String,
+      namespace: String,
+      port: { type: Number, default: 0 },
+    },
+    version: String,
+    versionPriority: { type: Number, default: 0 },
+  },
+  status: {
+    conditions: [statusConditions],
+  },
+});
 
-const ingressServiceBackend = {
-  name: String,
-  port: {
+const iscsi = {
+  chapAuthDiscovery: Boolean,
+  chapAuthSession: Boolean,
+  fsType: String,
+  initiatorName: String,
+  iqn: String,
+  iscsiInterface: String,
+  lun: { type: Number, default: 0 },
+  portals: [String],
+  readOnly: Boolean,
+  secretRef: {
     name: String,
-    number: Number,
-  }
+    namespace: String,
+  },
+  targetPortal: String,
 };
 
 const ingressSchema = Schema({
@@ -1901,7 +776,10 @@ const ingressSchema = Schema({
       http: {
         paths: [{
           path: String,
-          pathType: { type: String, required: true },
+          pathType: {
+            type: String,
+            required: true
+          },
           backend: {
             resource: typedLocalObjectReference,
             service: ingressServiceBackend,
@@ -2047,7 +925,7 @@ const endpointsSchema = Schema({
     }],
     ports: [{
       name: String,
-      port: Number,
+      port: { type: Number, default: 0 },
       protocol: String
     }]
   }]
@@ -2071,17 +949,7 @@ const roleSchema = Schema(role);
 const clusterRoleSchema = Schema({
   ...role,
   aggregationRule: {
-    clusterRoleSelectors: [{
-      matchExpressions: {
-        key: String,
-        operator: String,
-        values: String,
-      },
-      matchLabels: {
-        type: Map,
-        of: String
-      },
-    }]
+    clusterRoleSelectors: [fieldSelector]
   }
 })
 
@@ -2102,12 +970,14 @@ const roleBindingSchema = Schema({
   }]
 })
 
+const clusterRoleBindingSchema = roleBindingSchema;
+
 const certificateSigningRequestSchema = Schema({
   apiVersion: String,
   kind: String,
   metadata,
   spec: {
-    expirationSeconds: Number,
+    expirationSeconds: { type: Number, default: 0 },
     extra: {
       type: Map,
       of: String
@@ -2125,26 +995,7 @@ const certificateSigningRequestSchema = Schema({
   }
 })
 
-const serviceAccountSchema = Schema({
-  apiVersion: String,
-  kind: String,
-  metadata,
-  spec: {
-    automountServiceAccountToken: Boolean,
-    imagePullSecrets: [{
-      name: String,
-    }],
-    secrets: [{
-      apiVersion: String,
-      fieldPath: String,
-      kind: String,
-      name: String,
-      namespace: String,
-      resourceVersion: String,
-      uid: String,
-    }],
-  },
-})
+
 
 const nodeSchema = Schema({
   apiVersion: String,
@@ -2162,20 +1013,33 @@ const nodeSchema = Schema({
     },
     externalID: String,
     podCIDR: String,
-    podCIDRs: [ String ],
+    podCIDRs: [String],
     providerID: String,
     taints: [{
-      effect: { type: String },
-      key: { type: String },
-      timeAdded: { type: String },
-      value: { type: String },
+      effect: {
+        type: String
+      },
+      key: {
+        type: String
+      },
+      timeAdded: {
+        type: String
+      },
+      value: {
+        type: String
+      },
     }],
-    unschedulable: { type: Boolean, default: false },
+    unschedulable: {
+      type: Boolean,
+      default: false
+    },
   },
   status: {
     addresses: [{
       address: String,
-      type: { type: String },
+      type: {
+        type: String
+      },
     }],
     allocatable: {
       type: Map,
@@ -2187,21 +1051,14 @@ const nodeSchema = Schema({
     },
     conditions: [{
       ...statusConditions,
-      lastHeartbeatTime: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") },
+      lastHeartbeatTime: {
+        type: String,
+        default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      },
     }],
     config: {
       active: {
-         configMap: {
-           kubeletConfigKey: String,
-           name: String,
-           namespace: String,
-           resourceVersion: String,
-           uid: String,
-         },
-       },
-     },
-      assigned: {
-       configMap: {
+        configMap: {
           kubeletConfigKey: String,
           name: String,
           namespace: String,
@@ -2209,24 +1066,34 @@ const nodeSchema = Schema({
           uid: String,
         },
       },
-      error: String,
-      lastKnownGood: {
-         configMap: {
-            kubeletConfigKey: String,
-            name: String,
-            namespace: String,
-            resourceVersion: String,
-            uid: String,
-          },
-        },
+    },
+    assigned: {
+      configMap: {
+        kubeletConfigKey: String,
+        name: String,
+        namespace: String,
+        resourceVersion: String,
+        uid: String,
+      },
+    },
+    error: String,
+    lastKnownGood: {
+      configMap: {
+        kubeletConfigKey: String,
+        name: String,
+        namespace: String,
+        resourceVersion: String,
+        uid: String,
+      },
+    },
     daemonEndpoints: {
       kubeletEndpoint: {
-         Port: Number,
-       },
-     },
+        Port: { type: Number, default: 0 },
+      },
+    },
     images: [{
-      names: [ String ],
-      sizeBytes: Number,
+      names: [String],
+      sizeBytes: { type: Number, default: 0 },
     }],
     nodeInfo: {
       architecture: String,
@@ -2245,7 +1112,7 @@ const nodeSchema = Schema({
       devicePath: String,
       name: String,
     }],
-    volumesInUse: [ String ],
+    volumesInUse: [String],
   },
 })
 
@@ -2264,9 +1131,18 @@ const eventSchema = Schema({
   kind: String,
   metadata,
   action: String,
-  deprecatedCount: { type: Number, default: 0 },
-  deprecatedFirstTimestamp: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000") },
-  deprecatedLastTimestamp: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000") },
+  deprecatedCount: {
+    type: Number,
+    default: 0
+  },
+  deprecatedFirstTimestamp: {
+    type: String,
+    default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000")
+  },
+  deprecatedLastTimestamp: {
+    type: String,
+    default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000")
+  },
   deprecatedSource: {
     component: String,
     host: String,
@@ -2278,10 +1154,19 @@ const eventSchema = Schema({
   reportingController: String,
   reportingInstance: String,
   series: {
-    count: { type: Number, default: 0 },
-    lastObservedTime: { type: String, default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000") },
+    count: {
+      type: Number,
+      default: 0
+    },
+    lastObservedTime: {
+      type: String,
+      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000")
+    },
   },
-  type: { type: String, enum: [ 'Normal', 'Warning' ] },
+  type: {
+    type: String,
+    enum: ['Normal', 'Warning']
+  },
 })
 
 const replicaSetSchema = Schema({
@@ -2291,16 +1176,22 @@ const replicaSetSchema = Schema({
   spec: {
     selector: labelSelector,
     template: pod,
-    minReadySeconds: { type: Number, default: 0 },
-    replicas: { type: Number, default: 1 },
+    minReadySeconds: {
+      type: Number,
+      default: 0
+    },
+    replicas: {
+      type: Number,
+      default: 1
+    },
   },
   status: {
-    replicas: Number,
-    availableReplicas: Number,
-    readyReplicas: Number,
-    fullyLabeledReplicas: Number,
+    replicas: { type: Number, default: 0 },
+    availableReplicas: { type: Number, default: 0 },
+    readyReplicas: { type: Number, default: 0 },
+    fullyLabeledReplicas: { type: Number, default: 0 },
     conditions: [statusConditions],
-    observedGeneration: Number,
+    observedGeneration: { type: Number, default: 0 },
   }
 })
 
@@ -2311,46 +1202,74 @@ const daemonSetSchema = Schema({
   spec: {
     selector: labelSelector,
     template: pod,
-    minReadySeconds: { type: Number, default: 0 },
+    minReadySeconds: {
+      type: Number,
+      default: 0
+    },
     updateStrategy: {
-      type: { type: String, enum: [ 'RollingUpdate', 'OnDelete' ] },
+      type: {
+        type: String,
+        enum: ['RollingUpdate', 'OnDelete']
+      },
       rollingUpdate: {
         maxSurge: String,
         maxUnavailable: String,
       }
     },
-    revisionHistoryLimit: { type: Number, default: 10 },
+    revisionHistoryLimit: {
+      type: Number,
+      default: 10
+    },
   },
   status: {
-    numberReadynumberAvailable: Number,
-    numberUnavailable: Number,
-    numberMisschedule: Number,
-    desiredNumberScheduled: Number,
-    currentNumberScheduled: Number,
-    updatedNumberScheduled: Number,
-    collisionCount: Number,
+    numberReady: { type: Number, default: 0 },
+    numberAvailable: { type: Number, default: 0 },
+    numberUnavailable: { type: Number, default: 0 },
+    numberMisschedule: { type: Number, default: 0 },
+    desiredNumberScheduled: { type: Number, default: 0 },
+    currentNumberScheduled: { type: Number, default: 0 },
+    updatedNumberScheduled: { type: Number, default: 0 },
+    collisionCount: { type: Number, default: 0 },
     conditions: [statusConditions],
-    observedGeneration: Number,
+    observedGeneration: { type: Number, default: 0 },
   }
 })
 
 const replicationControllerSchema = Schema({
- apiVersion: String,
- kind: String,
- metadata,
- spec: {
-  minReadySeconds: { type: Number, default: 0 },
-  replicas: Number,
-  selector: labelSelector,
-  template: pod,
+  apiVersion: String,
+  kind: String,
+  metadata,
+  spec: {
+    minReadySeconds: {
+      type: Number,
+      default: 0
+    },
+    replicas: { type: Number, default: 0 },
+    selector: labelSelector,
+    template: pod,
   },
- status: {
-  availableReplicas: { type: Number, default: 0 },
-  conditions: [statusConditions],
-  fullyLabeledReplicas: { type: Number, default: 0 },
-  observedGeneration: { type: Number, default: 0 },
-  readyReplicas: { type: Number, default: 0 },
-  replicas: { type: Number, default: 0 },
+  status: {
+    availableReplicas: {
+      type: Number,
+      default: 0
+    },
+    conditions: [statusConditions],
+    fullyLabeledReplicas: {
+      type: Number,
+      default: 0
+    },
+    observedGeneration: {
+      type: Number,
+      default: 0
+    },
+    readyReplicas: {
+      type: Number,
+      default: 0
+    },
+    replicas: {
+      type: Number,
+      default: 0
+    },
   },
 });
 
@@ -2361,15 +1280,15 @@ const aPIServiceSchema = Schema({
   spec: {
     caBundle: String,
     group: String,
-    groupPriorityMinimum: Number,
+    groupPriorityMinimum: { type: Number, default: 0 },
     insecureSkipTLSVerify: Boolean,
     service: {
       name: String,
       namespace: String,
-      port: Number,
+      port: { type: Number, default: 0 },
     },
     version: String,
-    versionPriority: Number,
+    versionPriority: { type: Number, default: 0 },
   },
   status: {
     conditions: [statusConditions],
@@ -2404,7 +1323,7 @@ const cSIDriverSchema = Schema({
     storageCapacity: Boolean,
     tokenRequests: [{
       audience: String,
-      expirationSeconds: Number,
+      expirationSeconds: { type: Number, default: 0 },
     }],
     volumeLifecycleModes: [String],
   },
@@ -2417,7 +1336,7 @@ const cSINodeSchema = Schema({
   spec: {
     drivers: [{
       allocatable: {
-        count: Number,
+        count: { type: Number, default: 0 },
       },
       name: String,
       nodeID: String,
@@ -2432,17 +1351,7 @@ const cSIStorageCapacitySchema = Schema({
   kind: String,
   maximumVolumeSize: String,
   metadata,
-  nodeTopology: {
-    matchExpressions: [{
-      key: String,
-      operator: String,
-      values: [String],
-    }],
-    matchLabels: {
-      type: Map,
-      of: String,
-    },
-  },
+  nodeTopology: labelSelector,
   storageClassName: String,
 });
 
@@ -2462,7 +1371,7 @@ const controllerRevisionSchema = Schema({
   apiVersion: String,
   kind: String,
   metadata,
-  revision: Number,
+  revision: { type: Number, default: 0 },
 });
 
 const cronJobSchema = Schema({
@@ -2471,49 +1380,26 @@ const cronJobSchema = Schema({
   metadata,
   spec: {
     concurrencyPolicy: String,
-    failedJobsHistoryLimit: Number,
+    failedJobsHistoryLimit: { type: Number, default: 0 },
     jobTemplate: {
       metadata,
       spec: {
-        activeDeadlineSeconds: Number,
-        backoffLimit: Number,
+        activeDeadlineSeconds: { type: Number, default: 0 },
+        backoffLimit: { type: Number, default: 0 },
         completionMode: String,
-        completions: Number,
+        completions: { type: Number, default: 0 },
         manualSelector: Boolean,
-        parallelism: Number,
-        podFailurePolicy: {
-          rules: [{
-            action: String,
-            onExitCodes: {
-              containerName: String,
-              operator: String,
-              values: [Number],
-            },
-            onPodConditions: [{
-              status: String,
-              type: String,
-            }],
-          }],
-        },
-        selector: {
-          matchExpressions: [{
-            key: String,
-            operator: String,
-            values: [String],
-          }],
-          matchLabels: {
-            type: Map,
-            of: String,
-          },
-        },
+        parallelism: { type: Number, default: 0 },
+        podFailurePolicy,
+        selector: labelSelector,
         suspend: Boolean,
         template: pod,
-        ttlSecondsAfterFinished: Number,
+        ttlSecondsAfterFinished: { type: Number, default: 0 },
       },
     },
     schedule: String,
-    startingDeadlineSeconds: Number,
-    successfulJobsHistoryLimit: Number,
+    startingDeadlineSeconds: { type: Number, default: 0 },
+    successfulJobsHistoryLimit: { type: Number, default: 0 },
     suspend: Boolean,
     timeZone: String,
   },
@@ -2527,146 +1413,152 @@ const cronJobSchema = Schema({
       resourceVersion: String,
       uid: String,
     }],
-    lastScheduleTime: String,
-    lastSuccessfulTime: String,
+    lastScheduleTime: {
+      type: String,
+      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    },
+    lastSuccessfulTime: {
+      type: String,
+      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    },
   },
 });
 
-const customResourceDefinitionSchema = Schema({
-  apiVersion: String,
-  kind: String,
-  metadata,
-  spec: {
-    conversion: {
-      strategy: String,
-      webhook: {
-        clientConfig: {
-          caBundle: String,
-          service: {
-            name: String,
-            namespace: String,
-            path: String,
-            port: Number,
-          },
-          url: String,
-        },
-        conversionReviewVersions: [String],
-      },
-    },
-    group: String,
-    names: {
-      categories: [String],
-      kind: String,
-      listKind: String,
-      plural: String,
-      shortNames: [String],
-      singular: String,
-    },
-    preserveUnknownFields: Boolean,
-    scope: String,
-    versions: [{
-      additionalPrinterColumns: [{
-        description: String,
-        format: String,
-        jsonPath: String,
-        name: String,
-        priority: Number,
-        type: String,
-      }],
-      deprecated: Boolean,
-      deprecationWarning: String,
-      name: String,
-      schema: {
-        openAPIV3Schema: {
-          $ref: String,
-          $schema: String,
-          additionalItems: Object,
-          additionalProperties: Object,
-          allOf: [Object],
-          anyOf: [Object],
-          default: Object,
-          definitions: {
-            type: Map,
-            of: String,
-          },
-          dependencies: {
-            type: Map,
-            of: String,
-          },
-          description: String,
-          enum: [Object],
-          example: Object,
-          exclusiveMaximum: Boolean,
-          exclusiveMinimum: Boolean,
-          externalDocs: {
-            description: String,
-            url: String,
-          },
-          format: String,
-          id: String,
-          items: Object,
-          maxItems: Number,
-          maxLength: Number,
-          maxProperties: Number,
-          maximum: Number,
-          minItems: Number,
-          minLength: Number,
-          minProperties: Number,
-          minimum: Number,
-          multipleOf: Number,
-          not: Object,
-          nullable: Boolean,
-          oneOf: [Object],
-          pattern: String,
-          patternProperties: {
-            type: Map,
-            of: String,
-          },
-          properties: {
-            type: Map,
-            of: String,
-          },
-          required: [String],
-          title: String,
-          type: String,
-          uniqueItems: Boolean,
-          'x-kubernetes-embedded-resource': Boolean,
-          'x-kubernetes-int-or-string': Boolean,
-          'x-kubernetes-list-map-keys': [String],
-          'x-kubernetes-list-type': String,
-          'x-kubernetes-map-type': String,
-          'x-kubernetes-preserve-unknown-fields': Boolean,
-          'x-kubernetes-validations': [{
-            message: String,
-            messageExpression: String,
-            rule: String,
-          }],
-        },
-      },
-      served: Boolean,
-      storage: Boolean,
-      subresources: {
-        scale: {
-          labelSelectorPath: String,
-          specReplicasPath: String,
-          statusReplicasPath: String,
-        },
-      },
-    }],
-  },
-  status: {
-    acceptedNames: {
-      categories: [String],
-      kind: String,
-      listKind: String,
-      plural: String,
-      shortNames: [String],
-      singular: String,
-    },
-    conditions: [statusConditions],
-    storedVersions: [String],
-  },
-});
+// const customResourceDefinitionSchema = Schema({
+//   apiVersion: String,
+//   kind: String,
+//   metadata,
+//   spec: {
+//     conversion: {
+//       strategy: String,
+//       webhook: {
+//         clientConfig: {
+//           caBundle: String,
+//           service: {
+//             name: String,
+//             namespace: String,
+//             path: String,
+//             port: { type: Number, default: 0 },
+//           },
+//           url: String,
+//         },
+//         conversionReviewVersions: [String],
+//       },
+//     },
+//     group: String,
+//     names: {
+//       categories: [String],
+//       kind: String,
+//       listKind: String,
+//       plural: String,
+//       shortNames: [String],
+//       singular: String,
+//     },
+//     preserveUnknownFields: Boolean,
+//     scope: String,
+//     versions: [{
+//       additionalPrinterColumns: [{
+//         description: String,
+//         format: String,
+//         jsonPath: String,
+//         name: String,
+//         priority: { type: Number, default: 0 },
+//         type: String,
+//       }],
+//       deprecated: Boolean,
+//       deprecationWarning: String,
+//       name: String,
+//       schema: {
+//         openAPIV3Schema: {
+//           $ref: String,
+//           $schema: String,
+//           additionalItems: Object,
+//           additionalProperties: Object,
+//           allOf: [Object],
+//           anyOf: [Object],
+//           default: Object,
+//           definitions: {
+//             type: Map,
+//             of: String,
+//           },
+//           dependencies: {
+//             type: Map,
+//             of: String,
+//           },
+//           description: String,
+//           enum: [Object],
+//           example: Object,
+//           exclusiveMaximum: Boolean,
+//           exclusiveMinimum: Boolean,
+//           externalDocs: {
+//             description: String,
+//             url: String,
+//           },
+//           format: String,
+//           id: String,
+//           items: Object,
+//           maxItems: { type: Number, default: 0 },
+//           maxLength: { type: Number, default: 0 },
+//           maxProperties: { type: Number, default: 0 },
+//           maximum: { type: Number, default: 0 },
+//           minItems: { type: Number, default: 0 },
+//           minLength: { type: Number, default: 0 },
+//           minProperties: { type: Number, default: 0 },
+//           minimum: { type: Number, default: 0 },
+//           multipleOf: { type: Number, default: 0 },
+//           not: Object,
+//           nullable: Boolean,
+//           oneOf: [Object],
+//           pattern: String,
+//           patternProperties: {
+//             type: Map,
+//             of: String,
+//           },
+//           properties: {
+//             type: Map,
+//             of: String,
+//           },
+//           required: [String],
+//           title: String,
+//           type: String,
+//           uniqueItems: Boolean,
+//           'x-kubernetes-embedded-resource': Boolean,
+//           'x-kubernetes-int-or-string': Boolean,
+//           'x-kubernetes-list-map-keys': [String],
+//           'x-kubernetes-list-type': String,
+//           'x-kubernetes-map-type': String,
+//           'x-kubernetes-preserve-unknown-fields': Boolean,
+//           'x-kubernetes-validations': [{
+//             message: String,
+//             messageExpression: String,
+//             rule: String,
+//           }],
+//         },
+//       },
+//       served: Boolean,
+//       storage: Boolean,
+//       subresources: {
+//         scale: {
+//           labelSelectorPath: String,
+//           specReplicasPath: String,
+//           statusReplicasPath: String,
+//         },
+//       },
+//     }],
+//   },
+//   status: {
+//     acceptedNames: {
+//       categories: [String],
+//       kind: String,
+//       listKind: String,
+//       plural: String,
+//       shortNames: [String],
+//       singular: String,
+//     },
+//     conditions: [statusConditions],
+//     storedVersions: [String],
+//   },
+// });
 
 const endpointSliceSchema = Schema({
   addressType: String,
@@ -2705,50 +1597,8 @@ const endpointSliceSchema = Schema({
   ports: [{
     appProtocol: String,
     name: String,
-    port: Number,
+    port: { type: Number, default: 0 },
     protocol: String,
-  }],
-});
-
-const endpointsSchema = Schema({
-  apiVersion: String,
-  kind: String,
-  metadata,
-  subsets: [{
-    addresses: [{
-      hostname: String,
-      ip: String,
-      nodeName: String,
-      targetRef: {
-        apiVersion: String,
-        fieldPath: String,
-        kind: String,
-        name: String,
-        namespace: String,
-        resourceVersion: String,
-        uid: String,
-      },
-    }],
-    notReadyAddresses: [{
-      hostname: String,
-      ip: String,
-      nodeName: String,
-      targetRef: {
-        apiVersion: String,
-        fieldPath: String,
-        kind: String,
-        name: String,
-        namespace: String,
-        resourceVersion: String,
-        uid: String,
-      },
-    }],
-    ports: [{
-      appProtocol: String,
-      name: String,
-      port: Number,
-      protocol: String,
-    }],
   }],
 });
 
@@ -2760,118 +1610,26 @@ const horizontalPodAutoscalerSchema = Schema({
     behavior: {
       scaleDown: {
         policies: [{
-          periodSeconds: Number,
+          periodSeconds: { type: Number, default: 0 },
           type: String,
-          value: Number,
+          value: { type: Number, default: 0 },
         }],
         selectPolicy: String,
-        stabilizationWindowSeconds: Number,
+        stabilizationWindowSeconds: { type: Number, default: 0 },
       },
       scaleUp: {
         policies: [{
-          periodSeconds: Number,
+          periodSeconds: { type: Number, default: 0 },
           type: String,
-          value: Number,
+          value: { type: Number, default: 0 },
         }],
         selectPolicy: String,
-        stabilizationWindowSeconds: Number,
+        stabilizationWindowSeconds: { type: Number, default: 0 },
       },
     },
-    maxReplicas: Number,
-    metrics: [{
-      containerResource: {
-        container: String,
-        name: String,
-        target: {
-          averageUtilization: Number,
-          averageValue: String,
-          type: String,
-          value: String,
-        },
-      },
-      external: {
-        metric: {
-          name: String,
-          selector: {
-            matchExpressions: [{
-              key: String,
-              operator: String,
-              values: [String],
-            }],
-            matchLabels: {
-              type: Map,
-              of: String,
-            },
-          },
-        },
-        target: {
-          averageUtilization: Number,
-          averageValue: String,
-          type: String,
-          value: String,
-        },
-      },
-      object: {
-        describedObject: {
-          apiVersion: String,
-          kind: String,
-          name: String,
-        },
-        metric: {
-          name: String,
-          selector: {
-            matchExpressions: [{
-              key: String,
-              operator: String,
-              values: [String],
-            }],
-            matchLabels: {
-              type: Map,
-              of: String,
-            },
-          },
-        },
-        target: {
-          averageUtilization: Number,
-          averageValue: String,
-          type: String,
-          value: String,
-        },
-      },
-      pods: {
-        metric: {
-          name: String,
-          selector: {
-            matchExpressions: [{
-              key: String,
-              operator: String,
-              values: [String],
-            }],
-            matchLabels: {
-              type: Map,
-              of: String,
-            },
-          },
-        },
-        target: {
-          averageUtilization: Number,
-          averageValue: String,
-          type: String,
-          value: String,
-        },
-      },
-      resource: {
-        name: String,
-        target: {
-          averageUtilization: Number,
-          averageValue: String,
-          type: String,
-          value: String,
-        },
-      },
-      type: String,
-    }],
-    minReplicas: Number,
+    maxReplicas: { type: Number, default: 0 },
+    metrics: [metrics],
+    minReplicas: { type: Number, default: 0 },
     scaleTargetRef: {
       apiVersion: String,
       kind: String,
@@ -2880,98 +1638,14 @@ const horizontalPodAutoscalerSchema = Schema({
   },
   status: {
     conditions: [statusConditions],
-    currentMetrics: [{
-      containerResource: {
-        container: String,
-        current: {
-          averageUtilization: Number,
-          averageValue: String,
-          value: String,
-        },
-        name: String,
-      },
-      external: {
-        current: {
-          averageUtilization: Number,
-          averageValue: String,
-          value: String,
-        },
-        metric: {
-          name: String,
-          selector: {
-            matchExpressions: [{
-              key: String,
-              operator: String,
-              values: [String],
-            }],
-            matchLabels: {
-              type: Map,
-              of: String,
-            },
-          },
-        },
-      },
-      object: {
-        current: {
-          averageUtilization: Number,
-          averageValue: String,
-          value: String,
-        },
-        describedObject: {
-          apiVersion: String,
-          kind: String,
-          name: String,
-        },
-        metric: {
-          name: String,
-          selector: {
-            matchExpressions: [{
-              key: String,
-              operator: String,
-              values: [String],
-            }],
-            matchLabels: {
-              type: Map,
-              of: String,
-            },
-          },
-        },
-      },
-      pods: {
-        current: {
-          averageUtilization: Number,
-          averageValue: String,
-          value: String,
-        },
-        metric: {
-          name: String,
-          selector: {
-            matchExpressions: [{
-              key: String,
-              operator: String,
-              values: [String],
-            }],
-            matchLabels: {
-              type: Map,
-              of: String,
-            },
-          },
-        },
-      },
-      resource: {
-        current: {
-          averageUtilization: Number,
-          averageValue: String,
-          value: String,
-        },
-        name: String,
-      },
+    currentMetrics: [metrics],
+    currentReplicas: { type: Number, default: 0 },
+    desiredReplicas: { type: Number, default: 0 },
+    lastScaleTime: {
       type: String,
-    }],
-    currentReplicas: Number,
-    desiredReplicas: Number,
-    lastScaleTime: String,
-    observedGeneration: Number,
+      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    },
+    observedGeneration: { type: Number, default: 0 },
   },
 });
 
@@ -2996,50 +1670,33 @@ const jobSchema = Schema({
   kind: String,
   metadata,
   spec: {
-    activeDeadlineSeconds: Number,
-    backoffLimit: Number,
+    activeDeadlineSeconds: { type: Number, default: 0 },
+    backoffLimit: { type: Number, default: 0 },
     completionMode: String,
-    completions: Number,
+    completions: { type: Number, default: 0 },
     manualSelector: Boolean,
-    parallelism: Number,
-    podFailurePolicy: {
-      rules: [{
-        action: String,
-        onExitCodes: {
-          containerName: String,
-          operator: String,
-          values: [Number],
-        },
-        onPodConditions: [{
-          status: String,
-          type: String,
-        }],
-      }],
-    },
-    selector: {
-      matchExpressions: [{
-        key: String,
-        operator: String,
-        values: [String],
-      }],
-      matchLabels: {
-        type: Map,
-        of: String,
-      },
-    },
+    parallelism: { type: Number, default: 0 },
+    podFailurePolicy,
+    selector: labelSelector,
     suspend: Boolean,
     template: pod,
-    ttlSecondsAfterFinished: Number,
+    ttlSecondsAfterFinished: { type: Number, default: 0 },
   },
   status: {
-    active: Number,
+    active: { type: Number, default: 0 },
     completedIndexes: String,
-    completionTime: String,
+    completionTime: {
+      type: String,
+      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    },
     conditions: [statusConditions],
-    failed: Number,
-    ready: Number,
-    startTime: String,
-    succeeded: Number,
+    failed: { type: Number, default: 0 },
+    ready: { type: Number, default: 0 },
+    startTime: {
+      type: String,
+      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    },
+    succeeded: { type: Number, default: 0 },
     uncountedTerminatedPods: {
       failed: [String],
       succeeded: [String],
@@ -3052,11 +1709,17 @@ const leaseSchema = Schema({
   kind: String,
   metadata,
   spec: {
-    acquireTime: String,
+    acquireTime: {
+      type: String,
+      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    },
     holderIdentity: String,
-    leaseDurationSeconds: Number,
-    leaseTransitions: Number,
-    renewTime: String,
+    leaseDurationSeconds: { type: Number, default: 0 },
+    leaseTransitions: { type: Number, default: 0 },
+    renewTime: {
+      type: String,
+      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    },
   },
 });
 
@@ -3134,7 +1797,7 @@ const mutatingWebhookConfigurationSchema = Schema({
         name: String,
         namespace: String,
         path: String,
-        port: Number,
+        port: { type: Number, default: 0 },
       },
       url: String,
     },
@@ -3145,28 +1808,8 @@ const mutatingWebhookConfigurationSchema = Schema({
     }],
     matchPolicy: String,
     name: String,
-    namespaceSelector: {
-      matchExpressions: [{
-        key: String,
-        operator: String,
-        values: [String],
-      }],
-      matchLabels: {
-        type: Map,
-        of: String,
-      },
-    },
-    objectSelector: {
-      matchExpressions: [{
-        key: String,
-        operator: String,
-        values: [String],
-      }],
-      matchLabels: {
-        type: Map,
-        of: String,
-      },
-    },
+    namespaceSelector: labelSelector,
+    objectSelector: labelSelector,
     reinvocationPolicy: String,
     rules: [{
       apiGroups: [String],
@@ -3176,7 +1819,7 @@ const mutatingWebhookConfigurationSchema = Schema({
       scope: String,
     }],
     sideEffects: String,
-    timeoutSeconds: Number,
+    timeoutSeconds: { type: Number, default: 0 },
   }],
 });
 
@@ -3187,7 +1830,7 @@ const networkPolicySchema = Schema({
   spec: {
     egress: [{
       ports: [{
-        endPort: Number,
+        endPort: { type: Number, default: 0 },
         port: String,
         protocol: String,
       }],
@@ -3196,28 +1839,8 @@ const networkPolicySchema = Schema({
           cidr: String,
           except: [String],
         },
-        namespaceSelector: {
-          matchExpressions: [{
-            key: String,
-            operator: String,
-            values: [String],
-          }],
-          matchLabels: {
-            type: Map,
-            of: String,
-          },
-        },
-        podSelector: {
-          matchExpressions: [{
-            key: String,
-            operator: String,
-            values: [String],
-          }],
-          matchLabels: {
-            type: Map,
-            of: String,
-          },
-        },
+        namespaceSelector: labelSelector,
+        podSelector: labelSelector,
       }],
     }],
     ingress: [{
@@ -3226,46 +1849,16 @@ const networkPolicySchema = Schema({
           cidr: String,
           except: [String],
         },
-        namespaceSelector: {
-          matchExpressions: [{
-            key: String,
-            operator: String,
-            values: [String],
-          }],
-          matchLabels: {
-            type: Map,
-            of: String,
-          },
-        },
-        podSelector: {
-          matchExpressions: [{
-            key: String,
-            operator: String,
-            values: [String],
-          }],
-          matchLabels: {
-            type: Map,
-            of: String,
-          },
-        },
+        namespaceSelector: labelSelector,
+        podSelector: labelSelector,
       }],
       ports: [{
-        endPort: Number,
+        endPort: { type: Number, default: 0 },
         port: String,
         protocol: String,
       }],
     }],
-    podSelector: {
-      matchExpressions: [{
-        key: String,
-        operator: String,
-        values: [String],
-      }],
-      matchLabels: {
-        type: Map,
-        of: String,
-      },
-    },
+    podSelector: labelSelector,
     policyTypes: [String],
   },
   status: {
@@ -3281,7 +1874,7 @@ const persistentVolumeSchema = Schema({
     accessModes: [String],
     awsElasticBlockStore: {
       fsType: String,
-      partition: Number,
+      partition: { type: Number, default: 0 },
       readOnly: Boolean,
       volumeID: String,
     },
@@ -3364,7 +1957,7 @@ const persistentVolumeSchema = Schema({
     },
     fc: {
       fsType: String,
-      lun: Number,
+      lun: { type: Number, default: 0 },
       readOnly: Boolean,
       targetWWNs: [String],
       wwids: [String],
@@ -3388,7 +1981,7 @@ const persistentVolumeSchema = Schema({
     },
     gcePersistentDisk: {
       fsType: String,
-      partition: Number,
+      partition: { type: Number, default: 0 },
       pdName: String,
       readOnly: Boolean,
     },
@@ -3402,22 +1995,7 @@ const persistentVolumeSchema = Schema({
       path: String,
       type: String,
     },
-    iscsi: {
-      chapAuthDiscovery: Boolean,
-      chapAuthSession: Boolean,
-      fsType: String,
-      initiatorName: String,
-      iqn: String,
-      iscsiInterface: String,
-      lun: Number,
-      portals: [String],
-      readOnly: Boolean,
-      secretRef: {
-        name: String,
-        namespace: String,
-      },
-      targetPortal: String,
-    },
+    iscsi,
     local: {
       fsType: String,
       path: String,
@@ -3428,22 +2006,7 @@ const persistentVolumeSchema = Schema({
       readOnly: Boolean,
       server: String,
     },
-    nodeAffinity: {
-      required: {
-        nodeSelectorTerms: [{
-          matchExpressions: [{
-            key: String,
-            operator: String,
-            values: [String],
-          }],
-          matchFields: [{
-            key: String,
-            operator: String,
-            values: [String],
-          }],
-        }],
-      },
-    },
+    nodeAffinity,
     persistentVolumeReclaimPolicy: String,
     photonPersistentDisk: {
       fsType: String,
@@ -3462,19 +2025,7 @@ const persistentVolumeSchema = Schema({
       user: String,
       volume: String,
     },
-    rbd: {
-      fsType: String,
-      image: String,
-      keyring: String,
-      monitors: [String],
-      pool: String,
-      readOnly: Boolean,
-      secretRef: {
-        name: String,
-        namespace: String,
-      },
-      user: String,
-    },
+    rbd,
     scaleIO: {
       fsType: String,
       gateway: String,
@@ -3551,17 +2102,7 @@ const persistentVolumeClaimSchema = Schema({
         of: String,
       },
     },
-    selector: {
-      matchExpressions: [{
-        key: String,
-        operator: String,
-        values: [String],
-      }],
-      matchLabels: {
-        type: Map,
-        of: String,
-      },
-    },
+    selector: labelSelector,
     storageClassName: String,
     volumeMode: String,
     volumeName: String,
@@ -3578,7 +2119,10 @@ const persistentVolumeClaimSchema = Schema({
     },
     conditions: [{
       ...statusConditions,
-      lastProbeTime: String,
+      lastProbeTime: {
+        type: String,
+        default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      },
     }],
     phase: String,
     resizeStatus: String,
@@ -3592,33 +2136,23 @@ const podDisruptionBudgetSchema = Schema({
   spec: {
     maxUnavailable: String,
     minAvailable: String,
-    selector: {
-      matchExpressions: [{
-        key: String,
-        operator: String,
-        values: [String],
-      }],
-      matchLabels: {
-        type: Map,
-        of: String,
-      },
-    },
+    selector: labelSelector,
     unhealthyPodEvictionPolicy: String,
   },
   status: {
     conditions: [{
       ...statusConditions,
-      observedGeneration: Number,
+      observedGeneration: { type: Number, default: 0 },
     }],
-    currentHealthy: Number,
-    desiredHealthy: Number,
+    currentHealthy: { type: Number, default: 0 },
+    desiredHealthy: { type: Number, default: 0 },
     disruptedPods: {
       type: Map,
       of: String,
     },
-    disruptionsAllowed: Number,
-    expectedPods: Number,
-    observedGeneration: Number,
+    disruptionsAllowed: { type: Number, default: 0 },
+    expectedPods: { type: Number, default: 0 },
+    observedGeneration: { type: Number, default: 0 },
   },
 });
 
@@ -3629,7 +2163,7 @@ const priorityClassSchema = Schema({
   kind: String,
   metadata,
   preemptionPolicy: String,
-  value: Number,
+  value: { type: Number, default: 0 },
 });
 
 const resourceQuotaSchema = Schema({
@@ -3682,7 +2216,7 @@ const runtimeClassSchema = Schema({
       effect: String,
       key: String,
       operator: String,
-      tolerationSeconds: Number,
+      tolerationSeconds: { type: Number, default: 0 },
       value: String,
     }],
   },
@@ -3715,7 +2249,7 @@ const selfSubjectAccessReviewSchema = Schema({
   },
 });
 
-const selfSubjectReviewSchema = Schema({});
+// const selfSubjectReviewSchema = Schema({});
 
 const selfSubjectRulesReviewSchema = Schema({
   apiVersion: String,
@@ -3742,56 +2276,48 @@ const selfSubjectRulesReviewSchema = Schema({
 
 const serviceAccountSchema = Schema({
   apiVersion: String,
-  automountServiceAccountToken: Boolean,
-  imagePullSecrets: [{
-    name: String,
-  }],
   kind: String,
   metadata,
-  secrets: [{
-    apiVersion: String,
-    fieldPath: String,
-    kind: String,
-    name: String,
-    namespace: String,
-    resourceVersion: String,
-    uid: String,
-  }],
-});
+  spec: {
+    automountServiceAccountToken: Boolean,
+    imagePullSecrets: [{
+      name: String,
+    }],
+    secrets: [{
+      apiVersion: String,
+      fieldPath: String,
+      kind: String,
+      name: String,
+      namespace: String,
+      resourceVersion: String,
+      uid: String,
+    }],
+  },
+})
 
 const statefulSetSchema = Schema({
   apiVersion: String,
   kind: String,
   metadata,
   spec: {
-    minReadySeconds: Number,
+    minReadySeconds: { type: Number, default: 0 },
     ordinals: {
-      start: Number,
+      start: { type: Number, default: 0 },
     },
     persistentVolumeClaimRetentionPolicy: {
       whenDeleted: String,
       whenScaled: String,
     },
     podManagementPolicy: String,
-    replicas: Number,
-    revisionHistoryLimit: Number,
-    selector: {
-      matchExpressions: [{
-        key: String,
-        operator: String,
-        values: [String],
-      }],
-      matchLabels: {
-        type: Map,
-        of: String,
-      },
-    },
+    replicas: { type: Number, default: 0 },
+    revisionHistoryLimit: { type: Number, default: 0 },
+    selector: labelSelector,
     serviceName: String,
     template: pod,
     updateStrategy: {
       rollingUpdate: {
         maxUnavailable: String,
-        partition: Number,
+        partition: { type: Number, default: 0 },
       },
       type: String,
     },
@@ -3825,17 +2351,7 @@ const statefulSetSchema = Schema({
             of: String,
           },
         },
-        selector: {
-          matchExpressions: [{
-            key: String,
-            operator: String,
-            values: [String],
-          }],
-          matchLabels: {
-            type: Map,
-            of: String,
-          },
-        },
+        selector: labelSelector,
         storageClassName: String,
         volumeMode: String,
         volumeName: String,
@@ -3851,8 +2367,11 @@ const statefulSetSchema = Schema({
           of: String,
         },
         conditions: [{
-          ...statusConditions
-          lastProbeTime: String,
+          ...statusConditions,
+          lastProbeTime: {
+            type: String,
+            default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+          },
         }],
         phase: String,
         resizeStatus: String,
@@ -3860,16 +2379,16 @@ const statefulSetSchema = Schema({
     }],
   },
   status: {
-    availableReplicas: Number,
-    collisionCount: Number,
+    availableReplicas: { type: Number, default: 0 },
+    collisionCount: { type: Number, default: 0 },
     conditions: [statusConditions],
-    currentReplicas: Number,
+    currentReplicas: { type: Number, default: 0 },
     currentRevision: String,
-    observedGeneration: Number,
-    readyReplicas: Number,
-    replicas: Number,
+    observedGeneration: { type: Number, default: 0 },
+    readyReplicas: { type: Number, default: 0 },
+    replicas: { type: Number, default: 0 },
     updateRevision: String,
-    updatedReplicas: Number,
+    updatedReplicas: { type: Number, default: 0 },
   },
 });
 
@@ -3925,7 +2444,7 @@ const subjectAccessReviewSchema = Schema({
   },
 });
 
-const tokenRequestSchema = Schema({});
+// const tokenRequestSchema = Schema({});
 
 const tokenReviewSchema = Schema({
   apiVersion: String,
@@ -3960,7 +2479,7 @@ const validatingWebhookConfigurationSchema = Schema({
         name: String,
         namespace: String,
         path: String,
-        port: Number,
+        port: { type: Number, default: 0 },
       },
       url: String,
     },
@@ -3971,28 +2490,8 @@ const validatingWebhookConfigurationSchema = Schema({
     }],
     matchPolicy: String,
     name: String,
-    namespaceSelector: {
-      matchExpressions: [{
-        key: String,
-        operator: String,
-        values: [String],
-      }],
-      matchLabels: {
-        type: Map,
-        of: String,
-      },
-    },
-    objectSelector: {
-      matchExpressions: [{
-        key: String,
-        operator: String,
-        values: [String],
-      }],
-      matchLabels: {
-        type: Map,
-        of: String,
-      },
-    },
+    namespaceSelector: labelSelector,
+    objectSelector: labelSelector,
     rules: [{
       apiGroups: [String],
       apiVersions: [String],
@@ -4001,11 +2500,11 @@ const validatingWebhookConfigurationSchema = Schema({
       scope: String,
     }],
     sideEffects: String,
-    timeoutSeconds: Number,
+    timeoutSeconds: { type: Number, default: 0 },
   }],
 });
 
-const volumeSchema = Schema({});
+// const volumeSchema = Schema({});
 
 const volumeAttachmentSchema = Schema({
   apiVersion: String,
@@ -4015,250 +2514,17 @@ const volumeAttachmentSchema = Schema({
     attacher: String,
     nodeName: String,
     source: {
-      inlineVolumeSpec: {
-        accessModes: [String],
-        awsElasticBlockStore: {
-          fsType: String,
-          partition: Number,
-          readOnly: Boolean,
-          volumeID: String,
-        },
-        azureDisk: {
-          cachingMode: String,
-          diskName: String,
-          diskURI: String,
-          fsType: String,
-          kind: String,
-          readOnly: Boolean,
-        },
-        azureFile: {
-          readOnly: Boolean,
-          secretName: String,
-          secretNamespace: String,
-          shareName: String,
-        },
-        capacity: {
-          type: Map,
-          of: String,
-        },
-        cephfs: {
-          monitors: [String],
-          path: String,
-          readOnly: Boolean,
-          secretFile: String,
-          secretRef: {
-            name: String,
-            namespace: String,
-          },
-          user: String,
-        },
-        cinder: {
-          fsType: String,
-          readOnly: Boolean,
-          secretRef: {
-            name: String,
-            namespace: String,
-          },
-          volumeID: String,
-        },
-        claimRef: {
-          apiVersion: String,
-          fieldPath: String,
-          kind: String,
-          name: String,
-          namespace: String,
-          resourceVersion: String,
-          uid: String,
-        },
-        csi: {
-          controllerExpandSecretRef: {
-            name: String,
-            namespace: String,
-          },
-          controllerPublishSecretRef: {
-            name: String,
-            namespace: String,
-          },
-          driver: String,
-          fsType: String,
-          nodeExpandSecretRef: {
-            name: String,
-            namespace: String,
-          },
-          nodePublishSecretRef: {
-            name: String,
-            namespace: String,
-          },
-          nodeStageSecretRef: {
-            name: String,
-            namespace: String,
-          },
-          readOnly: Boolean,
-          volumeAttributes: {
-            type: Map,
-            of: String,
-          },
-          volumeHandle: String,
-        },
-        fc: {
-          fsType: String,
-          lun: Number,
-          readOnly: Boolean,
-          targetWWNs: [String],
-          wwids: [String],
-        },
-        flexVolume: {
-          driver: String,
-          fsType: String,
-          options: {
-            type: Map,
-            of: String,
-          },
-          readOnly: Boolean,
-          secretRef: {
-            name: String,
-            namespace: String,
-          },
-        },
-        flocker: {
-          datasetName: String,
-          datasetUUID: String,
-        },
-        gcePersistentDisk: {
-          fsType: String,
-          partition: Number,
-          pdName: String,
-          readOnly: Boolean,
-        },
-        glusterfs: {
-          endpoints: String,
-          endpointsNamespace: String,
-          path: String,
-          readOnly: Boolean,
-        },
-        hostPath: {
-          path: String,
-          type: String,
-        },
-        iscsi: {
-          chapAuthDiscovery: Boolean,
-          chapAuthSession: Boolean,
-          fsType: String,
-          initiatorName: String,
-          iqn: String,
-          iscsiInterface: String,
-          lun: Number,
-          portals: [String],
-          readOnly: Boolean,
-          secretRef: {
-            name: String,
-            namespace: String,
-          },
-          targetPortal: String,
-        },
-        local: {
-          fsType: String,
-          path: String,
-        },
-        mountOptions: [String],
-        nfs: {
-          path: String,
-          readOnly: Boolean,
-          server: String,
-        },
-        nodeAffinity: {
-          required: {
-            nodeSelectorTerms: [{
-              matchExpressions: [{
-                key: String,
-                operator: String,
-                values: [String],
-              }],
-              matchFields: [{
-                key: String,
-                operator: String,
-                values: [String],
-              }],
-            }],
-          },
-        },
-        persistentVolumeReclaimPolicy: String,
-        photonPersistentDisk: {
-          fsType: String,
-          pdID: String,
-        },
-        portworxVolume: {
-          fsType: String,
-          readOnly: Boolean,
-          volumeID: String,
-        },
-        quobyte: {
-          group: String,
-          readOnly: Boolean,
-          registry: String,
-          tenant: String,
-          user: String,
-          volume: String,
-        },
-        rbd: {
-          fsType: String,
-          image: String,
-          keyring: String,
-          monitors: [String],
-          pool: String,
-          readOnly: Boolean,
-          secretRef: {
-            name: String,
-            namespace: String,
-          },
-          user: String,
-        },
-        scaleIO: {
-          fsType: String,
-          gateway: String,
-          protectionDomain: String,
-          readOnly: Boolean,
-          secretRef: {
-            name: String,
-            namespace: String,
-          },
-          sslEnabled: Boolean,
-          storageMode: String,
-          storagePool: String,
-          system: String,
-          volumeName: String,
-        },
-        storageClassName: String,
-        storageos: {
-          fsType: String,
-          readOnly: Boolean,
-          secretRef: {
-            apiVersion: String,
-            fieldPath: String,
-            kind: String,
-            name: String,
-            namespace: String,
-            resourceVersion: String,
-            uid: String,
-          },
-          volumeName: String,
-          volumeNamespace: String,
-        },
-        volumeMode: String,
-        vsphereVolume: {
-          fsType: String,
-          storagePolicyID: String,
-          storagePolicyName: String,
-          volumePath: String,
-        },
-      },
+      inlineVolumeSpec: persistentVolumeSchema,
       persistentVolumeName: String,
     },
   },
   status: {
     attachError: {
       message: String,
-      time: String,
+      time: {
+        type: String,
+        default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      },
     },
     attached: Boolean,
     attachmentMetadata: {
@@ -4267,7 +2533,10 @@ const volumeAttachmentSchema = Schema({
     },
     detachError: {
       message: String,
-      time: String,
+      time: {
+        type: String,
+        default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      },
     },
   },
 });
@@ -4285,7 +2554,7 @@ module.exports = {
   CSIDriver: model('CSIDriver', cSIDriverSchema),
   CSINode: model('CSINode', cSINodeSchema),
   CSIStorageCapacity: model('CSIStorageCapacity', cSIStorageCapacitySchema),
-  CustomResourceDefinition: model('CustomResourceDefinition', customResourceDefinitionSchema),
+  // CustomResourceDefinition: model('CustomResourceDefinition', customResourceDefinitionSchema),
   DaemonSet: model('DaemonSet', daemonSetSchema),
   Deployment: model('Deployment', deploymentSchema),
   Endpoints: model('Endpoints', endpointsSchema),
@@ -4316,17 +2585,17 @@ module.exports = {
   RuntimeClass: model('RuntimeClass', runtimeClassSchema),
   Secret: model('Secret', secretSchema),
   SelfSubjectAccessReview: model('SelfSubjectAccessReview', selfSubjectAccessReviewSchema),
-  SelfSubjectReview: model('SelfSubjectReview', selfSubjectReviewSchema),
+  // SelfSubjectReview: model('SelfSubjectReview', selfSubjectReviewSchema),
   SelfSubjectRulesReview: model('SelfSubjectRulesReview', selfSubjectRulesReviewSchema),
   Service: model('Service', serviceSchema),
   ServiceAccount: model('ServiceAccount', serviceAccountSchema),
   StatefulSet: model('StatefulSet', statefulSetSchema),
   StorageClass: model('StorageClass', storageClassSchema),
   SubjectAccessReview: model('SubjectAccessReview', subjectAccessReviewSchema),
-  TokenRequest: model('TokenRequest', tokenRequestSchema),
+  // TokenRequest: model('TokenRequest', tokenRequestSchema),
   TokenReview: model('TokenReview', tokenReviewSchema),
   ValidatingWebhookConfiguration: model('ValidatingWebhookConfiguration', validatingWebhookConfigurationSchema),
-  Volume: model('Volume', volumeSchema),
+  // Volume: model('Volume', volumeSchema),
   VolumeAttachment: model('VolumeAttachment', volumeAttachmentSchema),
   DNS: model('DNS', dns),
 };
