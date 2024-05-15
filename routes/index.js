@@ -19,7 +19,6 @@ module.exports = {
   endpointSlice: require('./endpointSlice.js'),
   events: require('./events.js'),
   horizontalPodAutoscaler: require('./horizontalPodAutoscaler.js'),
-  ingress: require('./ingress.js'),
   ingressClass: require('./ingressClass.js'),
   job: require('./job.js'),
   lease: require('./lease.js'),

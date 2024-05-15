@@ -18,7 +18,6 @@ module.exports = {
   Event: require('./event.js'),
   HorizontalPodAutoscaler: require('./horizontalPodAutoscaler.js'),
   HorizontalPodAutoscaler: require('./horizontalPodAutoscaler.js'),
-  Ingress: require('./ingress.js'),
   IngressClass: require('./ingressClass.js'),
   Job: require('./job.js'),
   Lease: require('./lease.js'),
