@@ -56,7 +56,6 @@ class Pod extends K8Object {
       .then(async (podNames) => {
         return Promise.all(podNames.map((podName) => {
           return getContainerIP(podName)
-            .then((data) => JSON.parse(data.raw)[0]?.NetworkSettings.Networks.bridge.IPAddress)
             .then((ip) => {
               newPod.events().emit('NewContainer', {
                 ip,
