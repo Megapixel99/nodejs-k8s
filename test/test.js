@@ -85,7 +85,7 @@ const { spawn } = require('child_process');
   });
 
   try {
-    await axios.delete(`http://localhost:8080/api/v1/nodes/${ip}`);
+    await axios.delete(`http://localhost:8080/all`)
   } catch (e) { }
   await axios.post('http://localhost:8080/api/v1/nodes', nodeSpec);
   let test = spawn('kubetest2', ['noop', '--kubeconfig=./test-config', '--v', '10', '--test=ginkgo'])

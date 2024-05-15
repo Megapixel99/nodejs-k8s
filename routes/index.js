@@ -1,4 +1,5 @@
 module.exports = {
+  all: require('./all.js'),
   api: require('./api.js'),
   apiService: require('./apiService.js'),
   binding: require('./binding.js'),
