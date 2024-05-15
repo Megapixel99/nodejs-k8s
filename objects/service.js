@@ -22,13 +22,12 @@ class Service extends K8Object {
     super(config);
     this.spec = config.spec;
     this.status = config.status;
-    this.endpoints = null;
     this.apiVersion = Service.apiVersion;
     this.kind = Service.kind;
     this.Model = Service.Model;
   }
 
-  static apiVersion = 'apps/v1';
+  static apiVersion = 'v1';
   static kind = 'Service';
   static Model = Model;
 
@@ -92,14 +91,22 @@ class Service extends K8Object {
     }];
   }
 
+  delete() {
+    return Endpoints.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
+    .then((endpoint) => {
+      let arr = [ super.delete() ]
+      if (endpoint) {
+        arr.push(endpoint.delete())
+      }
+      return Promise.all(arr);
+    });
+  }
+
   static create(config) {
     return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
     .then((existingService) => {
       if (existingService) {
         throw this.alreadyExistsStatus(config.metadata.name);
-      }
-      if (existingEndpoint) {
-        throw Endpoints.alreadyExistsStatus(config.metadata.name);
       }
       return new Model(config).save()
     })
@@ -119,24 +126,31 @@ class Service extends K8Object {
               }
               return getContainerIP(`${endpoints.metadata.name}-${endpoints.metadata.namespace}-loadBalancer`)
               .then((serviceIP) => {
+                let arr = [endpoints.update({
+                  $set: {
+                    'spec.clusterIPs': [serviceIP],
+                  }
+                })]
                 if (serviceIP) {
                   return newService.update({
                     $set: {
+                      'status.status': true,
+                      'status.lastTransitionTime': DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
                       'spec.clusterIP': serviceIP,
                       'spec.clusterIPs': [serviceIP],
                     }
                   });
                 }
               })
-              .then(async () => {
+              .then(async (updatedService) => {
                 await new DNS({
-                  name: `${newService.metadata.name}.${newService.metadata.namespace}.cluster.local`,
+                  name: `${updatedService.metadata.name}.${updatedService.metadata.namespace}.cluster.local`,
                   type: 'A',
                   class: 'IN',
                   ttl: 300,
-                  address: newService.spec.clusterIP,
+                  address: updatedService.spec.clusterIP,
                 }).save()
-                return newService;
+                return updatedService;
               });
             })
         })
