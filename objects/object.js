@@ -1,4 +1,3 @@
-const objects = require('./index.js');
 const Status = require('./status.js');
 
 class K8Object {
@@ -51,10 +50,16 @@ class K8Object {
   }
 
   static create(config, searchQ) {
+    if (!config.metadata) {
+      return Promise.reject(this.unprocessableContentStatus());
+    }
+    if (!config.metadata.labels) {
+      config.metadata.labels = new Map([['name', config.metadata.name]]);
+    }
     if (!searchQ) {
       searchQ = { 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace };
     }
-    return this.findOne()
+    return this.findOne(searchQ)
     .then((existingObj) => {
       if (existingObj) {
         throw this.alreadyExistsStatus(config.metadata.name);

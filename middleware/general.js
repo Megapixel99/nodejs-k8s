@@ -36,14 +36,36 @@ module.exports = {
   },
   save(Model) {
     return (req, res, next) => {
-      if (!req.body?.metadata?.creationTimestamp) {
-        req.body.metadata.creationTimestamp = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
+      if (!req.body?.metadata) {
+        req.body.metadata = {};
       }
-      if (!req.body?.metadata?.namespace) {
-        req.body.metadata.namespace = (req.params.namespace || "default");
+      let query = { 'metadata.namespace': req.body.metadata.namespace };
+      if (['Node', 'APIService', 'Binding', 'ComponentStatus', 'Lease', 'RuntimeClass', 'Namespace'].includes(Model.kind)) {
+        if (!req.body.metadata?.name) {
+          req.body.metadata.name = (req.params.name || "default");
+        }
+        query = { 'metadata.name': req.body.metadata.name };
+      } else {
+        if (!req.body.metadata?.namespace) {
+          req.body.metadata.namespace = (req.params.namespace || "default");
+        }
+        if (req.params.name) {
+          query['metadata.name'] = req.params.name;
+        }
       }
-      Model.create(req.body)
-      .then((item) => res.status(201).send(item))
+      return Model.findOne(query)
+      .then((item) => {
+        if (item) {
+          return res.status(202).send(item);
+        }
+        if (!req.body.metadata?.creationTimestamp) {
+          req.body.metadata.creationTimestamp = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
+        }
+        return Model.create(req.body)
+        .then((item) => {
+          res.status(201).send(item)
+        })
+      })
       .catch(next);
     };
   },
@@ -115,11 +137,25 @@ module.exports = {
       .catch(next);
     };
   },
-  delete(Model) {
+  delete(Model, sendRes = true) {
     return (req, res, next) => {
-      Model.find(req.body)
-      .then((items) => Promise.all(items.map((item) => item.delete())))
-      .then((item) => items ? res.status(200).send(item) : res.status(200).send({}))
+      if (req.body) {
+        return Model.find(req.body)
+        .then((items) => Promise.all(items.map((item) => item.delete({}))))
+        .then((items) => {
+          if (res.writableEnded === false && sendRes) {
+            items ? res.status(200).send(items) : res.status(200).send({});
+          }
+        })
+        .catch(next);
+      }
+      return Model.find({})
+      .then((items) => Promise.all(items.map((item) => item.delete({}))))
+      .then((items) => {
+        if (res.writableEnded === false && sendRes) {
+          items ? res.status(200).send(items) : res.status(200).send({});
+        }
+      })
       .catch(next);
     };
   }
