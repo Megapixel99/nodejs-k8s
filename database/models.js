@@ -9,6 +9,20 @@ const {
   v4: uuid
 } = require('uuid');
 
+const ref = {
+  ip: String,
+  nodeName: String,
+  targetRef: {
+    kind: String,
+    namespace: String,
+    name: String,
+    uid: {
+      type: String,
+      default: uuid()
+    }
+  }
+};
+
 const metadata = {
   creationTimestamp: {
     type: String,
@@ -31,13 +45,10 @@ const metadata = {
     type: Map,
     of: String
   },
-  deletionGracePeriodSeconds: {
-    type: Number,
-    default: 0
-  },
+  deletionGracePeriodSeconds: Number,
   deletionTimestamp: {
-    type: Number,
-    default: 0
+    type: String,
+    default: null
   },
   finalizers: [String],
   generateName: String,
@@ -58,17 +69,7 @@ const metadata = {
       default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
   }],
-  ownerReferences: [{
-    apiVersion: String,
-    blockOwnerDeletion: Boolean,
-    controller: Boolean,
-    kind: String,
-    name: String,
-    uid: {
-      type: String,
-      default: uuid()
-    },
-  }],
+  ownerReferences: [ref],
   selfLink: String,
   labels: {
     type: Map,
@@ -747,6 +748,69 @@ const podAffinity = {
   }]
 }
 
+const persistentVolumeClaimSchema = Schema({
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'PersistentVolumeClaim',
+  },
+  metadata,
+  spec: {
+    accessModes: [String],
+    dataSource: {
+      apiGroup: String,
+      kind: String,
+      name: String,
+    },
+    dataSourceRef: {
+      apiGroup: String,
+      kind: String,
+      name: String,
+      namespace: String,
+    },
+    resources: {
+      claims: [{
+        name: String,
+      }],
+      limits: {
+        type: Map,
+        of: String,
+      },
+      requests: {
+        type: Map,
+        of: String,
+      },
+    },
+    selector: labelSelector,
+    storageClassName: String,
+    volumeMode: String,
+    volumeName: String,
+  },
+  status: {
+    accessModes: [String],
+    allocatedResources: {
+      type: Map,
+      of: String,
+    },
+    capacity: {
+      type: Map,
+      of: String,
+    },
+    conditions: [{
+      ...statusConditions,
+      lastProbeTime: {
+        type: String,
+        default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      },
+    }],
+    phase: String,
+    resizeStatus: String,
+  },
+});
+
 const volumeSchema = Schema({
   ...volumeInfo,
   configMap: {
@@ -771,20 +835,13 @@ const volumeSchema = Schema({
       default: 0
     },
     items: [{
-      fieldRef: {
-        apiVersion: String,
-        fieldPath: String,
-      },
+      fieldRef: objectFieldSelector,
       mode: {
         type: Number,
         default: 0
       },
       path: String,
-      resourceFieldRef: {
-        containerName: String,
-        divisor: String,
-        resource: String,
-      },
+      resourceFieldRef: resourceFieldSelector,
     }],
   },
   emptyDir: {
@@ -792,93 +849,7 @@ const volumeSchema = Schema({
     sizeLimit: String,
   },
   ephemeral: {
-    volumeClaimTemplate: {
-      metadata: {
-        annotations: {
-          type: Map,
-          of: String,
-        },
-        creationTimestamp: String,
-        deletionGracePeriodSeconds: {
-          type: Number,
-          default: 0
-        },
-        deletionTimestamp: String,
-        finalizers: [String],
-        generateName: String,
-        generation: {
-          type: Number,
-          default: 0
-        },
-        labels: {
-          type: Map,
-          of: String,
-        },
-        managedFields: [{
-          apiVersion: String,
-          fieldsType: String,
-          fieldsV1: String,
-          manager: String,
-          operation: String,
-          subresource: String,
-          time: String,
-        }],
-        name: String,
-        namespace: String,
-        ownerReferences: [{
-          apiVersion: String,
-          blockOwnerDeletion: Boolean,
-          controller: Boolean,
-          kind: String,
-          name: String,
-          uid: String,
-        }],
-        resourceVersion: String,
-        selfLink: String,
-        uid: String,
-      },
-      spec: {
-        accessModes: [String],
-        dataSource: {
-          apiGroup: String,
-          kind: String,
-          name: String,
-        },
-        dataSourceRef: {
-          apiGroup: String,
-          kind: String,
-          name: String,
-          namespace: String,
-        },
-        resources: {
-          claims: [{
-            name: String,
-          }],
-          limits: {
-            type: Map,
-            of: String,
-          },
-          requests: {
-            type: Map,
-            of: String,
-          },
-        },
-        selector: {
-          matchExpressions: [{
-            key: String,
-            operator: String,
-            values: [String],
-          }],
-          matchLabels: {
-            type: Map,
-            of: String,
-          },
-        },
-        storageClassName: String,
-        volumeMode: String,
-        volumeName: String,
-      },
-    },
+    volumeClaimTemplate: persistentVolumeClaimSchema,
   },
   gitRepo: {
     directory: String,
@@ -910,20 +881,13 @@ const volumeSchema = Schema({
       },
       downwardAPI: {
         items: [{
-          fieldRef: {
-            apiVersion: String,
-            fieldPath: String,
-          },
+          fieldRef: objectFieldSelector,
           mode: {
             type: Number,
             default: 0
           },
           path: String,
-          resourceFieldRef: {
-            containerName: String,
-            divisor: String,
-            resource: String,
-          },
+          resourceFieldRef: resourceFieldSelector,
         }],
       },
       secret: {
@@ -967,8 +931,14 @@ const volumeSchema = Schema({
 });
 
 const pod = {
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'Pod',
+  },
+  kind: {
+    type: String,
+    default: 'v1',
+  },
   metadata,
   spec: {
     activeDeadlineSeconds: {
@@ -1243,15 +1213,27 @@ const jobInfo = {
 }
 
 const podTemplateSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'PodTemplate',
+  },
+  kind: {
+    type: String,
+    default: 'v1',
+  },
   metadata,
   template: pod
 });
 
 const namespaceSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'namespace',
+  },
+  kind: {
+    type: String,
+    default: 'v1',
+  },
   metadata,
   spec: {
     finalizers: {
@@ -1268,8 +1250,14 @@ const namespaceSchema = Schema({
 });
 
 const deploymentSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'deployment',
+  },
   metadata,
   spec: {
     minReadySeconds: {
@@ -1353,8 +1341,14 @@ const ingressLoadBalancerStatus = {
 };
 
 const serviceSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'service',
+  },
   metadata,
   spec: {
     allocateLoadBalancerNodePorts: Boolean,
@@ -1424,8 +1418,14 @@ const serviceSchema = Schema({
 });
 
 const apiServiceSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'apiregistration.k8s.io/v1',
+  },
+  kind: {
+    type: String,
+    default: 'APIService',
+  },
   metadata,
   spec: {
     caBundle: String,
@@ -1451,42 +1451,6 @@ const apiServiceSchema = Schema({
   },
   status: {
     conditions: [statusConditions],
-  },
-});
-
-const ingressSchema = Schema({
-  apiVersion: String,
-  kind: String,
-  metadata,
-  spec: {
-    defaultBackend: {
-      resource: typedLocalObjectReference,
-      service: ingressServiceBackend,
-    },
-    ingressClassName: String,
-    rules: {
-      host: String,
-      http: {
-        paths: [{
-          path: String,
-          pathType: {
-            type: String,
-            required: true
-          },
-          backend: {
-            resource: typedLocalObjectReference,
-            service: ingressServiceBackend,
-          },
-        }]
-      }
-    },
-    tls: {
-      hosts: [String],
-      secretName: String,
-    }
-  },
-  status: {
-    loadBalancer: ingressLoadBalancerStatus,
   },
 });
 
@@ -1548,8 +1512,14 @@ const dns = Schema({
 });
 
 const secretSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'Secret',
+  },
   metadata,
   data: {
     type: Map,
@@ -1577,8 +1547,14 @@ const secretSchema = Schema({
 })
 
 const configMapSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'ConfigMap',
+  },
   metadata,
   data: {
     type: Map,
@@ -1592,36 +1568,18 @@ const configMapSchema = Schema({
 })
 
 const endpointsSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'networking.k8s.io/v1',
+  },
+  kind: {
+    type: String,
+    default: 'Endpoints',
+  },
   metadata,
   subsets: [{
-    addresses: [{
-      ip: String,
-      nodeName: String,
-      targetRef: {
-        kind: String,
-        namespace: String,
-        name: String,
-        uid: {
-          type: String,
-          default: uuid()
-        }
-      }
-    }],
-    notReadyAddresses: [{
-      ip: String,
-      nodeName: String,
-      targetRef: {
-        kind: String,
-        namespace: String,
-        name: String,
-        uid: {
-          type: String,
-          default: uuid()
-        }
-      }
-    }],
+    addresses: [ref],
+    notReadyAddresses: [ref],
     ports: [{
       name: String,
       port: {
@@ -1634,8 +1592,14 @@ const endpointsSchema = Schema({
 })
 
 const role = {
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'rbac.authorization.k8s.io/v1',
+  },
+  kind: {
+    type: String,
+    default: 'Role',
+  },
   metadata,
   rules: [{
     apiGroups: [String],
@@ -1650,14 +1614,28 @@ const roleSchema = Schema(role);
 
 const clusterRoleSchema = Schema({
   ...role,
+  apiVersion: {
+    type: String,
+    default: 'rbac.authorization.k8s.io/v1',
+  },
+  kind: {
+    type: String,
+    default: 'ClusterRole',
+  },
   aggregationRule: {
     clusterRoleSelectors: [labelSelector]
   }
 })
 
 const roleBindingSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'rbac.authorization.k8s.io/v1',
+  },
+  kind: {
+    type: String,
+    default: 'RoleBinding',
+  },
   metadata,
   roleRef: {
     apiGroup: String,
@@ -1675,8 +1653,14 @@ const roleBindingSchema = Schema({
 const clusterRoleBindingSchema = roleBindingSchema;
 
 const certificateSigningRequestSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'CertificateSigningRequest',
+  },
   metadata,
   spec: {
     expirationSeconds: {
@@ -1706,8 +1690,14 @@ const certificateSigningRequestSchema = Schema({
 
 
 const nodeSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'Node',
+  },
   metadata,
   spec: {
     configSource: {
@@ -1807,21 +1797,33 @@ const nodeSchema = Schema({
 })
 
 const objectReferenceSchema = Schema({
-  kind: String,
+  kind: {
+    type: String,
+    default: '',
+  },
   namespace: String,
   name: String,
   uid: {
     type: String,
     default: uuid()
   },
-  apiVersion: String,
+  apiVersion: {
+    type: String,
+    default: '',
+  },
   resourceVersion: String,
   fieldPath: String,
 });
 
 const eventSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'events.k8s.io/v1',
+  },
+  kind: {
+    type: String,
+    default: 'v1',
+  },
   metadata,
   action: String,
   deprecatedCount: {
@@ -1863,8 +1865,14 @@ const eventSchema = Schema({
 })
 
 const replicaSetSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'apps/v1',
+  },
+  kind: {
+    type: String,
+    default: 'ReplicaSet',
+  },
   metadata,
   spec: {
     selector: labelSelector,
@@ -1904,8 +1912,14 @@ const replicaSetSchema = Schema({
 })
 
 const daemonSetSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'DaemonSet',
+  },
   metadata,
   spec: {
     selector: labelSelector,
@@ -1971,8 +1985,14 @@ const daemonSetSchema = Schema({
 })
 
 const replicationControllerSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'ReplicationController',
+  },
   metadata,
   spec: {
     minReadySeconds: {
@@ -2011,58 +2031,28 @@ const replicationControllerSchema = Schema({
   },
 });
 
-const aPIServiceSchema = Schema({
-  apiVersion: String,
-  kind: String,
-  metadata,
-  spec: {
-    caBundle: String,
-    group: String,
-    groupPriorityMinimum: {
-      type: Number,
-      default: 0
-    },
-    insecureSkipTLSVerify: Boolean,
-    service: {
-      name: String,
-      namespace: String,
-      port: {
-        type: Number,
-        default: 0
-      },
-    },
-    version: String,
-    versionPriority: {
-      type: Number,
-      default: 0
-    },
-  },
-  status: {
-    conditions: [statusConditions],
-  },
-});
-
 const bindingSchema = Schema({
-  apiVersion: String,
-  kind: String,
-  metadata,
-  target: {
-    apiVersion: String,
-    fieldPath: String,
-    kind: String,
-    name: String,
-    namespace: String,
-    resourceVersion: String,
-    uid: {
-      type: String,
-      default: uuid()
-    },
+  apiVersion: {
+    type: String,
+    default: 'v1',
   },
+  kind: {
+    type: String,
+    default: 'Binding',
+  },
+  metadata,
+  target: ref,
 });
 
 const csiDriverSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'CSIDriver',
+  },
   metadata,
   spec: {
     attachRequired: Boolean,
@@ -2083,8 +2073,14 @@ const csiDriverSchema = Schema({
 });
 
 const csiNodeSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'CSINode',
+  },
   metadata,
   spec: {
     drivers: [{
@@ -2102,9 +2098,15 @@ const csiNodeSchema = Schema({
 });
 
 const csiStorageCapacitySchema = Schema({
-  apiVersion: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
   capacity: String,
-  kind: String,
+  kind: {
+    type: String,
+    default: 'CSIStorageCapacity',
+  },
   maximumVolumeSize: String,
   metadata,
   nodeTopology: labelSelector,
@@ -2112,20 +2114,32 @@ const csiStorageCapacitySchema = Schema({
 });
 
 const componentStatusSchema = Schema({
-  apiVersion: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'ComponentStatus',
+  },
   conditions: [{
     error: String,
     message: String,
     status: String,
     type: String,
   }],
-  kind: String,
   metadata,
 });
 
 const controllerRevisionSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'ControllerRevision',
+  },
   metadata,
   revision: {
     type: Number,
@@ -2134,8 +2148,14 @@ const controllerRevisionSchema = Schema({
 });
 
 const jobSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'Job',
+  },
   metadata,
   spec: jobInfo,
   status: {
@@ -2173,8 +2193,14 @@ const jobSchema = Schema({
 });
 
 const cronJobSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'CronJob',
+  },
   metadata,
   spec: {
     concurrencyPolicy: String,
@@ -2196,18 +2222,7 @@ const cronJobSchema = Schema({
     timeZone: String,
   },
   status: {
-    active: [{
-      apiVersion: String,
-      fieldPath: String,
-      kind: String,
-      name: String,
-      namespace: String,
-      resourceVersion: String,
-      uid: {
-        type: String,
-        default: uuid()
-      },
-    }],
+    active: [ref],
     lastScheduleTime: {
       type: String,
       default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
@@ -2220,8 +2235,14 @@ const cronJobSchema = Schema({
 });
 
 // const customResourceDefinitionSchema = Schema({
-//   apiVersion: String,
-//   kind: String,
+//   apiVersion: {
+//     type: String,
+//     default: 'v1',
+//   },
+//   kind: {
+//     type: String,
+//     default: 'CustomResourceDefinition',
+//   },
 //   metadata,
 //   spec: {
 //     conversion: {
@@ -2357,7 +2378,10 @@ const cronJobSchema = Schema({
 
 const endpointSliceSchema = Schema({
   addressType: String,
-  apiVersion: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
   endpoints: [{
     addresses: [String],
     conditions: {
@@ -2376,21 +2400,13 @@ const endpointSliceSchema = Schema({
     },
     hostname: String,
     nodeName: String,
-    targetRef: {
-      apiVersion: String,
-      fieldPath: String,
-      kind: String,
-      name: String,
-      namespace: String,
-      resourceVersion: String,
-      uid: {
-        type: String,
-        default: uuid()
-      },
-    },
+    targetRef: ref,
     zone: String,
   }],
-  kind: String,
+  kind: {
+    type: String,
+    default: 'EndpointSlice',
+  },
   metadata,
   ports: [{
     appProtocol: String,
@@ -2404,8 +2420,14 @@ const endpointSliceSchema = Schema({
 });
 
 const horizontalPodAutoscalerSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'HorizontalPodAutoscaler',
+  },
   metadata,
   spec: {
     behavior: {
@@ -2484,8 +2506,14 @@ const horizontalPodAutoscalerSchema = Schema({
 });
 
 const ingressClassSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'networking.k8s.io/v1',
+  },
+  kind: {
+    type: String,
+    default: 'IngressClass',
+  },
   metadata,
   spec: {
     controller: String,
@@ -2500,8 +2528,14 @@ const ingressClassSchema = Schema({
 });
 
 const leaseSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'coordination.k8s.io/v1',
+  },
+  kind: {
+    type: String,
+    default: 'Lease',
+  },
   metadata,
   spec: {
     acquireTime: {
@@ -2525,8 +2559,14 @@ const leaseSchema = Schema({
 });
 
 const limitRangeSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'LimitRange',
+  },
   metadata,
   spec: {
     limits: [{
@@ -2556,8 +2596,14 @@ const limitRangeSchema = Schema({
 });
 
 const localSubjectAccessReviewSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'LocalSubjectAccessReview',
+  },
   metadata,
   spec: {
     extra: [String],
@@ -2590,8 +2636,14 @@ const localSubjectAccessReviewSchema = Schema({
 });
 
 const mutatingWebhookConfigurationSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'MutatingWebhookConfiguration',
+  },
   metadata,
   webhooks: [{
     admissionReviewVersions: [String],
@@ -2634,8 +2686,14 @@ const mutatingWebhookConfigurationSchema = Schema({
 });
 
 const networkPolicySchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'NetworkPolicy',
+  },
   metadata,
   spec: {
     egress: [{
@@ -2683,8 +2741,14 @@ const networkPolicySchema = Schema({
 });
 
 const persistentVolumeSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'PersistentVolume',
+  },
   metadata,
   spec: {
     ...volumeInfo,
@@ -2711,18 +2775,7 @@ const persistentVolumeSchema = Schema({
         namespace: String,
       },
     },
-    claimRef: {
-      apiVersion: String,
-      fieldPath: String,
-      kind: String,
-      name: String,
-      namespace: String,
-      resourceVersion: String,
-      uid: {
-        type: String,
-        default: uuid()
-      },
-    },
+    claimRef: ref,
     csi: {
       ...volumeInfo.csi,
       controllerExpandSecretRef: {
@@ -2775,18 +2828,7 @@ const persistentVolumeSchema = Schema({
     storageClassName: String,
     storageos: {
       ...volumeInfo.storageos,
-      secretRef: {
-        ...volumeInfo.storageos.secretRef,
-        apiVersion: String,
-        fieldPath: String,
-        kind: String,
-        namespace: String,
-        resourceVersion: String,
-        uid: {
-          type: String,
-          default: uuid()
-        },
-      },
+      secretRef: ref,
     },
     volumeMode: String,
   },
@@ -2797,66 +2839,15 @@ const persistentVolumeSchema = Schema({
   },
 });
 
-const persistentVolumeClaimSchema = Schema({
-  apiVersion: String,
-  kind: String,
-  metadata,
-  spec: {
-    accessModes: [String],
-    dataSource: {
-      apiGroup: String,
-      kind: String,
-      name: String,
-    },
-    dataSourceRef: {
-      apiGroup: String,
-      kind: String,
-      name: String,
-      namespace: String,
-    },
-    resources: {
-      claims: [{
-        name: String,
-      }],
-      limits: {
-        type: Map,
-        of: String,
-      },
-      requests: {
-        type: Map,
-        of: String,
-      },
-    },
-    selector: labelSelector,
-    storageClassName: String,
-    volumeMode: String,
-    volumeName: String,
-  },
-  status: {
-    accessModes: [String],
-    allocatedResources: {
-      type: Map,
-      of: String,
-    },
-    capacity: {
-      type: Map,
-      of: String,
-    },
-    conditions: [{
-      ...statusConditions,
-      lastProbeTime: {
-        type: String,
-        default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
-      },
-    }],
-    phase: String,
-    resizeStatus: String,
-  },
-});
-
 const podDisruptionBudgetSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'PodDisruptionBudget',
+  },
   metadata,
   spec: {
     maxUnavailable: String,
@@ -2900,10 +2891,16 @@ const podDisruptionBudgetSchema = Schema({
 });
 
 const priorityClassSchema = Schema({
-  apiVersion: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
   description: String,
   globalDefault: Boolean,
-  kind: String,
+  kind: {
+    type: String,
+    default: 'PriorityClass',
+  },
   metadata,
   preemptionPolicy: String,
   value: {
@@ -2913,8 +2910,14 @@ const priorityClassSchema = Schema({
 });
 
 const resourceQuotaSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'ResourceQuota',
+  },
   metadata,
   spec: {
     hard: {
@@ -2943,9 +2946,15 @@ const resourceQuotaSchema = Schema({
 });
 
 const runtimeClassSchema = Schema({
-  apiVersion: String,
+  apiVersion: {
+    type: String,
+    default: 'node.k8s.io/v1',
+  },
+  kind: {
+    type: String,
+    default: 'RuntimeClass',
+  },
   handler: String,
-  kind: String,
   metadata,
   overhead: {
     podFixed: {
@@ -2972,8 +2981,14 @@ const runtimeClassSchema = Schema({
 });
 
 const selfSubjectAccessReviewSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'SelfSubjectAccessReview',
+  },
   metadata,
   spec: {
     nonResourceAttributes: {
@@ -2999,8 +3014,14 @@ const selfSubjectAccessReviewSchema = Schema({
 });
 
 const selfSubjectReviewSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'authentication.k8s.io/v1',
+  },
+  kind: {
+    type: String,
+    default: 'SelfSubjectReview',
+  },
   metadata,
   status: {
     userInfo: {
@@ -3019,8 +3040,14 @@ const selfSubjectReviewSchema = Schema({
 });
 
 const selfSubjectRulesReviewSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'SelfSubjectRulesReview',
+  },
   metadata,
   spec: {
     namespace: String,
@@ -3042,32 +3069,33 @@ const selfSubjectRulesReviewSchema = Schema({
 });
 
 const serviceAccountSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'ServiceAccount',
+  },
   metadata,
   spec: {
     automountServiceAccountToken: Boolean,
     imagePullSecrets: [{
       name: String,
     }],
-    secrets: [{
-      apiVersion: String,
-      fieldPath: String,
-      kind: String,
-      name: String,
-      namespace: String,
-      resourceVersion: String,
-      uid: {
-        type: String,
-        default: uuid()
-      },
-    }],
+    secrets: [ref],
   },
 })
 
 const statefulSetSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'StatefulSet',
+  },
   metadata,
   spec: {
     minReadySeconds: {
@@ -3106,62 +3134,7 @@ const statefulSetSchema = Schema({
       },
       type: String,
     },
-    volumeClaimTemplates: [{
-      apiVersion: String,
-      kind: String,
-      metadata,
-      spec: {
-        accessModes: [String],
-        dataSource: {
-          apiGroup: String,
-          kind: String,
-          name: String,
-        },
-        dataSourceRef: {
-          apiGroup: String,
-          kind: String,
-          name: String,
-          namespace: String,
-        },
-        resources: {
-          claims: [{
-            name: String,
-          }],
-          limits: {
-            type: Map,
-            of: String,
-          },
-          requests: {
-            type: Map,
-            of: String,
-          },
-        },
-        selector: labelSelector,
-        storageClassName: String,
-        volumeMode: String,
-        volumeName: String,
-      },
-      status: {
-        accessModes: [String],
-        allocatedResources: {
-          type: Map,
-          of: String,
-        },
-        capacity: {
-          type: Map,
-          of: String,
-        },
-        conditions: [{
-          ...statusConditions,
-          lastProbeTime: {
-            type: String,
-            default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
-          },
-        }],
-        phase: String,
-        resizeStatus: String,
-      },
-    }],
+    volumeClaimTemplates: [persistentVolumeClaimSchema],
   },
   status: {
     availableReplicas: {
@@ -3199,6 +3172,15 @@ const statefulSetSchema = Schema({
 });
 
 const storageClassSchema = Schema({
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'StorageClass',
+  },
+  metadata,
   allowVolumeExpansion: Boolean,
   allowedTopologies: [{
     matchLabelExpressions: [{
@@ -3206,9 +3188,6 @@ const storageClassSchema = Schema({
       values: [String],
     }],
   }],
-  apiVersion: String,
-  kind: String,
-  metadata,
   mountOptions: [String],
   parameters: {
     type: Map,
@@ -3220,8 +3199,14 @@ const storageClassSchema = Schema({
 });
 
 const subjectAccessReviewSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'SubjectAccessReview',
+  },
   metadata,
   spec: {
     extra: [String],
@@ -3254,6 +3239,15 @@ const subjectAccessReviewSchema = Schema({
 });
 
 const tokenRequestSchema = Schema({
+  apiVersion: {
+    type: String,
+    default: 'authentication.k8s.io/v1',
+  },
+  kind: {
+    type: String,
+    default: 'TokenRequest',
+  },
+  metadata,
   spec: {
     audiences: {
       type: [String],
@@ -3286,8 +3280,14 @@ const tokenRequestSchema = Schema({
 });
 
 const tokenReviewSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'TokenReview',
+  },
   metadata,
   spec: {
     audiences: [String],
@@ -3310,8 +3310,14 @@ const tokenReviewSchema = Schema({
 });
 
 const validatingWebhookConfigurationSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'ValidatingWebhookConfiguration',
+  },
   metadata,
   webhooks: [{
     admissionReviewVersions: [String],
@@ -3353,8 +3359,14 @@ const validatingWebhookConfigurationSchema = Schema({
 });
 
 const volumeAttachmentSchema = Schema({
-  apiVersion: String,
-  kind: String,
+  apiVersion: {
+    type: String,
+    default: 'v1',
+  },
+  kind: {
+    type: String,
+    default: 'VolumeAttachment',
+  },
   metadata,
   spec: {
     attacher: String,
