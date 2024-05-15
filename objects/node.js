@@ -2,7 +2,8 @@ const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const { Node: Model } = require('../database/models.js');
 const Namespace = require('./namespace.js');
-const Pod = require('./pod.js');
+const ReplicationController = require('./replicationController.js');
+const Service = require('./service.js');
 const {
   duration,
   isContainerRunning,
@@ -49,43 +50,77 @@ class Node extends K8Object {
           await Promise.all([
             Namespace.findOne({ 'metadata.name': 'kube-system' })
               .then((namespace) => namespace ? Promise.resolve() : createNamespace('kube-system'))
-              .then(() => Pod.findOne({ 'metadata.namespace': 'kube-system', 'metadata.name': 'core-dns' }))
-              .then((pod) => {
-                if (pod) {
-                  return Promise.resolve();
-                }
-                return Pod.create({
+              .then(() => ReplicationController.find({ 'metadata.name': { $regex: `^core-dns` } , 'metadata.namespace': 'kube-system' }))
+              .then(async (rc) => {
+                console.log(`core-dns-${rc.length + 1}`);
+                let replicationController = await ReplicationController.create({
                   metadata: {
-                    name: 'core-dns',
-                    namespace: 'kube-system',
-                    labels: {
-                      name: "core-dns",
-                      role: "core-dns"
-                    },
-                  },
-                  status: {
-                    hostIP: node?.status?.addresses?.find((e) => e.type === 'InternalIP')?.address,
+                    name: `core-dns-${rc.length + 1}`,
                   },
                   spec: {
-                    containers: [{
-                      name: "core-dns",
-                      image: "dns:latest",
-                      ports: [{
-                        name: "udp",
-                        containerPort: 5333
-                      }, {
-                        name: "tcp",
-                        containerPort: 5334
-                      }],
-                    }]
+                    template: {
+                      metadata: {
+                        name: 'core-dns',
+                        namespace: 'kube-system',
+                        labels: {
+                          name: "core-dns",
+                          role: "core-dns"
+                        },
+                      },
+                      status: {
+                        hostIP: node?.status?.addresses?.find((e) => e.type === 'InternalIP')?.address,
+                      },
+                      spec: {
+                        containers: [{
+                          name: "core-dns",
+                          image: "dns:latest",
+                          ports: [{
+                            name: "udp",
+                            containerPort: 5333
+                          }, {
+                            name: "tcp",
+                            containerPort: 5334
+                          }],
+                        }]
+                      }
+                    }
                   }
-                })
+                });
+                return replicationController.createPods(1);
+              }),
+            Namespace.findOne({ 'metadata.name': 'default' })
+              .then((namespace) => namespace ? Promise.resolve() : createNamespace('default'))
+              .then(() => Service.findOne({ 'metadata.name': 'kubernetes' , 'metadata.namespace': 'default' }))
+              .then((service) => {
+                if (service) {
+                  return;
+                }
+                return Service.create({
+                  metadata: {
+                    name: "kubernetes",
+                    namespace: "default",
+                    labels: {
+                      app: "kubernetes",
+                      namespace: "default"
+                    }
+                  },
+                  spec: {
+                    ports: [],
+                    selector: {
+                      app: null,
+                      deploymentconfig: null
+                    }
+                  }
+                });
               }),
             Namespace.findOne({ 'metadata.name': 'kube-public' })
               .then((namespace) => namespace ? Promise.resolve() : createNamespace('kube-public')),
             Namespace.findOne({ 'metadata.name': 'kube-node-lease' })
               .then((namespace) => namespace ? Promise.resolve() : createNamespace('kube-node-lease')),
-          ]);
+          ])
+            .catch((err) => {
+              throw err;
+            });
           node.update({
             'status.images': [{
               names: [ node.metadata.labels.get('name') ],
@@ -121,7 +156,10 @@ class Node extends K8Object {
               "reason": "KubeletReady",
               "message": "kubelet is posting ready status"
             }],
-          });
+          })
+            .catch((err) => {
+              throw err;
+            });
         }
       }, 1000);
     })
