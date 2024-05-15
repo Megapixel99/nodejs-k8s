@@ -61,7 +61,10 @@ class Deployment extends K8Object {
   update(updateObj, searchQ) {
     return Promise.all([
       super.update(updateObj, searchQ),
-      ReplicationController.find({ 'metadata.name': { $regex: `^${this.metadata.name}` } , 'metadata.namespace': this.metadata.namespace })
+      ReplicationController.find(
+        { 'metadata.name': { $regex: `^${this.metadata.name}` } , 'metadata.namespace': this.metadata.namespace },
+        { sort: { 'created_at': 1 } }
+      )
     ])
     .then(async (arr) => {
       let [ deployment, rc ] = arr;
@@ -82,6 +85,16 @@ class Deployment extends K8Object {
         }
         return newDeployment;
       }
+    });
+  }
+
+  delete() {
+    return ReplicationController.find({ 'metadata.name': { $regex: `^${this.metadata.name}` } , 'metadata.namespace': this.metadata.namespace })
+    .then((rcs) => {
+      return Promise.all([
+        ...rcs.map((rc) => rc.delete()),
+        super.delete(),
+      ]);
     });
   }
 

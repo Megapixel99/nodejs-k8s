@@ -22,6 +22,9 @@ class ReplicationController extends K8Object {
   static Model = Model;
 
   deletePods(numPods) {
+    if (this.status.replicas < 1) {
+      return Promise.resolve();
+    }
     let opts = { sort: { 'created_at': 1 } };
     if (numPods) {
       opts.limit = numPods;
@@ -46,6 +49,13 @@ class ReplicationController extends K8Object {
     })
   }
 
+  async delete() {
+    return Promise.all([
+      super.delete(),
+      this.deletePods()
+    ]);
+  }
+
   static async create(config) {
     return super.create(config)
     .then((rc) => new ReplicationController(rc))
@@ -62,14 +72,20 @@ class ReplicationController extends K8Object {
     let start = DateTime.now();
     let minReadySeconds = Infinity;
     let arr = new Array(numPods ?? this.spec.replicas).fill(
-      Pod.create(this.spec.template)
-      .then((pod) => {
+      Promise.all([
+        Pod.create(this.spec.template),
+        super.update({
+          $inc: {
+            'status.replicas': 1,
+          }
+        })
+      ])
+      .then(() => {
         let update = {
           $inc: {
             'status.availableReplicas': 1,
             'status.fullyLabeledReplicas': 1,
             'status.readyReplicas': 1,
-            'status.replicas': 1,
           }
         }
         if (DateTime.now() - start < minReadySeconds) {
