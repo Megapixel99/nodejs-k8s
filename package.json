@@ -20,6 +20,7 @@
     "mongoose": "^8.2.3",
     "node-cleanup": "^2.1.2",
     "portfinder": "^1.0.32",
+    "selfsigned": "^2.4.1",
     "uuid": "^9.0.1",
     "yaml": "^2.4.1"
   }
