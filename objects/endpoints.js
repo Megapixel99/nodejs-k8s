@@ -42,7 +42,7 @@ class Endpoints extends K8Object {
         )
         .then(async () => {
           let options = {
-            ports: newEndpoints.subsets.map((s) => s.ports.map((p) => `${p.port}:${p.port}`)),
+            ports: newEndpoints.subsets.map((s) => s.ports.map((p) => `${p.port}:${p.port}`)).flat(),
             env: [{
               name: 'PORTS',
               value: config.ports,
@@ -58,15 +58,22 @@ class Endpoints extends K8Object {
               value: await getContainerIP(dnsPod.metadata.generateName),
             })
           }
-          return runImage('loadbalancer', `${newEndpoints.metadata.name}-loadBalancer`, options)
+          return runImage('loadbalancer', `${newEndpoints.metadata.name}-${newEndpoints.metadata.namespace}-loadBalancer`, options)
         })
         .then(() => newEndpoints.listenForPods())
     });
   }
 
   stopLoadBalancer() {
-    return stopContainer(`${this.metadata.name}-loadBalancer`)
-      .then(() => removeContainer(`${this.metadata.name}-loadBalancer`));
+    return stopContainer(`${this.metadata.name}-${this.metadata.namespace}-loadBalancer`)
+      .then(() => removeContainer(`${this.metadata.name}-${this.metadata.namespace}-loadBalancer`));
+  }
+
+  delete() {
+    return Promise.all([
+      this.stopLoadBalancer(),
+      super.delete()
+    ]);
   }
 
   getPods() {
