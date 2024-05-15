@@ -25,7 +25,7 @@ const { spawn } = require('child_process');
   });
 
   await runImage('ubuntu', nodeName);
-  let ip = JSON.parse((await getContainerIP(nodeName)).raw)[0]?.NetworkSettings.Networks.bridge.IPAddress;
+  let ip = (await getContainerIP(nodeName));
   nodeSpec.metadata.name = ip;
   nodeSpec.metadata.labels.name = nodeName;
   nodeSpec.status.addresses = [{

@@ -117,9 +117,7 @@ class Service extends K8Object {
                   ports: newService.spec.ports.map((e) => `${e.port}:${e.targetPort}`).join(' '),
                 }));
               }
-              newService.endpoints = endpoints;
-              return getContainerIP(`${newService.endpoints.metadata.name}-loadBalancer`)
-              .then((ipInfo) => JSON.parse(ipInfo?.raw)[0]?.NetworkSettings?.Networks?.bridge?.IPAddress)
+              return getContainerIP(`${endpoints.metadata.name}-${endpoints.metadata.namespace}-loadBalancer`)
               .then((serviceIP) => {
                 if (serviceIP) {
                   return newService.update({

@@ -69,6 +69,7 @@ const killContainer = (containerName) => dockerCommand(`kill ${containerName}`, 
 const removeContainer = (containerName) => dockerCommand(`rm ${containerName}`, { echo: false });
 
 const getContainerIP = (containerName) => dockerCommand(`inspect ${containerName}`, { echo: false })
+  .then((data) => JSON.parse(data.raw)[0]?.NetworkSettings.Networks.bridge.IPAddress)
 
 const getAllContainersWithName = (containerName, imageName) => dockerCommand(`ps -q -f name=${containerName} -f ancestor=${imageName}`, { echo: false });
 
