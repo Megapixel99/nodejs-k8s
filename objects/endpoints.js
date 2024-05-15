@@ -179,11 +179,23 @@ class Endpoints extends K8Object {
   }
 
   removePod(pod) {
-    return removePodFromEndpoints(`${this.metadata.name}-loadBalancer`, pod.status.podIP);
+    return removePodFromEndpoint(`${this.metadata.generateName}-${this.metadata.namespace}-loadBalancer`, pod.status.podIP);
   }
 
   addPod(pod) {
-    return addPodToEndpoints(`${this.metadata.name}-loadBalancer`, pod.status.podIP);
+    return addPodToEndpoint(`${this.metadata.generateName}-${this.metadata.namespace}-loadBalancer`, pod.status.podIP);
+  }
+
+  removePort(port) {
+    return removePortFromEndpoint(`${this.metadata.generateName}-${this.metadata.namespace}-loadBalancer`, port);
+  }
+
+  addPorts(ports) {
+    return addPortsToEndpoint(`${this.metadata.generateName}-${this.metadata.namespace}-loadBalancer`, ports);
+  }
+
+  addPort(port) {
+    return addPortToEndpoint(`${this.metadata.generateName}-${this.metadata.namespace}-loadBalancer`, port);
   }
 }
 

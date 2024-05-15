@@ -239,27 +239,52 @@ class Service extends K8Object {
   }
 
   removePort(port) {
-    return removePortFromService(`${this.endpoints.metadata.generateName}-loadBalancer`, port);
+    return Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+      .then(async (endpoint) => {
+        if (endpoint) {
+          return endpoint.removePort(port);
+        }
+      });
   }
 
   addPorts(ports) {
-    return addPortsToService(`${this.endpoints.metadata.generateName}-loadBalancer`, ports);
+    return Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+      .then(async (endpoint) => {
+        if (endpoint) {
+          return endpoint.addPorts(orts);
+        }
+      });
   }
 
   addPort(port) {
-    return addPortToService(`${this.endpoints.metadata.generateName}-loadBalancer`, port);
+    return Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+      .then(async (endpoint) => {
+        if (endpoint) {
+          return endpoint.addPort(port);
+        }
+      });
+  }
+
+  addPod() {
+    return Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+      .then(async (endpoint) => {
+        if (endpoint) {
+          return endpoint.addPod(port);
+        }
+      });
+  }
+
+  removePod() {
+    return Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+      .then(async (endpoint) => {
+        if (endpoint) {
+          return endpoint.removePod(port);
+        }
+      });
   }
 
   async findOldestPod() {
     return (await Pod.findAllSorted({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })).at(-1);
-  }
-
-  removePod(pod) {
-    return this.endpoints.removePod(pod);
-  }
-
-  addPod(pod) {
-    return this.endpoints.addPod(pod);
   }
 }
 

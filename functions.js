@@ -79,24 +79,24 @@ const addPodsToService = (containerName, pods) => {
     .then(() => ips);
 }
 
-const addPortsToService = (containerName, ports) => {
+const addPortsToEndpoint = (containerName, ports) => {
   return dockerExec(containerName, `bin/bash -c '${ports.map((e) => `echo "port add ${e}" > /proc/1/fd/0`).join(' ; ')}'`)
     .then(() => ports);
 }
 
-const addPortToService = (containerName, port) => {
+const addPortToEndpoint = (containerName, port) => {
   return dockerExec(containerName, `bin/bash -c 'echo "port add ${port}" > /proc/1/fd/0'`);
 }
 
-const addPodToEndpoints = (containerName, podIP) => {
+const addPodToEndpoint = (containerName, podIP) => {
   return dockerExec(containerName, `bin/bash -c 'echo "pod add ${podIP}" > /proc/1/fd/0'`);
 }
 
-const removePortFromService = (containerName, port) => {
+const removePortFromEndpoint = (containerName, port) => {
   return dockerExec(containerName, `bin/bash -c 'echo "port remove ${port}" > /proc/1/fd/0'`);
 }
 
-const removePodFromEndpoints = (containerName, podIP) => {
+const removePodFromEndpoint = (containerName, podIP) => {
   return dockerExec(containerName, `bin/bash -c 'echo "pod remove ${podIP}" > /proc/1/fd/0'`);
 }
 
@@ -108,11 +108,11 @@ module.exports = {
   duration,
   getAllContainersWithName,
   randomBytes,
-  addPortsToService,
-  addPortToService,
-  addPodToEndpoints,
-  removePortFromService,
-  removePodFromEndpoints,
+  addPortsToEndpoint,
+  addPortToEndpoint,
+  addPodToEndpoint,
+  removePortFromEndpoint,
+  removePodFromEndpoint,
   getContainerIP,
   buildImage,
   pullImage,
