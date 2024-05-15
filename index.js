@@ -22,7 +22,6 @@ const {
   endpointSlice,
   events,
   horizontalPodAutoscaler,
-  ingress,
   ingressClass,
   job,
   lease,
@@ -41,6 +40,7 @@ const {
   podTemplate,
   priorityClass,
   replicaset,
+  replicationController,
   resourceQuota,
   role,
   roleBinding,
@@ -122,17 +122,12 @@ app.use(endpoints);
 app.use(endpointSlice);
 app.use(events);
 app.use(horizontalPodAutoscaler);
-app.use(ingress);
 app.use(ingressClass);
 app.use(job);
 app.use(limitRange);
 app.use(localSubjectAccessReview);
 app.use(mutatingWebhookConfiguration);
-app.use(namespace);
-app.use(namespaceCheck);
 app.use(networkPolicy);
-app.use(node);
-app.use(openapi);
 app.use(persistentVolume);
 app.use(persistentVolumeClaim);
 app.use(pod);
@@ -140,6 +135,7 @@ app.use(podDisruptionBudget);
 app.use(podTemplate);
 app.use(priorityClass);
 app.use(replicaset);
+app.use(replicationController);
 app.use(resourceQuota);
 app.use(role);
 app.use(roleBinding);
