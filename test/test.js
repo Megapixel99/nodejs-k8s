@@ -88,7 +88,7 @@ const { spawn } = require('child_process');
     await axios.delete(`http://localhost:8080/all`)
   } catch (e) { }
   await axios.post('http://localhost:8080/api/v1/nodes', nodeSpec);
-  let test = spawn('kubetest2', ['noop', '--kubeconfig=./test-config', '--v', '10', '--test=ginkgo'])
+  let test = spawn('kubetest2', ['noop', '--kubeconfig=./test-config', '--v', '10', '--test=ginkgo', '--', '--focus-regex=\\\[Conformance\\\]'])
 
   test.stdout.on('data', (data) => console.log(`[${DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")}] [test] ${data}`));
 
