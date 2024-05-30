@@ -2,10 +2,10 @@
 
 export $(grep -v '^#' ./.env | xargs)
 
-docker rm -f loadbalancer
+# docker rm -f loadbalancer
 docker image rm -f loadbalancer
 docker build -t loadbalancer -f loadBalancer/Dockerfile .
-docker image rm -f dns
+# docker image rm -f dns
 docker rm -f dns_server
 docker build -t dns -f dns/Dockerfile .
 if [[ -z $DB_URL ]]; then
