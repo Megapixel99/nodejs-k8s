@@ -28,12 +28,13 @@ module.exports = {
       let path = Object.keys(schema.document.paths)
         .filter((e) => {
           let r = new RegExp(e.replace(/\{.*?\}/ig, '.*?'));
-          if (req.baseUrl.match(r)?.length === 1) {
+          if (req?.route?.path[0]?.match(r)?.length === 1) {
             return Object.keys(schema.document.paths);
           }
         })
         .reverse()
         .at(0);
+      req.operationId = schema.document.paths?.[path]?.[req.method.toLowerCase()].operationId;
       return openapi.validPath(schema.document.paths[path])(req, res, next);
     };
   }
