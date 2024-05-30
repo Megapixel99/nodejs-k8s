@@ -29,8 +29,14 @@ class Pod extends K8Object {
   static kind = 'Pod';
   static Model = Model;
 
-  static async create(config) {
+  static async create(config = {}) {
     let otherPod = undefined;
+    if (!config.metadata) {
+      config.metadata = {};
+    }
+    if (!config.metadata.name) {
+      config.metadata.name = 'default';
+    }
     do {
       config.metadata.generateName = `${config.metadata.name}-${randomBytes(6).toString('hex')}`;
       otherPod = await Pod.findOne({ 'metadata.generateName': config.metadata.generateName });
@@ -49,8 +55,8 @@ class Pod extends K8Object {
       status: 'True',
       lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
     });
-    return new Model(config).save()
-    .then((pod) => {
+    let p = new Model(config).save();
+    p.then((pod) => {
       let newPod = new Pod(pod);
       return newPod.start()
       .then(async (podNames) => {
@@ -134,7 +140,8 @@ class Pod extends K8Object {
           });
         });
       })
-    })
+    });
+    return p;
   }
 
   events() {
