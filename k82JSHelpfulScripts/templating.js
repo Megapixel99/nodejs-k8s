@@ -52,9 +52,9 @@ const fs = require('fs');
 //
 // const routes = [\`/api/\$\{${res[0]}.apiVersion}/:namespace/\$\{plural.toLowerCase()}\`];
 //
-// router.get(routes.map((e) => \`\${e}/:name\`), validSchema(apiAppsV1OpenApiV3), general.findOne(${res[0]}));
+// router.get(routes.map((e) => \`\${e}/:name\`), validSchema(apiAppsV1OpenApiV3), general.findOne(${res[0]}), general.format(${res[0]}), general.raw(${res[0]}));
 //
-// router.get(['/api/v1/${plural.toLowerCase()}', ...routes], validSchema(apiV1OpenApiV3), general.list(${res[0]}));
+// router.get(['/api/v1/${plural.toLowerCase()}', ...routes], validSchema(apiV1OpenApiV3), general.find(${res[0]}), general.format(${res[0]}), general.list(${res[0]}));
 //
 // router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(${res[0]}));
 //
