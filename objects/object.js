@@ -1,3 +1,4 @@
+const EventEmitter = require('events');
 const Status = require('./status.js');
 
 class K8Object {
@@ -5,6 +6,7 @@ class K8Object {
     this.apiVersion = config.apiVersion;
     this.kind = config.kind;
     this.metadata = config.metadata;
+    this.eventEmitter = new EventEmitter();
   }
 
   static findOneByReq(reqQuery = {}, reqParams = {}) {
@@ -66,7 +68,10 @@ class K8Object {
       }
       return new this.Model(config).save();
     })
-    .then((obj) => obj);
+    .then((obj) => {
+      new this(obj).events().emit('created');
+      return obj;
+    });
   }
 
   delete (searchQ) {
@@ -76,6 +81,7 @@ class K8Object {
     return this.Model.findOneAndDelete(searchQ)
     .then((obj) => {
       if (obj) {
+        this.events().emit('deleted');
         return obj;
       }
     });
@@ -95,6 +101,7 @@ class K8Object {
     )
     .then((obj) => {
       if (obj) {
+        this.events().emit('updated');
         return obj;
       }
     });
