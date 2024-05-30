@@ -262,7 +262,7 @@ class Deployment extends K8Object {
                 Service.findOldestPod()
                 .then((service) => {
                   if (service) {
-                    return service.removePod(newPod);
+                    return service.removePod();
                   }
                 })
               ])
