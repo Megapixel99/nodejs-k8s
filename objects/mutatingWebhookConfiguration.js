@@ -16,9 +16,8 @@ class MutatingWebhookConfiguration extends K8Object {
   static kind = 'MutatingWebhookConfiguration';
   static Model = Model;
 
-  static table (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (mutatingWebhookConfigurations) => ({
+  static async table (queryOptions = {}) {
+    return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
@@ -36,7 +35,7 @@ class MutatingWebhookConfiguration extends K8Object {
             metadata: e.metadata,
           }
         })),
-      }));
+    }
   }
 
   async setConfig(config) {

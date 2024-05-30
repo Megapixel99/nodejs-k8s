@@ -20,9 +20,8 @@ class CertificateSigningRequest extends K8Object {
     return super.create(config, { 'metadata.name': this.metadata.name });
   }
 
-  static table (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (certificateSigningRequests) => ({
+  static async table (queryOptions = {}) {
+    return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
@@ -55,7 +54,7 @@ class CertificateSigningRequest extends K8Object {
             metadata: e.metadata,
           }
         })),
-      }));
+    }
   }
 
   async setConfig(config) {

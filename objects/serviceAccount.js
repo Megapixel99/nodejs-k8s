@@ -19,9 +19,8 @@ class ServiceAccount extends K8Object {
   static kind = 'ServiceAccount';
   static Model = Model;
 
-  static table (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (serviceAccounts) => ({
+  static async table (serviceAccounts) {
+    return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
@@ -62,7 +61,7 @@ class ServiceAccount extends K8Object {
             metadata: e.metadata,
           }
         })),
-      }));
+    }
   }
 
   async setConfig(config) {

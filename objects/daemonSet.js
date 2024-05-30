@@ -16,13 +16,12 @@ class DaemonSet extends K8Object {
     this.Model = DaemonSet.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'apps/v1';
   static kind = 'DaemonSet';
   static Model = Model;
 
-  static table (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (daemonSets) => ({
+  static async table (queryOptions = {}) {
+    return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
@@ -55,7 +54,7 @@ class DaemonSet extends K8Object {
             metadata: e.metadata,
           }
         })),
-      }));
+    }
   }
 
   async setConfig(config) {

@@ -100,9 +100,8 @@ class ReplicationController extends K8Object {
     return Promise.all(arr);
   }
 
-  static table (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (replicationControllers) => ({
+  static async table (queryOptions = {}) {
+    return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
@@ -135,7 +134,7 @@ class ReplicationController extends K8Object {
             metadata: e.metadata,
           }
         })),
-      }));
+    }
   }
 
   async setConfig(config) {

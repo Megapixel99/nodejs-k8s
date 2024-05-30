@@ -16,9 +16,8 @@ class StorageClass extends K8Object {
   static kind = 'StorageClass';
   static Model = Model;
 
-  static table (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (storageClasses) => ({
+  static async table (queryOptions = {}) {
+    return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
@@ -36,7 +35,7 @@ class StorageClass extends K8Object {
             metadata: e.metadata,
           }
         })),
-      }));
+    }
   }
 
   async setConfig(config) {

@@ -46,9 +46,8 @@ class ConfigMap extends K8Object {
     .then((configMap) => new ConfigMap(configMap));
   }
 
-  static table (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (configMaps) => ({
+  static async table (configMaps) {
+    return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
@@ -105,7 +104,7 @@ class ConfigMap extends K8Object {
             metadata: e.metadata,
           }
         })),
-      }));
+    }
   }
 
   mapVariables() {
