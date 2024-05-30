@@ -12,7 +12,7 @@ class StatefulSet extends K8Object {
     this.Model = StatefulSet.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'apps/v1';
   static kind = 'StatefulSet';
   static Model = Model;
 

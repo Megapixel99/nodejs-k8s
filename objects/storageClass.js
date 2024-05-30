@@ -12,7 +12,7 @@ class StorageClass extends K8Object {
     this.Model = StorageClass.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'storage.k8s.io/v1';
   static kind = 'StorageClass';
   static Model = Model;
 
