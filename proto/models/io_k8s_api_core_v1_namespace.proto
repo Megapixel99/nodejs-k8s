@@ -1,0 +1,78 @@
+syntax = "proto2";
+
+package openapitools;
+
+import "google/protobuf/struct.proto";
+
+message Unknown {
+  optional TypeMeta typeMeta = 1;
+  optional bytes raw = 2;
+  optional string contentEncoding = 3;
+  optional string contentType = 4;
+}
+
+message TypeMeta {
+  optional string kind = 1;
+  optional string apiVersion = 2;
+}
+
+message createCoreV1Namespace {
+  optional ObjectMeta metadata = 1;
+  optional NamespaceSpec spec = 2;
+  optional NamespaceStatus status = 3;
+}
+message NamespaceCondition {
+  optional string type = 1;
+  optional string status = 2;
+  optional Time lastTransitionTime = 4;
+  optional string reason = 5;
+  optional string message = 6;
+}
+message NamespaceSpec {
+  repeated string finalizers = 1;
+}
+message NamespaceStatus {
+  optional string phase = 1;
+  repeated NamespaceCondition conditions = 2;
+}
+message ObjectMeta {
+  optional string name = 1;
+  optional string generateName = 2;
+  optional string namespace = 3;
+  optional string selfLink = 4;
+  optional string uid = 5;
+  optional string resourceVersion = 6;
+  optional int64 generation = 7;
+  optional Time creationTimestamp = 8;
+  optional Time deletionTimestamp = 9;
+  optional int64 deletionGracePeriodSeconds = 10;
+  map<string, string> labels = 11;
+  map<string, string> annotations = 12;
+  repeated OwnerReference ownerReferences = 13;
+  repeated string finalizers = 14;
+  repeated ManagedFieldsEntry managedFields = 17;
+}
+message OwnerReference {
+  optional string apiVersion = 5;
+  optional string kind = 1;
+  optional string name = 3;
+  optional string uid = 4;
+  optional bool controller = 6;
+  optional bool blockOwnerDeletion = 7;
+}
+message ManagedFieldsEntry {
+  optional string manager = 1;
+  optional string operation = 2;
+  optional string apiVersion = 3;
+  optional Time time = 4;
+  optional string fieldsType = 6;
+  optional FieldsV1 fieldsV1 = 7;
+  optional string subresource = 8;
+}
+message FieldsV1 {
+  optional bytes Raw = 1;
+}
+message Time {
+  optional int64 seconds = 1;
+  optional int32 nanos = 2;
+}
