@@ -75,10 +75,6 @@ const metadata = {
     type: Map,
     of: String
   },
-  annotations: {
-    type: Map,
-    of: String
-  },
 };
 
 const glusterfs = {
@@ -933,11 +929,11 @@ const volumeSchema = Schema({
 const pod = {
   apiVersion: {
     type: String,
-    default: 'Pod',
+    default: 'v1',
   },
   kind: {
     type: String,
-    default: 'v1',
+    default: 'Pod',
   },
   metadata,
   spec: {
@@ -1116,7 +1112,7 @@ const pod = {
     initContainerStatuses: [containerStatus],
     message: String,
     nominatedNodeName: String,
-    phase: String,
+    phase: { type: String, default: 'Not Running' },
     podIP: {
       type: String,
       default: null
@@ -1215,11 +1211,11 @@ const jobInfo = {
 const podTemplateSchema = Schema({
   apiVersion: {
     type: String,
-    default: 'PodTemplate',
+    default: 'v1',
   },
   kind: {
     type: String,
-    default: 'v1',
+    default: 'PodTemplate',
   },
   metadata,
   template: pod
@@ -1228,11 +1224,11 @@ const podTemplateSchema = Schema({
 const namespaceSchema = Schema({
   apiVersion: {
     type: String,
-    default: 'namespace',
+    default: 'v1',
   },
   kind: {
     type: String,
-    default: 'v1',
+    default: 'Namespace',
   },
   metadata,
   spec: {
@@ -1256,7 +1252,7 @@ const deploymentSchema = Schema({
   },
   kind: {
     type: String,
-    default: 'deployment',
+    default: 'Deployment',
   },
   metadata,
   spec: {
@@ -1347,7 +1343,7 @@ const serviceSchema = Schema({
   },
   kind: {
     type: String,
-    default: 'service',
+    default: 'Service',
   },
   metadata,
   spec: {
@@ -1643,10 +1639,10 @@ const roleBindingSchema = Schema({
     name: String,
   },
   subjects: [{
-    apiGroups: [String],
-    kind: [String],
-    namespace: [String],
-    name: [String],
+    apiGroups: String,
+    kind: String,
+    namespace: String,
+    name: String,
   }]
 })
 
@@ -1822,7 +1818,7 @@ const eventSchema = Schema({
   },
   kind: {
     type: String,
-    default: 'v1',
+    default: 'Event',
   },
   metadata,
   action: String,
@@ -1914,7 +1910,7 @@ const replicaSetSchema = Schema({
 const daemonSetSchema = Schema({
   apiVersion: {
     type: String,
-    default: 'v1',
+    default: 'apps/v1',
   },
   kind: {
     type: String,
@@ -2047,7 +2043,7 @@ const bindingSchema = Schema({
 const csiDriverSchema = Schema({
   apiVersion: {
     type: String,
-    default: 'v1',
+    default: 'storage.k8s.io/v1',
   },
   kind: {
     type: String,
@@ -3090,7 +3086,7 @@ const serviceAccountSchema = Schema({
 const statefulSetSchema = Schema({
   apiVersion: {
     type: String,
-    default: 'v1',
+    default: 'apps/v1',
   },
   kind: {
     type: String,
@@ -3174,7 +3170,7 @@ const statefulSetSchema = Schema({
 const storageClassSchema = Schema({
   apiVersion: {
     type: String,
-    default: 'v1',
+    default: 'storage.k8s.io/v1',
   },
   kind: {
     type: String,
