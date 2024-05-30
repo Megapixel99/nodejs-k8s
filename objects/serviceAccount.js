@@ -36,57 +36,25 @@ class ServiceAccount extends K8Object {
             "priority": 0
           },
           {
-            "name": "Type",
+            "name": "Secrets",
             "type": "string",
             "format": "name",
-            "description": "Type of service.",
-            "priority": 0
-          },
-          {
-            "name": "Cluster-ip",
-            "type": "string",
-            "format": "",
-            "description": "IP within the cluster.",
-            "priority": 0
-          },
-          {
-            "name": "External-ip",
-            "type": "string",
-            "format": "",
-            "description": "IP outside the cluster.",
-            "priority": 0
-          },
-          {
-            "name": "Port(s)",
-            "type": "string",
-            "format": "",
-            "description": "Port(s) exposed by the service, for the pod(s).",
+            "description": "Secrets is a list of the secrets in the same namespace that pods running using this ServiceAccount are allowed to use. Pods are only limited to this list if this service account has a \"kubernetes.io/enforce-mountable-secrets\" annotation set to \"true\". This field should not be used to find auto-generated service account token secrets for use outside of pods. Instead, tokens can be requested directly using the TokenRequest API, or service account token secrets can be manually created. More info: https://kubernetes.io/docs/concepts/configuration/secret",
             "priority": 0
           },
           {
             "name": "Age",
             "type": "string",
-            "format": "",
+            "format": "name",
             "description": "CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.\n\nPopulated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
             "priority": 0
-          },
-          {
-            "name": "Selector",
-            "type": "string",
-            "format": "",
-            "description": "Which pod(s) are fronted by the service.",
-            "priority": 1
           }
         ],
-        "rows": pods.map((e) => ({
+        "rows": serviceAccounts.map((e) => ({
           "cells": [
             e.metadata.name,
-            e.spec.type,
-            (e.spec.clusterIP || e.spec.clusterIPs?.join() || '<None>'),
-            (e.spec.externalIPs?.join() || '<None>'),
-            e.spec?.ports?.length > 0 ? e.spec.ports.map((e) => `${e.port}/${e.protocol}`).join() : '<None>',
+            e.spec.secrets.length,
             duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
-            e.spec?.selector && Object.keys(e.spec.selector).length > 0 ? Object.entries(e.spec.selector).map((e) => `${e[0]}=${e[1]}`).join() : '<None>',
           ],
           object: {
             "kind": "PartialObjectMetadata",
