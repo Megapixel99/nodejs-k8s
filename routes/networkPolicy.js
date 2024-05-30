@@ -6,9 +6,9 @@ const { apiRbacAuthorizatonK8sIoV1OpenApiV3, apiV1OpenApiV3, validSchema } = ope
 
 let routes = [`/apis/${NetworkPolicy.apiVersion}/networkpolicies`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.findOne(NetworkPolicy));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.findOne(NetworkPolicy), general.format(NetworkPolicy), general.raw(NetworkPolicy));
 
-router.get(['/api/v1/networkpolicies', ...routes], validSchema(apiV1OpenApiV3), general.list(NetworkPolicy));
+router.get(['/api/v1/networkpolicies', ...routes], validSchema(apiV1OpenApiV3), general.find(NetworkPolicy), general.format(NetworkPolicy), general.list(NetworkPolicy));
 
 router.post(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(NetworkPolicy));
 

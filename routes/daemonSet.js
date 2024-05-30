@@ -4,11 +4,11 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-let route = `/api/${DaemonSet.apiVersion}/daemonsets`;
+let route = `/apis/${DaemonSet.apiVersion}/namespaces/:namespace/daemonsets`;
 
-router.get(`${route}/:name`, validSchema(apiV1OpenApiV3), general.findOne(DaemonSet));
+router.get(`${route}/:name`, validSchema(apiV1OpenApiV3), general.findOne(DaemonSet), general.format(DaemonSet), general.raw(DaemonSet));
 
-router.get(`${route}`, validSchema(apiV1OpenApiV3), general.list(DaemonSet));
+router.get(`${route}`, validSchema(apiV1OpenApiV3), general.find(DaemonSet), general.format(DaemonSet), general.list(DaemonSet));
 
 router.post(route, validSchema(apiV1OpenApiV3), general.save(DaemonSet));
 

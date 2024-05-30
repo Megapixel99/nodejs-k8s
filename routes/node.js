@@ -1,12 +1,12 @@
 const router = require('express').Router();
 const { Node, Pod } = require('../objects');
-const { general, openapi } = require('../middleware');
+const { general, protoBuf, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 let route = `/api/${Node.apiVersion}/nodes`;
 
-router.get(`${route}/:name`, validSchema(apiV1OpenApiV3), general.findOne(Node));
+router.get(`${route}/:name`, validSchema(apiV1OpenApiV3), general.findOne(Node), general.format(Node), general.raw(Node));
 
 router.get(`${route}/:name/proxy/pods`, validSchema(apiV1OpenApiV3), (req, res, next) => {
   Pod.listByQuery({ 'status.hostIP': req.params.name.split(':')[0] })
@@ -18,7 +18,7 @@ router.get(`${route}/:name/proxy/metrics`, validSchema(apiV1OpenApiV3), (req, re
   res.send('');
 });
 
-router.get(`${route}`, validSchema(apiV1OpenApiV3), general.list(Node));
+router.get(`${route}`, validSchema(apiV1OpenApiV3), general.find(Node), general.format(Node), general.format(Node), general.format(Node), general.list(Node), general.format(Node));
 
 router.post(route, validSchema(apiV1OpenApiV3), general.save(Node));
 

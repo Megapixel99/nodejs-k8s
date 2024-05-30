@@ -6,9 +6,9 @@ const { apiRbacAuthorizatonK8sIoV1OpenApiV3, apiV1OpenApiV3, validSchema } = ope
 
 let routes = [`/apis/${Role.apiVersion}/namespaces/:namespace/roles`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.findOne(Role));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.findOne(Role), general.format(Role), general.raw(Role));
 
-router.get(['/api/v1/roles', ...routes], validSchema(apiV1OpenApiV3), general.list(Role));
+router.get(['/api/v1/roles', ...routes], validSchema(apiV1OpenApiV3), general.find(Role), general.format(Role), general.list(Role));
 
 router.post(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(Role));
 

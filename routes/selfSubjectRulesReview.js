@@ -6,9 +6,9 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/api/${SelfSubjectRulesReview.apiVersion}/:namespace/selfsubjectreviews`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(SelfSubjectRulesReview));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(SelfSubjectRulesReview), general.format(SelfSubjectRulesReview), general.raw(SelfSubjectRulesReview));
 
-router.get(['/api/v1/selfsubjectrulesreviews', ...routes], validSchema(apiV1OpenApiV3), general.list(SelfSubjectRulesReview));
+router.get(['/api/v1/selfsubjectrulesreviews', ...routes], validSchema(apiV1OpenApiV3), general.find(SelfSubjectRulesReview), general.format(SelfSubjectRulesReview), general.list(SelfSubjectRulesReview));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(SelfSubjectRulesReview));
 

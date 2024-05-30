@@ -6,9 +6,9 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/api/${PodTemplate.apiVersion}/:namespace/podtemplates`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(PodTemplate));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(PodTemplate), general.format(PodTemplate), general.raw(PodTemplate));
 
-router.get(['/api/v1/podtemplates', ...routes], validSchema(apiV1OpenApiV3), general.list(PodTemplate));
+router.get(['/api/v1/podtemplates', ...routes], validSchema(apiV1OpenApiV3), general.find(PodTemplate), general.format(PodTemplate), general.list(PodTemplate));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(PodTemplate));
 

@@ -6,9 +6,9 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const route = `/api/${ReplicationController.apiVersion}/namespaces/:namespace/replicationcontrollers`;
 
-router.get(`${route}/:name`, validSchema(apiV1OpenApiV3), general.findOne(ReplicationController));
+router.get(`${route}/:name`, validSchema(apiV1OpenApiV3), general.findOne(ReplicationController), general.format(ReplicationController), general.raw(ReplicationController));
 
-router.get(`${route}`, validSchema(apiV1OpenApiV3), general.list(ReplicationController));
+router.get(`${route}`, validSchema(apiV1OpenApiV3), general.find(ReplicationController), general.format(ReplicationController), general.list(ReplicationController));
 
 router.post(route, validSchema(apiV1OpenApiV3), general.save(ReplicationController));
 

@@ -6,9 +6,9 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 let routes = [`/apis/${Deployment.apiVersion}/namespaces/:namespace/deployments`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(Deployment));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(Deployment), general.format(Deployment), general.raw(Deployment));
 
-router.get(['/api/v1/deployments', ...routes], validSchema(apiV1OpenApiV3), general.list(Deployment));
+router.get(['/api/v1/deployments', ...routes], validSchema(apiV1OpenApiV3), general.find(Deployment), general.format(Deployment), general.list(Deployment));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(Deployment));
 

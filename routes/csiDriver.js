@@ -4,11 +4,11 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/api/${CSIDriver.apiVersion}/:namespace/csidriver`];
+const routes = [`/apis/${CSIDriver.apiVersion}/:namespace/csidrivers`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(CSIDriver));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(CSIDriver), general.format(CSIDriver), general.raw(CSIDriver));
 
-router.get(['/api/v1/csidrivers', ...routes], validSchema(apiV1OpenApiV3), general.list(CSIDriver));
+router.get(['/api/v1/csidrivers', ...routes], validSchema(apiV1OpenApiV3), general.find(CSIDriver), general.format(CSIDriver), general.list(CSIDriver));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(CSIDriver));
 

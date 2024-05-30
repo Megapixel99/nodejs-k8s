@@ -6,9 +6,9 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const route = `/apis/${ReplicaSet.apiVersion}/namespaces/:namespace/replicasets`;
 
-router.get(`${route}/:name`, validSchema(apiV1OpenApiV3), general.findOne(ReplicaSet));
+router.get(`${route}/:name`, validSchema(apiV1OpenApiV3), general.findOne(ReplicaSet), general.format(ReplicaSet), general.raw(ReplicaSet));
 
-router.get(`${route}`, validSchema(apiV1OpenApiV3), general.list(ReplicaSet));
+router.get(`${route}`, validSchema(apiV1OpenApiV3), general.find(ReplicaSet), general.format(ReplicaSet), general.list(ReplicaSet));
 
 router.post(route, validSchema(apiV1OpenApiV3), general.save(ReplicaSet));
 

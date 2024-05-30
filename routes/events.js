@@ -6,9 +6,9 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 let routes = [`/api/v1/namespaces/:namespace/events`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(Event));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(Event), general.format(Event), general.raw(Event));
 
-router.get(['/api/v1/events', ...routes], validSchema(apiV1OpenApiV3), general.list(Event));
+router.get(['/api/v1/events', ...routes], validSchema(apiV1OpenApiV3), general.find(Event), general.format(Event), general.list(Event));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(Event));
 

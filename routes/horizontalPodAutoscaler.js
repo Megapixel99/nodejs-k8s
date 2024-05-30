@@ -6,9 +6,9 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/api/${HorizontalPodAutoscaler.apiVersion}/:namespace/horizontalpodautoscalers`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(HorizontalPodAutoscaler));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(HorizontalPodAutoscaler), general.format(HorizontalPodAutoscaler), general.raw(HorizontalPodAutoscaler));
 
-router.get(['/api/v1/horizontalpodautoscalers', ...routes], validSchema(apiV1OpenApiV3), general.list(HorizontalPodAutoscaler));
+router.get(['/api/v1/horizontalpodautoscalers', ...routes], validSchema(apiV1OpenApiV3), general.find(HorizontalPodAutoscaler), general.format(HorizontalPodAutoscaler), general.list(HorizontalPodAutoscaler));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(HorizontalPodAutoscaler));
 

@@ -6,9 +6,9 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/api/${ServiceAccount.apiVersion}/namespaces/:namespace/serviceaccounts`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(ServiceAccount));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(ServiceAccount), general.format(ServiceAccount), general.raw(ServiceAccount));
 
-router.get(['/api/v1/serviceaccounts', ...routes], validSchema(apiV1OpenApiV3), general.list(ServiceAccount));
+router.get(['/api/v1/serviceaccounts', ...routes], validSchema(apiV1OpenApiV3), general.find(ServiceAccount), general.format(ServiceAccount), general.list(ServiceAccount));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(ServiceAccount));
 

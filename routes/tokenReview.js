@@ -6,9 +6,9 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/api/${TokenReview.apiVersion}/:namespace/tokenreviews`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(TokenReview));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(TokenReview), general.format(TokenReview), general.raw(TokenReview));
 
-router.get(['/api/v1/tokenreviews', ...routes], validSchema(apiV1OpenApiV3), general.list(TokenReview));
+router.get(['/api/v1/tokenreviews', ...routes], validSchema(apiV1OpenApiV3), general.find(TokenReview), general.format(TokenReview), general.list(TokenReview));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(TokenReview));
 

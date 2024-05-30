@@ -6,9 +6,9 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/api/${PriorityClass.apiVersion}/:namespace/priorityclasses`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(PriorityClass));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(PriorityClass), general.format(PriorityClass), general.raw(PriorityClass));
 
-router.get(['/api/v1/priorityclasses', ...routes], validSchema(apiV1OpenApiV3), general.list(PriorityClass));
+router.get(['/api/v1/priorityclasses', ...routes], validSchema(apiV1OpenApiV3), general.find(PriorityClass), general.format(PriorityClass), general.list(PriorityClass));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(PriorityClass));
 

@@ -6,9 +6,9 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/api/${SelfSubjectAccessReview.apiVersion}/:namespace/selfsubjectaccessreviews`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(SelfSubjectAccessReview));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(SelfSubjectAccessReview), general.format(SelfSubjectAccessReview), general.raw(SelfSubjectAccessReview));
 
-router.get(['/api/v1/selfsubjectaccessreviews', ...routes], validSchema(apiV1OpenApiV3), general.list(SelfSubjectAccessReview));
+router.get(['/api/v1/selfsubjectaccessreviews', ...routes], validSchema(apiV1OpenApiV3), general.find(SelfSubjectAccessReview), general.format(SelfSubjectAccessReview), general.list(SelfSubjectAccessReview));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(SelfSubjectAccessReview));
 

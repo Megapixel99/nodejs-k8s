@@ -6,9 +6,9 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/api/${ResourceQuota.apiVersion}/:namespace/resourcequotas`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(ResourceQuota));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(ResourceQuota), general.format(ResourceQuota), general.raw(ResourceQuota));
 
-router.get(['/api/v1/resourcequotas', ...routes], validSchema(apiV1OpenApiV3), general.list(ResourceQuota));
+router.get(['/api/v1/resourcequotas', ...routes], validSchema(apiV1OpenApiV3), general.find(ResourceQuota), general.format(ResourceQuota), general.list(ResourceQuota));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(ResourceQuota));
 
