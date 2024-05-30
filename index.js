@@ -128,10 +128,11 @@ app.use(binding);
 app.use(componentStatus);
 app.use(lease);
 app.use(runtimeClass);
+app.use(storageClass);
 app.use(version);
 
 app.use(namespace);
-app.use(namespaceCheck);
+// app.use(namespaceCheck);
 app.use(certificateSigningRequest);
 app.use(clusterRole);
 app.use(clusterRoleBinding);
@@ -171,7 +172,6 @@ app.use(selfSubjectRulesReview);
 app.use(service);
 app.use(serviceAccount);
 app.use(statefulSet);
-app.use(storageClass);
 app.use(subjectAccessReview);
 app.use(tokenRequest)
 app.use(tokenReview);
