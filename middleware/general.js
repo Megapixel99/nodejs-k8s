@@ -1,11 +1,15 @@
 const { DateTime } = require('luxon');
+const { Readable } = require('stream');
+const Event = require('../objects/event.js');
+const { toProtoBuf, fromProtoBuf } = require('./protoBuf.js');
 
 module.exports = {
   find(Model) {
     return (req, res, next) => {
-      Model.findByReq(req.query, req.params)
+      Model.findAllSortedByReq(req.query, req.params)
         .then((items) => {
-          return res.status(200).send(items);
+          req.items = items;
+          next();
         })
         .catch(next);
     };
@@ -14,25 +18,125 @@ module.exports = {
     return (req, res, next) => {
       Model.findOneByReq(req.query, req.params)
         .then((item) => {
-          if (item) {
-            return res.status(200).send(item);
+          if (!item) {
+            return res.status(404).send(Model.notFoundStatus(req.params.name));
           }
-          return res.status(404).send(Model.notFoundStatus(req.params.name));
+          req.item = item;
+          next();
         })
         .catch(next);
     };
   },
-  list(Model) {
+  format(Model) {
     return (req, res, next) => {
+      if (req.query?.watch === 'true') {
+        let idsWritten = [];
+        let eventStream = new Readable({
+          read() {}
+        });
+        eventStream.pipe(res);
+        if (req.headers?.accept?.includes('protobuf') && req.operationId) {
+          res.set('Content-Type', 'application/vnd.kubernetes.protobuf');
+        } else {
+          res.set('Content-Type', 'application/json');
+        }
+        let arr = [req.item, ...req.items].flat().filter((e) => e);
+        arr.forEach((i) => {
+          i.events().on('updated', () => {
+            Model.table([i]).then((table) => {
+              let retObj = {
+                "type": "MODIFIED",
+                "object": table
+              };
+              if (req.headers?.accept?.includes('protobuf') && req.operationId) {
+                try {
+                  eventStream.push(toProtoBuf(retObj, req.operationId, req.protobufTypes));
+                } catch (e) {
+                  console.error(e);
+                  next(Model.unprocessableContentStatus());
+                }
+              } else {
+                table.columnDefinitions = null;
+                eventStream.push(`${JSON.stringify(retObj)}\n`);
+              }
+            });
+          });
+          i.events().on('deleted', () => {
+            Model.table([i]).then((table) => {
+              let retObj = {
+                "type": "DELETED",
+                "object": table
+              };
+              if (req.headers?.accept?.includes('protobuf') && req.operationId) {
+                try {
+                  eventStream.push(toProtoBuf(retObj, req.operationId, req.protobufTypes));
+                } catch (e) {
+                  console.error(e);
+                  next(Model.unprocessableContentStatus());
+                }
+              } else {
+                table.columnDefinitions = null;
+                eventStream.push(`${JSON.stringify(retObj)}\n`);
+              }
+            });
+          });
+        });
+        Model.table(arr)
+          .then((table) => {
+            let retObj = {
+              type: "ADDED",
+              object: table,
+            }
+            if (req.headers?.accept?.includes('protobuf') && req.operationId) {
+              try {
+                eventStream.push(toProtoBuf(retObj, req.operationId, req.protobufTypes));
+              } catch (e) {
+                console.error(e);
+                next(Model.unprocessableContentStatus());
+              }
+            } else {
+              eventStream.push(`${JSON.stringify(retObj)}\n`);
+            }
+          })
+          .catch(next);
+        return;
+      }
       if (req.headers?.accept?.split(';').find((e) => e === 'as=Table')) {
-        return Model.table(req.query)
+        let i = req.item || req.items;
+        return Model.table([i].flat())
           .then((table) => res.status(200).send(table))
           .catch(next);
       }
-      Model.listByReq(req.query, req.params)
+      if (req.headers?.accept?.includes('protobuf') && req.operationId) {
+        try {
+          if (req.items) {
+            req.items = toProtoBuf(req.items, req.operationId, req.protobufTypes);
+          } else if (req.item) {
+            req.item = toProtoBuf(req.item, req.operationId, req.protobufTypes);
+          }
+        } catch (e) {
+          console.error(e);
+          next(Model.unprocessableContentStatus());
+        }
+      }
+      return next();
+    };
+  },
+  raw(Model) {
+    return (req, res, next) => {
+      let i = req.item || req.items
+      if (i || i.length) {
+        return res.status(200).send(i);
+      }
+      return res.status(404).send(Model.notFoundStatus(req.params.name));
+    };
+  },
+  list(Model) {
+    return (req, res, next) => {
+      return Model.listByReq(req.query, req.params)
       .then((list) => res.status(200).send(list))
       .catch(next);
-    };
+    }
   },
   save(Model) {
     return (req, res, next) => {
@@ -58,7 +162,7 @@ module.exports = {
         if (item) {
           return res.status(202).send(item);
         }
-        if (!req.body.metadata?.creationTimestamp) {
+        if (!req.body.metadata?.creationTimestamp || typeof req.body.metadata.creationTimestamp !== 'String') {
           req.body.metadata.creationTimestamp = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
         }
         return Model.create(req.body)
@@ -130,7 +234,7 @@ module.exports = {
       .then((item) => item ? item.delete() : Promise.resolve())
       .then((item) => {
         if (item) {
-          return res.status(200).send(item.successfulStatus());
+          return res.status(200).send(new Model(item).successfulStatus());
         }
         return res.status(404).send(Model.notFoundStatus(req.params.name));
       })
