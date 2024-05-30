@@ -119,6 +119,18 @@ app.use((req, res, next) => {
   next();
 })
 
+app.use((req, res, next) => {
+    let send = res.send;
+    res.send = c => {
+        // console.log(`Code: ${res.statusCode}`);
+        // console.log("Body: ", c);
+        res.send = send;
+        // console.log('------------------');
+        return res.send(c);
+    }
+    next();
+});
+
 app.use(all);
 app.use(api);
 app.use(openapi);
