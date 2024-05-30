@@ -93,8 +93,8 @@ class ConfigMap extends K8Object {
         "rows": configMaps.map((e) => ({
           "cells": [
             e.metadata.name,
-            Object.keys(e.data).length,
-            Object.keys(e.binaryData).length,
+            e.data ? Object.keys(e.data).length : 0,
+            e.binaryData ? Object.keys(e.binaryData).length : 0,
             e.immutable ?? false,
             duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
           ],
