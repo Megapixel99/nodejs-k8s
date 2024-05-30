@@ -1,5 +1,8 @@
 require('dotenv').config();
+const fs = require('fs');
 const express = require('express');
+const YAML = require('yaml');
+const protobuf = require("protobufjs");
 const db = require('./database/connection.js');
 const {
   all,
@@ -85,12 +88,34 @@ db.connect(process.env.DB_URL);
 
 const app = express();
 
+const protobufTypes = protobuf.loadSync([
+  `${__dirname}/proto/apps_v1_service.proto`,
+  `${__dirname}/proto/certificates_v1_service.proto`,
+  `${__dirname}/proto/core_v1_service.proto`,
+  `${__dirname}/proto/networking_v1_service.proto`,
+  `${__dirname}/proto/rbac_authorization_v1_service.proto`,
+])
+
+const ymlToJSON = (req, res, buf, encoding) => {
+  if (buf && Buffer.isBuffer(buf)) {
+    try {
+      req.body = YAML.parse(buf.toString());
+    } catch (e) {
+      req.body = buf.toString();
+    }
+  }
+}
+
 app.use(express.json());
+app.use(express.raw({ type: 'application/vnd.kubernetes.protobuf' }));
+app.use(express.raw({ type: 'text/vnd.kubernetes.protobuf' }));
+app.use(express.raw({ verify: ymlToJSON, type: 'application/yaml' }));
+app.use(express.raw({ verify: ymlToJSON, type: 'text/yaml' }));
 
 app.use((req, res, next) => {
+  req.protobufTypes = protobufTypes;
   console.log(req.method);
   console.log(req.headers, req.body, req.url);
-  console.log('------------------');
   next();
 })
 
