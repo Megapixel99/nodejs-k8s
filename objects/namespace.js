@@ -166,7 +166,7 @@ class Namespace extends K8Object {
           return configMap.update({ data: configMap.data });
         })
       ])
-      .then(() => new Model(config).save());
+      .then(() => new Model(config).save({ validateBeforeSave: false }))
     })
   }
 
