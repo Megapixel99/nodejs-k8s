@@ -12,7 +12,7 @@ router.get([`/api/${Secret.apiVersion}/secrets`, ...routes], validSchema(apiV1Op
 
 router.post(routes, validSchema(apiV1OpenApiV3), general.save(Secret));
 
-router.put(routes, validSchema(apiV1OpenApiV3), general.update(Secret));
+router.put(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.update(Secret));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(Secret));
 

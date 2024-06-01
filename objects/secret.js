@@ -3,6 +3,20 @@ const K8Object = require('./object.js');
 const { Secret: Model } = require('../database/models.js');
 const { duration } = require('../functions.js');
 
+function convertData(data) {
+  const base64RegExp = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
+  const isBase64 = (str) => base64RegExp.test(str);
+  let obj = {};
+  Object.entries(data).forEach(([key, value]) => {
+    if (isBase64(value)) {
+      obj[key] = value;
+      return;
+    }
+    obj[key] = Buffer.from(value).toString('base64');
+  });
+  return obj;
+}
+
 class Secret extends K8Object {
   constructor(config) {
     super(config);
@@ -20,26 +34,57 @@ class Secret extends K8Object {
   static Model = Model;
 
   static create(config) {
-    const base64RegExp = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
-    const isBase64 = (str) => base64RegExp.test(str);
-
     return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
     .then((existingSecret) => {
       if (existingSecret) {
-        throw this.alreadyExistsStatus(config.metadata.name);
+        throw K8Object.alreadyExistsStatus(config.metadata.name);
       }
       if (config.data) {
-        Object.entries(config.data).forEach(([key, value]) => {
-          if (isBase64(value)) {
-            config.data[key] = value;
-            return;
-          }
-          config.data[key] = Buffer.from(value).toString('base64');
-        });
+        config.data = convertData(config.data);
       }
-      return new Model(config).save();
-    })
-    .then((secret) => new Secret(secret).toJSON());
+      if (!config.type) {
+        config.type = 'Opaque';
+      }
+      return super.create(config);
+    });
+  }
+
+  update(updateObj, searchQ) {
+    if (this.immutable === true) {
+      let diff = null;
+      if (this.immutable !== updateObj.immutable) {
+        diff = 'immutable';
+      }
+      if (JSON.stringify(this.data) !== JSON.stringify(convertData(updateObj.data))) {
+        diff = 'data';
+      }
+      if (JSON.stringify(this.stringData) !== JSON.stringify(updateObj.stringData)) {
+        diff = 'metadata';
+      }
+      if (this.type !== updateObj.type) {
+        diff = 'type';
+      }
+      if (this.kind !== updateObj.kind) {
+        diff = 'kind';
+      }
+      if (this.apiVersion !== updateObj.apiVersion) {
+        diff = 'apiVersion';
+      }
+      if (diff !== null) {
+        throw K8Object.unprocessableContentStatus(this.kind, this.metadata.name, null, `Secret "${this.metadata.name}" is invalid: data: Forbidden: field is immutable when \`${diff}\` is set`, 'Invalid');
+      }
+    }
+    if (!searchQ) {
+      searchQ = { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace };
+    }
+    return super.delete(searchQ)
+    .then(() => Secret.create(updateObj))
+    .then((secret) => {
+      if (secret) {
+        super.events().emit('updated');
+        return secret;
+      }
+    });
   }
 
   static async table (queryOptions = {}) {
