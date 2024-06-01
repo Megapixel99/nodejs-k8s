@@ -3,6 +3,17 @@ const { Readable } = require('stream');
 const Event = require('../objects/event.js');
 const { toProtoBuf, fromProtoBuf, toWatchEvent } = require('./protoBuf.js');
 
+function convertFromProtoBuff(req) {
+  if (Buffer.isBuffer(req.body) && req.headers['content-type']?.includes('protobuf')) {
+    if (req.operationId) {
+      return fromProtoBuf(req.body, req.operationId, req.protobufTypes);
+    }
+    throw new Error(`Could not convert data from protobuf opID: ${req.operationId}`)
+  } else {
+    return req.body;
+  }
+}
+
 module.exports = {
   find(Model) {
     return (req, res, next) => {
@@ -42,14 +53,12 @@ module.exports = {
         }
         let arr = [req.item, ...req.items].flat().filter((e) => e);
         let pushToEventStream = (elem, eventType) => {
-          if (req.headers?.accept?.includes('protobuf') && req.operationId) {
-            try {
-              let proto = toProtoBuf(elem.toJSON(), req.operationId, req.protobufTypes);
-              eventStream.push(toWatchEvent(proto, eventType, req.protobufTypes));
-            } catch (e) {
-              console.error(e);
-              next(Model.internalServerErrorStatus());
+          if (req.headers?.accept?.includes('protobuf')) {
+            if (!res.operationId) {
+              throw new Error(`Could not convert data from protobuf opID: ${res.operationId}`)
             }
+            let proto = toProtoBuf(elem.toJSON(), res.operationId, req.protobufTypes);
+            eventStream.push(toWatchEvent(proto, eventType, req.protobufTypes));
           } else if (req.headers?.accept?.split(';').find((e) => e === 'as=Table')) {
             Model.table([elem]).then((table) => {
               if (eventType !== 'ADDED') {
@@ -111,6 +120,11 @@ module.exports = {
   },
   save(Model) {
     return (req, res, next) => {
+      try {
+        req.body = convertFromProtoBuff(req);
+      } catch (e) {
+        next(e);
+      }
       if (!req.body?.metadata) {
         req.body.metadata = {};
       }
@@ -146,6 +160,11 @@ module.exports = {
   },
   update(Model) {
     return (req, res, next) => {
+      try {
+        req.body = convertFromProtoBuff(req);
+      } catch (e) {
+        next(e);
+      }
       let query = { 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace };
       if (!req.params.namespace) {
         query = { 'metadata.name': req.params.name };
@@ -174,6 +193,11 @@ module.exports = {
   },
   patch(Model) {
     return (req, res, next) => {
+      try {
+        req.body = convertFromProtoBuff(req);
+      } catch (e) {
+        next(e);
+      }
       let query = { 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace };
       if (!req.params.namespace) {
         query = { 'metadata.name': req.params.name };
@@ -215,6 +239,11 @@ module.exports = {
   delete(Model, sendRes = true) {
     return (req, res, next) => {
       if (req.body) {
+        try {
+          req.body = convertFromProtoBuff(req);
+        } catch (e) {
+          next(e);
+        }
         return Model.find(req.body)
         .then((items) => Promise.all(items.map((item) => item.delete({}))))
         .then((items) => {

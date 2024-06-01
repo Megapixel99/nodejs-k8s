@@ -1,22 +1,18 @@
 const K8Object = require('../objects/object.js');
 
 module.exports = {
-  fromProtoBuf: (req, res, next) => {
-    if (!req.body || !req.headers['content-type']?.includes('protobuf') || !req.operationId) {
-      return next();
-    }
-    let b = req.body.subarray(4, req.body.length);
-    let unknownType = req.protobufTypes.lookup("Unknown");
+  fromProtoBuf: (data, operationId, protobufTypes) => {
+    let b = data.subarray(4, data.length);
+    let unknownType = protobufTypes.lookup("Unknown");
     let { typeMeta, raw } = unknownType.decode(b);
-    let dataType = req.protobufTypes.lookup(req.operationId);
+    let dataType = protobufTypes.lookup(operationId);
     let dataInfo = dataType.decode(raw);
-    req.body = {
+    data = {
       ...typeMeta,
       ...dataInfo
     };
     console.log('Request Body:');
-    console.log(req.body);
-    next();
+    return data;
   },
   toProtoBuf: (data, operationId, protobufTypes) => {
     if (Array.isArray(data) && !operationId.includes('List')) {

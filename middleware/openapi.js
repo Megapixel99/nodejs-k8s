@@ -25,17 +25,26 @@ module.exports = {
   apiCertificatesK8sIoApiV3: ApiAppsV1OpenApiV3(apiCertificatesK8sIoApiV3Spec),
   validSchema: (schema) => {
     return (req, res, next) => {
-      let path = Object.keys(schema.document.paths)
-        .filter((e) => {
-          let r = new RegExp(e.replace(/\{.*?\}/ig, '.*?'));
-          if (req?.route?.path[0]?.match(r)?.length === 1) {
-            return Object.keys(schema.document.paths);
-          }
+      let paths = [req.route.path]
+        .flat()
+        .map((p) => {
+          return p
+           .split('/')
+           .map((e) => e.charAt(0) === ':' ? `{${e.substring(1, e.length)}}` : e)
+           .join('/');
         })
-        .reverse()
-        .at(0);
-      let type = req.headers?.accept?.split(';')?.[0];
-      req.operationId = schema.document.paths?.[path]?.[req.method.toLowerCase()].responses?.['200']?.content?.[type]?.schema?.['$ref']?.split('.')?.at(-1);
+      console.log(paths);
+      let path = Object.keys(schema.document.paths).find((key) => paths.includes(key));
+      console.log(path);
+      if (req.headers?.accept?.includes(';')) {
+        type = req.headers?.accept?.split(';')?.[0];
+      } else if (req.headers?.accept?.includes(',')) {
+        type = req.headers?.accept?.split(',')?.[0];
+      } else {
+        type = req.headers?.accept;
+      }
+      req.operationId = schema.document.paths?.[path]?.[req.method.toLowerCase()].requestBody?.content?.['*/*']?.schema?.['$ref']?.split('.')?.at(-1);
+      res.operationId = schema.document.paths?.[path]?.[req.method.toLowerCase()].responses?.['200']?.content?.[type?.trim()]?.schema?.['$ref']?.split('.')?.at(-1);
       return openapi.validPath(schema.document.paths[path])(req, res, next);
     };
   }
