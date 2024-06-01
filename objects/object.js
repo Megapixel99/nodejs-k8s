@@ -212,17 +212,6 @@ class K8Object {
     return this.apiVersion;
   }
 
-  successfulStatus() {
-    return new Status({
-      status: 'Success',
-      details: {
-        name: this.metadata.name,
-        kind: this.kind.toLowerCase(),
-        uid: this.metadata.uid
-      }
-    });
-  }
-
   static arrayBufferTo53bitNumber(buffer) {
     const view = new DataView(buffer);
     const first32bits = view.getUint32(0, true);
@@ -249,6 +238,20 @@ class K8Object {
         name,
         group,
         kind: kind ? kind.toLowerCase() : undefined,
+      }
+    });
+  }
+
+  successfulStatus() {
+    return new Status({
+      status: 'Success',
+      reason: 'Success',
+      code: 200,
+      message: 'Success',
+      details: {
+        name: this.metadata.name,
+        kind: this.kind.toLowerCase(),
+        uid: this.metadata.uid
       }
     });
   }
