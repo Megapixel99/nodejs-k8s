@@ -124,7 +124,7 @@ class K8Object {
         remainingItemCount: queryOptions.limit && queryOptions.limit < data.length ? data.length - queryOptions.limit : 0,
         resourceVersion: `${await this.hash(`${data.length}${JSON.stringify(data[0])}`)}`
       },
-      items: data
+      items: data.map((i) => i.toJSON())
     }
   }
 
