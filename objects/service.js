@@ -126,11 +126,13 @@ class Service extends K8Object {
               }
               return getContainerIP(`${endpoints.metadata.name}-${endpoints.metadata.namespace}-loadBalancer`)
               .then((serviceIP) => {
-                let arr = [endpoints.update({
-                  $set: {
-                    'spec.clusterIPs': [serviceIP],
-                  }
-                })]
+                let arr = [
+                  new Endpoints(endpoints).update({
+                    $set: {
+                      'spec.clusterIPs': [serviceIP],
+                    }
+                  })
+                ]
                 if (serviceIP) {
                   return newService.update({
                     $set: {
