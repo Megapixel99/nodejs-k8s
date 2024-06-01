@@ -14,98 +14,89 @@ package openapitools.services.networkingv1service;
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
-import public "models/io_k8s_api_networking_v1_ingress.proto";
-import public "models/io_k8s_api_networking_v1_ingress_class.proto";
-import public "models/io_k8s_api_networking_v1_ingress_class_list.proto";
-import public "models/io_k8s_api_networking_v1_ingress_list.proto";
-import public "models/io_k8s_api_networking_v1_network_policy.proto";
-import public "models/io_k8s_api_networking_v1_network_policy_list.proto";
-import public "models/io_k8s_apimachinery_pkg_apis_meta_v1_api_resource_list.proto";
-import public "models/io_k8s_apimachinery_pkg_apis_meta_v1_delete_options.proto";
-import public "models/io_k8s_apimachinery_pkg_apis_meta_v1_status.proto";
-import public "models/io_k8s_apimachinery_pkg_apis_meta_v1_watch_event.proto";
-
+import public "models/networking_v1.proto";
+import public "models/meta.proto";
 
 service NetworkingV1Service {
-  rpc CreateNetworkingV1IngressClass (CreateNetworkingV1IngressClassRequest) returns (IoK8sApiNetworkingV1IngressClass);
+  rpc CreateNetworkingV1IngressClass (CreateIngressClassRequest) returns (IngressClass);
 
-  rpc CreateNetworkingV1NamespacedIngress (CreateNetworkingV1NamespacedIngressRequest) returns (IoK8sApiNetworkingV1Ingress);
+  rpc CreateNetworkingV1NamespacedIngress (CreateNamespacedIngressRequest) returns (Ingress);
 
-  rpc CreateNetworkingV1NamespacedNetworkPolicy (CreateNetworkingV1NamespacedNetworkPolicyRequest) returns (IoK8sApiNetworkingV1NetworkPolicy);
+  rpc CreateNetworkingV1NamespacedNetworkPolicy (CreateNamespacedNetworkPolicyRequest) returns (NetworkPolicy);
 
-  rpc DeleteNetworkingV1CollectionIngressClass (DeleteNetworkingV1CollectionIngressClassRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteNetworkingV1CollectionIngressClass (DeleteCollectionIngressClassRequest) returns (Status);
 
-  rpc DeleteNetworkingV1CollectionNamespacedIngress (DeleteNetworkingV1CollectionNamespacedIngressRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteNetworkingV1CollectionNamespacedIngress (DeleteCollectionNamespacedIngressRequest) returns (Status);
 
-  rpc DeleteNetworkingV1CollectionNamespacedNetworkPolicy (DeleteNetworkingV1CollectionNamespacedNetworkPolicyRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteNetworkingV1CollectionNamespacedNetworkPolicy (DeleteCollectionNamespacedNetworkPolicyRequest) returns (Status);
 
-  rpc DeleteNetworkingV1IngressClass (DeleteNetworkingV1IngressClassRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteNetworkingV1IngressClass (DeleteIngressClassRequest) returns (Status);
 
-  rpc DeleteNetworkingV1NamespacedIngress (DeleteNetworkingV1NamespacedIngressRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteNetworkingV1NamespacedIngress (DeleteNamespacedIngressRequest) returns (Status);
 
-  rpc DeleteNetworkingV1NamespacedNetworkPolicy (DeleteNetworkingV1NamespacedNetworkPolicyRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteNetworkingV1NamespacedNetworkPolicy (DeleteNamespacedNetworkPolicyRequest) returns (Status);
 
-  rpc GetNetworkingV1APIResources (google.protobuf.Empty) returns (IoK8sApimachineryPkgApisMetaV1APIResourceList);
+  rpc GetNetworkingV1APIResources (google.protobuf.Empty) returns (APIResourceList);
 
-  rpc ListNetworkingV1IngressClass (ListNetworkingV1IngressClassRequest) returns (IoK8sApiNetworkingV1IngressClassList);
+  rpc ListNetworkingV1IngressClass (ListIngressClassRequest) returns (IngressClassList);
 
-  rpc ListNetworkingV1IngressForAllNamespaces (ListNetworkingV1IngressForAllNamespacesRequest) returns (IoK8sApiNetworkingV1IngressList);
+  rpc ListNetworkingV1IngressForAllNamespaces (ListIngressForAllNamespacesRequest) returns (IngressList);
 
-  rpc ListNetworkingV1NamespacedIngress (ListNetworkingV1NamespacedIngressRequest) returns (IoK8sApiNetworkingV1IngressList);
+  rpc ListNetworkingV1NamespacedIngress (ListNamespacedIngressRequest) returns (IngressList);
 
-  rpc ListNetworkingV1NamespacedNetworkPolicy (ListNetworkingV1NamespacedNetworkPolicyRequest) returns (IoK8sApiNetworkingV1NetworkPolicyList);
+  rpc ListNetworkingV1NamespacedNetworkPolicy (ListNamespacedNetworkPolicyRequest) returns (NetworkPolicyList);
 
-  rpc ListNetworkingV1NetworkPolicyForAllNamespaces (ListNetworkingV1NetworkPolicyForAllNamespacesRequest) returns (IoK8sApiNetworkingV1NetworkPolicyList);
+  rpc ListNetworkingV1NetworkPolicyForAllNamespaces (ListNetworkPolicyForAllNamespacesRequest) returns (NetworkPolicyList);
 
-  rpc PatchNetworkingV1IngressClass (PatchNetworkingV1IngressClassRequest) returns (IoK8sApiNetworkingV1IngressClass);
+  rpc PatchNetworkingV1IngressClass (PatchIngressClassRequest) returns (IngressClass);
 
-  rpc PatchNetworkingV1NamespacedIngress (PatchNetworkingV1NamespacedIngressRequest) returns (IoK8sApiNetworkingV1Ingress);
+  rpc PatchNetworkingV1NamespacedIngress (PatchNamespacedIngressRequest) returns (Ingress);
 
-  rpc PatchNetworkingV1NamespacedIngressStatus (PatchNetworkingV1NamespacedIngressStatusRequest) returns (IoK8sApiNetworkingV1Ingress);
+  rpc PatchNetworkingV1NamespacedIngressStatus (PatchNamespacedIngressStatusRequest) returns (Ingress);
 
-  rpc PatchNetworkingV1NamespacedNetworkPolicy (PatchNetworkingV1NamespacedNetworkPolicyRequest) returns (IoK8sApiNetworkingV1NetworkPolicy);
+  rpc PatchNetworkingV1NamespacedNetworkPolicy (PatchNamespacedNetworkPolicyRequest) returns (NetworkPolicy);
 
-  rpc PatchNetworkingV1NamespacedNetworkPolicyStatus (PatchNetworkingV1NamespacedNetworkPolicyStatusRequest) returns (IoK8sApiNetworkingV1NetworkPolicy);
+  rpc PatchNetworkingV1NamespacedNetworkPolicyStatus (PatchNamespacedNetworkPolicyStatusRequest) returns (NetworkPolicy);
 
-  rpc ReadNetworkingV1IngressClass (ReadNetworkingV1IngressClassRequest) returns (IoK8sApiNetworkingV1IngressClass);
+  rpc ReadNetworkingV1IngressClass (ReadIngressClassRequest) returns (IngressClass);
 
-  rpc ReadNetworkingV1NamespacedIngress (ReadNetworkingV1NamespacedIngressRequest) returns (IoK8sApiNetworkingV1Ingress);
+  rpc ReadNetworkingV1NamespacedIngress (ReadNamespacedIngressRequest) returns (Ingress);
 
-  rpc ReadNetworkingV1NamespacedIngressStatus (ReadNetworkingV1NamespacedIngressStatusRequest) returns (IoK8sApiNetworkingV1Ingress);
+  rpc ReadNetworkingV1NamespacedIngressStatus (ReadNamespacedIngressStatusRequest) returns (Ingress);
 
-  rpc ReadNetworkingV1NamespacedNetworkPolicy (ReadNetworkingV1NamespacedNetworkPolicyRequest) returns (IoK8sApiNetworkingV1NetworkPolicy);
+  rpc ReadNetworkingV1NamespacedNetworkPolicy (ReadNamespacedNetworkPolicyRequest) returns (NetworkPolicy);
 
-  rpc ReadNetworkingV1NamespacedNetworkPolicyStatus (ReadNetworkingV1NamespacedNetworkPolicyStatusRequest) returns (IoK8sApiNetworkingV1NetworkPolicy);
+  rpc ReadNetworkingV1NamespacedNetworkPolicyStatus (ReadNamespacedNetworkPolicyStatusRequest) returns (NetworkPolicy);
 
-  rpc ReplaceNetworkingV1IngressClass (ReplaceNetworkingV1IngressClassRequest) returns (IoK8sApiNetworkingV1IngressClass);
+  rpc ReplaceNetworkingV1IngressClass (ReplaceIngressClassRequest) returns (IngressClass);
 
-  rpc ReplaceNetworkingV1NamespacedIngress (ReplaceNetworkingV1NamespacedIngressRequest) returns (IoK8sApiNetworkingV1Ingress);
+  rpc ReplaceNetworkingV1NamespacedIngress (ReplaceNamespacedIngressRequest) returns (Ingress);
 
-  rpc ReplaceNetworkingV1NamespacedIngressStatus (ReplaceNetworkingV1NamespacedIngressStatusRequest) returns (IoK8sApiNetworkingV1Ingress);
+  rpc ReplaceNetworkingV1NamespacedIngressStatus (ReplaceNamespacedIngressStatusRequest) returns (Ingress);
 
-  rpc ReplaceNetworkingV1NamespacedNetworkPolicy (ReplaceNetworkingV1NamespacedNetworkPolicyRequest) returns (IoK8sApiNetworkingV1NetworkPolicy);
+  rpc ReplaceNetworkingV1NamespacedNetworkPolicy (ReplaceNamespacedNetworkPolicyRequest) returns (NetworkPolicy);
 
-  rpc ReplaceNetworkingV1NamespacedNetworkPolicyStatus (ReplaceNetworkingV1NamespacedNetworkPolicyStatusRequest) returns (IoK8sApiNetworkingV1NetworkPolicy);
+  rpc ReplaceNetworkingV1NamespacedNetworkPolicyStatus (ReplaceNamespacedNetworkPolicyStatusRequest) returns (NetworkPolicy);
 
-  rpc WatchNetworkingV1IngressClass (WatchNetworkingV1IngressClassRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchNetworkingV1IngressClass (WatchIngressClassRequest) returns (WatchEvent);
 
-  rpc WatchNetworkingV1IngressClassList (WatchNetworkingV1IngressClassListRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchNetworkingV1IngressClassList (WatchIngressClassListRequest) returns (WatchEvent);
 
-  rpc WatchNetworkingV1IngressListForAllNamespaces (WatchNetworkingV1IngressListForAllNamespacesRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchNetworkingV1IngressListForAllNamespaces (WatchIngressListForAllNamespacesRequest) returns (WatchEvent);
 
-  rpc WatchNetworkingV1NamespacedIngress (WatchNetworkingV1NamespacedIngressRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchNetworkingV1NamespacedIngress (WatchNamespacedIngressRequest) returns (WatchEvent);
 
-  rpc WatchNetworkingV1NamespacedIngressList (WatchNetworkingV1NamespacedIngressListRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchNetworkingV1NamespacedIngressList (WatchNamespacedIngressListRequest) returns (WatchEvent);
 
-  rpc WatchNetworkingV1NamespacedNetworkPolicy (WatchNetworkingV1NamespacedNetworkPolicyRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchNetworkingV1NamespacedNetworkPolicy (WatchNamespacedNetworkPolicyRequest) returns (WatchEvent);
 
-  rpc WatchNetworkingV1NamespacedNetworkPolicyList (WatchNetworkingV1NamespacedNetworkPolicyListRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchNetworkingV1NamespacedNetworkPolicyList (WatchNamespacedNetworkPolicyListRequest) returns (WatchEvent);
 
-  rpc WatchNetworkingV1NetworkPolicyListForAllNamespaces (WatchNetworkingV1NetworkPolicyListForAllNamespacesRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchNetworkingV1NetworkPolicyListForAllNamespaces (WatchNetworkPolicyListForAllNamespacesRequest) returns (WatchEvent);
 
 }
 
-message CreateNetworkingV1IngressClassRequest {
+message CreateIngressClassRequest {
   // If 'true', then the output is pretty printed.
   string pretty = 1;
   // When present, indicates that modifications should not be persisted. An invalid or unrecognized dryRun directive will result in an error response and no further processing of the request. Valid values are: - All: all dry run stages will be processed
@@ -114,11 +105,11 @@ message CreateNetworkingV1IngressClassRequest {
   string fieldManager = 3;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 4;
-  IoK8sApiNetworkingV1IngressClass ioK8sApiNetworkingV1IngressClass = 5;
+  IngressClass ioK8sApiNetworkingV1IngressClass = 5;
 
 }
 
-message CreateNetworkingV1NamespacedIngressRequest {
+message CreateNamespacedIngressRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // If 'true', then the output is pretty printed.
@@ -129,11 +120,11 @@ message CreateNetworkingV1NamespacedIngressRequest {
   string fieldManager = 4;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 5;
-  IoK8sApiNetworkingV1Ingress ioK8sApiNetworkingV1Ingress = 6;
+  Ingress ioK8sApiNetworkingV1Ingress = 6;
 
 }
 
-message CreateNetworkingV1NamespacedNetworkPolicyRequest {
+message CreateNamespacedNetworkPolicyRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // If 'true', then the output is pretty printed.
@@ -144,11 +135,11 @@ message CreateNetworkingV1NamespacedNetworkPolicyRequest {
   string fieldManager = 4;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 5;
-  IoK8sApiNetworkingV1NetworkPolicy ioK8sApiNetworkingV1NetworkPolicy = 6;
+  NetworkPolicy ioK8sApiNetworkingV1NetworkPolicy = 6;
 
 }
 
-message DeleteNetworkingV1CollectionIngressClassRequest {
+message DeleteCollectionIngressClassRequest {
   // If 'true', then the output is pretty printed.
   string pretty = 1;
   // The continue option should be set when retrieving more results from the server. Since this value is server defined, clients may only use the continue value from a previous query result with identical query parameters (except for the value of continue) and the server may reject a continue value it does not recognize. If the specified continue value is no longer valid whether due to expiration (generally five to fifteen minutes) or a configuration change on the server, the server will respond with a 410 ResourceExpired error together with a continue token. If the client needs a consistent list, it must restart their list without the continue field. Otherwise, the client may send another list request with the token received with the 410 error, the server will respond with a list starting from the next key, but from the latest snapshot, which is inconsistent from the previous list results - objects that are created, modified, or deleted after the first list request will be included in the response, as long as their keys are after the \"next key\".  This field is not supported when watch is true. Clients may start a watch from the last resourceVersion value returned by the server and not miss any modifications.
@@ -175,11 +166,11 @@ message DeleteNetworkingV1CollectionIngressClassRequest {
   bool sendInitialEvents = 12;
   // Timeout for the list/watch call. This limits the duration of the call, regardless of any activity or inactivity.
   int32 timeoutSeconds = 13;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
 
 }
 
-message DeleteNetworkingV1CollectionNamespacedIngressRequest {
+message DeleteCollectionNamespacedIngressRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // If 'true', then the output is pretty printed.
@@ -208,11 +199,11 @@ message DeleteNetworkingV1CollectionNamespacedIngressRequest {
   bool sendInitialEvents = 13;
   // Timeout for the list/watch call. This limits the duration of the call, regardless of any activity or inactivity.
   int32 timeoutSeconds = 14;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 15;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 15;
 
 }
 
-message DeleteNetworkingV1CollectionNamespacedNetworkPolicyRequest {
+message DeleteCollectionNamespacedNetworkPolicyRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // If 'true', then the output is pretty printed.
@@ -241,11 +232,11 @@ message DeleteNetworkingV1CollectionNamespacedNetworkPolicyRequest {
   bool sendInitialEvents = 13;
   // Timeout for the list/watch call. This limits the duration of the call, regardless of any activity or inactivity.
   int32 timeoutSeconds = 14;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 15;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 15;
 
 }
 
-message DeleteNetworkingV1IngressClassRequest {
+message DeleteIngressClassRequest {
   // name of the IngressClass
   string name = 1;
   // If 'true', then the output is pretty printed.
@@ -258,11 +249,11 @@ message DeleteNetworkingV1IngressClassRequest {
   bool orphanDependents = 5;
   // Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.
   string propagationPolicy = 6;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 7;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 7;
 
 }
 
-message DeleteNetworkingV1NamespacedIngressRequest {
+message DeleteNamespacedIngressRequest {
   // name of the Ingress
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -277,11 +268,11 @@ message DeleteNetworkingV1NamespacedIngressRequest {
   bool orphanDependents = 6;
   // Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.
   string propagationPolicy = 7;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
 
 }
 
-message DeleteNetworkingV1NamespacedNetworkPolicyRequest {
+message DeleteNamespacedNetworkPolicyRequest {
   // name of the NetworkPolicy
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -296,11 +287,11 @@ message DeleteNetworkingV1NamespacedNetworkPolicyRequest {
   bool orphanDependents = 6;
   // Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.
   string propagationPolicy = 7;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
 
 }
 
-message ListNetworkingV1IngressClassRequest {
+message ListIngressClassRequest {
   // If 'true', then the output is pretty printed.
   string pretty = 1;
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
@@ -326,7 +317,7 @@ message ListNetworkingV1IngressClassRequest {
 
 }
 
-message ListNetworkingV1IngressForAllNamespacesRequest {
+message ListIngressForAllNamespacesRequest {
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
   bool allowWatchBookmarks = 1;
   // The continue option should be set when retrieving more results from the server. Since this value is server defined, clients may only use the continue value from a previous query result with identical query parameters (except for the value of continue) and the server may reject a continue value it does not recognize. If the specified continue value is no longer valid whether due to expiration (generally five to fifteen minutes) or a configuration change on the server, the server will respond with a 410 ResourceExpired error together with a continue token. If the client needs a consistent list, it must restart their list without the continue field. Otherwise, the client may send another list request with the token received with the 410 error, the server will respond with a list starting from the next key, but from the latest snapshot, which is inconsistent from the previous list results - objects that are created, modified, or deleted after the first list request will be included in the response, as long as their keys are after the \"next key\".  This field is not supported when watch is true. Clients may start a watch from the last resourceVersion value returned by the server and not miss any modifications.
@@ -352,7 +343,7 @@ message ListNetworkingV1IngressForAllNamespacesRequest {
 
 }
 
-message ListNetworkingV1NamespacedIngressRequest {
+message ListNamespacedIngressRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // If 'true', then the output is pretty printed.
@@ -380,7 +371,7 @@ message ListNetworkingV1NamespacedIngressRequest {
 
 }
 
-message ListNetworkingV1NamespacedNetworkPolicyRequest {
+message ListNamespacedNetworkPolicyRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // If 'true', then the output is pretty printed.
@@ -408,7 +399,7 @@ message ListNetworkingV1NamespacedNetworkPolicyRequest {
 
 }
 
-message ListNetworkingV1NetworkPolicyForAllNamespacesRequest {
+message ListNetworkPolicyForAllNamespacesRequest {
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
   bool allowWatchBookmarks = 1;
   // The continue option should be set when retrieving more results from the server. Since this value is server defined, clients may only use the continue value from a previous query result with identical query parameters (except for the value of continue) and the server may reject a continue value it does not recognize. If the specified continue value is no longer valid whether due to expiration (generally five to fifteen minutes) or a configuration change on the server, the server will respond with a 410 ResourceExpired error together with a continue token. If the client needs a consistent list, it must restart their list without the continue field. Otherwise, the client may send another list request with the token received with the 410 error, the server will respond with a list starting from the next key, but from the latest snapshot, which is inconsistent from the previous list results - objects that are created, modified, or deleted after the first list request will be included in the response, as long as their keys are after the \"next key\".  This field is not supported when watch is true. Clients may start a watch from the last resourceVersion value returned by the server and not miss any modifications.
@@ -434,7 +425,7 @@ message ListNetworkingV1NetworkPolicyForAllNamespacesRequest {
 
 }
 
-message PatchNetworkingV1IngressClassRequest {
+message PatchIngressClassRequest {
   // name of the IngressClass
   string name = 1;
   // If 'true', then the output is pretty printed.
@@ -451,7 +442,7 @@ message PatchNetworkingV1IngressClassRequest {
 
 }
 
-message PatchNetworkingV1NamespacedIngressRequest {
+message PatchNamespacedIngressRequest {
   // name of the Ingress
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -470,7 +461,7 @@ message PatchNetworkingV1NamespacedIngressRequest {
 
 }
 
-message PatchNetworkingV1NamespacedIngressStatusRequest {
+message PatchNamespacedIngressStatusRequest {
   // name of the Ingress
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -489,7 +480,7 @@ message PatchNetworkingV1NamespacedIngressStatusRequest {
 
 }
 
-message PatchNetworkingV1NamespacedNetworkPolicyRequest {
+message PatchNamespacedNetworkPolicyRequest {
   // name of the NetworkPolicy
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -508,7 +499,7 @@ message PatchNetworkingV1NamespacedNetworkPolicyRequest {
 
 }
 
-message PatchNetworkingV1NamespacedNetworkPolicyStatusRequest {
+message PatchNamespacedNetworkPolicyStatusRequest {
   // name of the NetworkPolicy
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -527,7 +518,7 @@ message PatchNetworkingV1NamespacedNetworkPolicyStatusRequest {
 
 }
 
-message ReadNetworkingV1IngressClassRequest {
+message ReadIngressClassRequest {
   // name of the IngressClass
   string name = 1;
   // If 'true', then the output is pretty printed.
@@ -535,7 +526,7 @@ message ReadNetworkingV1IngressClassRequest {
 
 }
 
-message ReadNetworkingV1NamespacedIngressRequest {
+message ReadNamespacedIngressRequest {
   // name of the Ingress
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -545,7 +536,7 @@ message ReadNetworkingV1NamespacedIngressRequest {
 
 }
 
-message ReadNetworkingV1NamespacedIngressStatusRequest {
+message ReadNamespacedIngressStatusRequest {
   // name of the Ingress
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -555,7 +546,7 @@ message ReadNetworkingV1NamespacedIngressStatusRequest {
 
 }
 
-message ReadNetworkingV1NamespacedNetworkPolicyRequest {
+message ReadNamespacedNetworkPolicyRequest {
   // name of the NetworkPolicy
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -565,7 +556,7 @@ message ReadNetworkingV1NamespacedNetworkPolicyRequest {
 
 }
 
-message ReadNetworkingV1NamespacedNetworkPolicyStatusRequest {
+message ReadNamespacedNetworkPolicyStatusRequest {
   // name of the NetworkPolicy
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -575,7 +566,7 @@ message ReadNetworkingV1NamespacedNetworkPolicyStatusRequest {
 
 }
 
-message ReplaceNetworkingV1IngressClassRequest {
+message ReplaceIngressClassRequest {
   // name of the IngressClass
   string name = 1;
   // If 'true', then the output is pretty printed.
@@ -586,11 +577,11 @@ message ReplaceNetworkingV1IngressClassRequest {
   string fieldManager = 4;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 5;
-  IoK8sApiNetworkingV1IngressClass ioK8sApiNetworkingV1IngressClass = 6;
+  IngressClass ioK8sApiNetworkingV1IngressClass = 6;
 
 }
 
-message ReplaceNetworkingV1NamespacedIngressRequest {
+message ReplaceNamespacedIngressRequest {
   // name of the Ingress
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -603,11 +594,11 @@ message ReplaceNetworkingV1NamespacedIngressRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiNetworkingV1Ingress ioK8sApiNetworkingV1Ingress = 7;
+  Ingress ioK8sApiNetworkingV1Ingress = 7;
 
 }
 
-message ReplaceNetworkingV1NamespacedIngressStatusRequest {
+message ReplaceNamespacedIngressStatusRequest {
   // name of the Ingress
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -620,11 +611,11 @@ message ReplaceNetworkingV1NamespacedIngressStatusRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiNetworkingV1Ingress ioK8sApiNetworkingV1Ingress = 7;
+  Ingress ioK8sApiNetworkingV1Ingress = 7;
 
 }
 
-message ReplaceNetworkingV1NamespacedNetworkPolicyRequest {
+message ReplaceNamespacedNetworkPolicyRequest {
   // name of the NetworkPolicy
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -637,11 +628,11 @@ message ReplaceNetworkingV1NamespacedNetworkPolicyRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiNetworkingV1NetworkPolicy ioK8sApiNetworkingV1NetworkPolicy = 7;
+  NetworkPolicy ioK8sApiNetworkingV1NetworkPolicy = 7;
 
 }
 
-message ReplaceNetworkingV1NamespacedNetworkPolicyStatusRequest {
+message ReplaceNamespacedNetworkPolicyStatusRequest {
   // name of the NetworkPolicy
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -654,11 +645,11 @@ message ReplaceNetworkingV1NamespacedNetworkPolicyStatusRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiNetworkingV1NetworkPolicy ioK8sApiNetworkingV1NetworkPolicy = 7;
+  NetworkPolicy ioK8sApiNetworkingV1NetworkPolicy = 7;
 
 }
 
-message WatchNetworkingV1IngressClassRequest {
+message WatchIngressClassRequest {
   // name of the IngressClass
   string name = 1;
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
@@ -686,7 +677,7 @@ message WatchNetworkingV1IngressClassRequest {
 
 }
 
-message WatchNetworkingV1IngressClassListRequest {
+message WatchIngressClassListRequest {
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
   bool allowWatchBookmarks = 1;
   // The continue option should be set when retrieving more results from the server. Since this value is server defined, clients may only use the continue value from a previous query result with identical query parameters (except for the value of continue) and the server may reject a continue value it does not recognize. If the specified continue value is no longer valid whether due to expiration (generally five to fifteen minutes) or a configuration change on the server, the server will respond with a 410 ResourceExpired error together with a continue token. If the client needs a consistent list, it must restart their list without the continue field. Otherwise, the client may send another list request with the token received with the 410 error, the server will respond with a list starting from the next key, but from the latest snapshot, which is inconsistent from the previous list results - objects that are created, modified, or deleted after the first list request will be included in the response, as long as their keys are after the \"next key\".  This field is not supported when watch is true. Clients may start a watch from the last resourceVersion value returned by the server and not miss any modifications.
@@ -712,7 +703,7 @@ message WatchNetworkingV1IngressClassListRequest {
 
 }
 
-message WatchNetworkingV1IngressListForAllNamespacesRequest {
+message WatchIngressListForAllNamespacesRequest {
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
   bool allowWatchBookmarks = 1;
   // The continue option should be set when retrieving more results from the server. Since this value is server defined, clients may only use the continue value from a previous query result with identical query parameters (except for the value of continue) and the server may reject a continue value it does not recognize. If the specified continue value is no longer valid whether due to expiration (generally five to fifteen minutes) or a configuration change on the server, the server will respond with a 410 ResourceExpired error together with a continue token. If the client needs a consistent list, it must restart their list without the continue field. Otherwise, the client may send another list request with the token received with the 410 error, the server will respond with a list starting from the next key, but from the latest snapshot, which is inconsistent from the previous list results - objects that are created, modified, or deleted after the first list request will be included in the response, as long as their keys are after the \"next key\".  This field is not supported when watch is true. Clients may start a watch from the last resourceVersion value returned by the server and not miss any modifications.
@@ -738,7 +729,7 @@ message WatchNetworkingV1IngressListForAllNamespacesRequest {
 
 }
 
-message WatchNetworkingV1NamespacedIngressRequest {
+message WatchNamespacedIngressRequest {
   // name of the Ingress
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -768,7 +759,7 @@ message WatchNetworkingV1NamespacedIngressRequest {
 
 }
 
-message WatchNetworkingV1NamespacedIngressListRequest {
+message WatchNamespacedIngressListRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
@@ -796,7 +787,7 @@ message WatchNetworkingV1NamespacedIngressListRequest {
 
 }
 
-message WatchNetworkingV1NamespacedNetworkPolicyRequest {
+message WatchNamespacedNetworkPolicyRequest {
   // name of the NetworkPolicy
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -826,7 +817,7 @@ message WatchNetworkingV1NamespacedNetworkPolicyRequest {
 
 }
 
-message WatchNetworkingV1NamespacedNetworkPolicyListRequest {
+message WatchNamespacedNetworkPolicyListRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
@@ -854,7 +845,7 @@ message WatchNetworkingV1NamespacedNetworkPolicyListRequest {
 
 }
 
-message WatchNetworkingV1NetworkPolicyListForAllNamespacesRequest {
+message WatchNetworkPolicyListForAllNamespacesRequest {
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
   bool allowWatchBookmarks = 1;
   // The continue option should be set when retrieving more results from the server. Since this value is server defined, clients may only use the continue value from a previous query result with identical query parameters (except for the value of continue) and the server may reject a continue value it does not recognize. If the specified continue value is no longer valid whether due to expiration (generally five to fifteen minutes) or a configuration change on the server, the server will respond with a 410 ResourceExpired error together with a continue token. If the client needs a consistent list, it must restart their list without the continue field. Otherwise, the client may send another list request with the token received with the 410 error, the server will respond with a list starting from the next key, but from the latest snapshot, which is inconsistent from the previous list results - objects that are created, modified, or deleted after the first list request will be included in the response, as long as their keys are after the \"next key\".  This field is not supported when watch is true. Clients may start a watch from the last resourceVersion value returned by the server and not miss any modifications.

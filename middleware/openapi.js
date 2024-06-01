@@ -34,7 +34,8 @@ module.exports = {
         })
         .reverse()
         .at(0);
-      req.operationId = schema.document.paths?.[path]?.[req.method.toLowerCase()].operationId;
+      let type = req.headers?.accept?.split(';')?.[0];
+      req.operationId = schema.document.paths?.[path]?.[req.method.toLowerCase()].responses?.['200']?.content?.[type]?.schema?.['$ref']?.split('.')?.at(-1);
       return openapi.validPath(schema.document.paths[path])(req, res, next);
     };
   }

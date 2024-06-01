@@ -6,28 +6,48 @@ module.exports = {
       return next();
     }
     let b = req.body.subarray(4, req.body.length);
-    try {
-      console.log(req.operationId);
-      let unknownType = req.protobufTypes.lookup("Unknown");
-      let { typeMeta, raw } = unknownType.decode(b);
-      let dataType = req.protobufTypes.lookup(req.operationId);
-      let dataInfo = dataType.decode(raw);
-      req.body = {
-        ...typeMeta,
-        ...dataInfo
-      };
-      console.log(req.body);
-      next();
-    } catch (e) {
-      console.error(e);
-      next(K8Object.unprocessableContentStatus());
-    }
+    let unknownType = req.protobufTypes.lookup("Unknown");
+    let { typeMeta, raw } = unknownType.decode(b);
+    let dataType = req.protobufTypes.lookup(req.operationId);
+    let dataInfo = dataType.decode(raw);
+    req.body = {
+      ...typeMeta,
+      ...dataInfo
+    };
+    next();
   },
   toProtoBuf: (data, operationId, protobufTypes) => {
-    console.log(operationId);
+    if (Array.isArray(data) && !operationId.includes('List')) {
+      operationId = `${operationId}List`;
+    } else if (!Array.isArray(data) && operationId.includes('List')) {
+      operationId = operationId.substring(0, operationId.length - 4);
+    }
     let dataType = protobufTypes.lookup(operationId);
     let dataInfo = dataType.encode(data).finish();
     let unknownType = protobufTypes.lookup("Unknown");
-    return unknownType.encode(dataInfo).finish();
+    let obj = {
+      typeMeta: {
+        kind: (data.kind ?? ''),
+        apiVersion: (data.apiVersion ?? ''),
+      },
+      raw: dataInfo,
+      contentEncoding: '',
+      contentType: '',
+    };
+    let encoded = unknownType.encode(obj).finish();
+    let prefix = Buffer.from([107, 56, 115]);
+    return Buffer.concat([prefix, encoded]);
+  },
+  toWatchEvent: (buffer, eventType, protobufTypes) => {
+    let watchEventType = protobufTypes.lookup('WatchEvent');
+    let obj = {
+      type: eventType,
+      object: {
+        raw: buffer
+      },
+    }
+    let encoded = watchEventType.encode(obj).finish();
+    let prefix = Buffer.from([0, 0, 0, 243])
+    return Buffer.concat([prefix, encoded]);
   }
 };

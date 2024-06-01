@@ -193,6 +193,13 @@ class K8Object {
     return this.genFindQuery(reqQuery, reqParams, sortOptions)
   }
 
+  toJSON() {
+    let newObj = JSON.parse(JSON.stringify({ ...this }));
+    delete newObj.Model;
+    delete newObj.eventEmitter;
+    return newObj;
+  }
+
   getKind() {
     return this.kind;
   }

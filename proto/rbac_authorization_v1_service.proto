@@ -14,106 +14,95 @@ package openapitools.services.rbacauthorizationv1service;
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
-import public "models/io_k8s_api_rbac_v1_cluster_role.proto";
-import public "models/io_k8s_api_rbac_v1_cluster_role_binding.proto";
-import public "models/io_k8s_api_rbac_v1_cluster_role_binding_list.proto";
-import public "models/io_k8s_api_rbac_v1_cluster_role_list.proto";
-import public "models/io_k8s_api_rbac_v1_role.proto";
-import public "models/io_k8s_api_rbac_v1_role_binding.proto";
-import public "models/io_k8s_api_rbac_v1_role_binding_list.proto";
-import public "models/io_k8s_api_rbac_v1_role_list.proto";
-import public "models/io_k8s_apimachinery_pkg_apis_meta_v1_api_resource_list.proto";
-import public "models/io_k8s_apimachinery_pkg_apis_meta_v1_delete_options.proto";
-import public "models/io_k8s_apimachinery_pkg_apis_meta_v1_status.proto";
-import public "models/io_k8s_apimachinery_pkg_apis_meta_v1_watch_event.proto";
-
+import public "models/rbac_v1.proto";
+import public "models/meta.proto";
 
 service RbacAuthorizationV1Service {
-  rpc CreateRbacAuthorizationV1ClusterRole (CreateRbacAuthorizationV1ClusterRoleRequest) returns (IoK8sApiRbacV1ClusterRole);
+  rpc CreateClusterRole (CreateClusterRoleRequest) returns (ClusterRole);
 
-  rpc CreateRbacAuthorizationV1ClusterRoleBinding (CreateRbacAuthorizationV1ClusterRoleBindingRequest) returns (IoK8sApiRbacV1ClusterRoleBinding);
+  rpc CreateClusterRoleBinding (CreateClusterRoleBindingRequest) returns (ClusterRoleBinding);
 
-  rpc CreateRbacAuthorizationV1NamespacedRole (CreateRbacAuthorizationV1NamespacedRoleRequest) returns (IoK8sApiRbacV1Role);
+  rpc CreateNamespacedRole (CreateNamespacedRoleRequest) returns (Role);
 
-  rpc CreateRbacAuthorizationV1NamespacedRoleBinding (CreateRbacAuthorizationV1NamespacedRoleBindingRequest) returns (IoK8sApiRbacV1RoleBinding);
+  rpc CreateNamespacedRoleBinding (CreateNamespacedRoleBindingRequest) returns (RoleBinding);
 
-  rpc DeleteRbacAuthorizationV1ClusterRole (DeleteRbacAuthorizationV1ClusterRoleRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteClusterRole (DeleteClusterRoleRequest) returns (Status);
 
-  rpc DeleteRbacAuthorizationV1ClusterRoleBinding (DeleteRbacAuthorizationV1ClusterRoleBindingRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteClusterRoleBinding (DeleteClusterRoleBindingRequest) returns (Status);
 
-  rpc DeleteRbacAuthorizationV1CollectionClusterRole (DeleteRbacAuthorizationV1CollectionClusterRoleRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteCollectionClusterRole (DeleteCollectionClusterRoleRequest) returns (Status);
 
-  rpc DeleteRbacAuthorizationV1CollectionClusterRoleBinding (DeleteRbacAuthorizationV1CollectionClusterRoleBindingRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteCollectionClusterRoleBinding (DeleteCollectionClusterRoleBindingRequest) returns (Status);
 
-  rpc DeleteRbacAuthorizationV1CollectionNamespacedRole (DeleteRbacAuthorizationV1CollectionNamespacedRoleRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteCollectionNamespacedRole (DeleteCollectionNamespacedRoleRequest) returns (Status);
 
-  rpc DeleteRbacAuthorizationV1CollectionNamespacedRoleBinding (DeleteRbacAuthorizationV1CollectionNamespacedRoleBindingRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteCollectionNamespacedRoleBinding (DeleteCollectionNamespacedRoleBindingRequest) returns (Status);
 
-  rpc DeleteRbacAuthorizationV1NamespacedRole (DeleteRbacAuthorizationV1NamespacedRoleRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteNamespacedRole (DeleteNamespacedRoleRequest) returns (Status);
 
-  rpc DeleteRbacAuthorizationV1NamespacedRoleBinding (DeleteRbacAuthorizationV1NamespacedRoleBindingRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteNamespacedRoleBinding (DeleteNamespacedRoleBindingRequest) returns (Status);
 
-  rpc GetRbacAuthorizationV1APIResources (google.protobuf.Empty) returns (IoK8sApimachineryPkgApisMetaV1APIResourceList);
+  rpc GetRbacAuthorizationV1APIResources (google.protobuf.Empty) returns (APIResourceList);
 
-  rpc ListRbacAuthorizationV1ClusterRole (ListRbacAuthorizationV1ClusterRoleRequest) returns (IoK8sApiRbacV1ClusterRoleList);
+  rpc ListClusterRole (ListClusterRoleRequest) returns (ClusterRoleList);
 
-  rpc ListRbacAuthorizationV1ClusterRoleBinding (ListRbacAuthorizationV1ClusterRoleBindingRequest) returns (IoK8sApiRbacV1ClusterRoleBindingList);
+  rpc ListClusterRoleBinding (ListClusterRoleBindingRequest) returns (ClusterRoleBindingList);
 
-  rpc ListRbacAuthorizationV1NamespacedRole (ListRbacAuthorizationV1NamespacedRoleRequest) returns (IoK8sApiRbacV1RoleList);
+  rpc ListNamespacedRole (ListNamespacedRoleRequest) returns (RoleList);
 
-  rpc ListRbacAuthorizationV1NamespacedRoleBinding (ListRbacAuthorizationV1NamespacedRoleBindingRequest) returns (IoK8sApiRbacV1RoleBindingList);
+  rpc ListNamespacedRoleBinding (ListNamespacedRoleBindingRequest) returns (RoleBindingList);
 
-  rpc ListRbacAuthorizationV1RoleBindingForAllNamespaces (ListRbacAuthorizationV1RoleBindingForAllNamespacesRequest) returns (IoK8sApiRbacV1RoleBindingList);
+  rpc ListRoleBindingForAllNamespaces (ListRoleBindingForAllNamespacesRequest) returns (RoleBindingList);
 
-  rpc ListRbacAuthorizationV1RoleForAllNamespaces (ListRbacAuthorizationV1RoleForAllNamespacesRequest) returns (IoK8sApiRbacV1RoleList);
+  rpc ListRoleForAllNamespaces (ListRoleForAllNamespacesRequest) returns (RoleList);
 
-  rpc PatchRbacAuthorizationV1ClusterRole (PatchRbacAuthorizationV1ClusterRoleRequest) returns (IoK8sApiRbacV1ClusterRole);
+  rpc PatchClusterRole (PatchClusterRoleRequest) returns (ClusterRole);
 
-  rpc PatchRbacAuthorizationV1ClusterRoleBinding (PatchRbacAuthorizationV1ClusterRoleBindingRequest) returns (IoK8sApiRbacV1ClusterRoleBinding);
+  rpc PatchClusterRoleBinding (PatchClusterRoleBindingRequest) returns (ClusterRoleBinding);
 
-  rpc PatchRbacAuthorizationV1NamespacedRole (PatchRbacAuthorizationV1NamespacedRoleRequest) returns (IoK8sApiRbacV1Role);
+  rpc PatchNamespacedRole (PatchNamespacedRoleRequest) returns (Role);
 
-  rpc PatchRbacAuthorizationV1NamespacedRoleBinding (PatchRbacAuthorizationV1NamespacedRoleBindingRequest) returns (IoK8sApiRbacV1RoleBinding);
+  rpc PatchNamespacedRoleBinding (PatchNamespacedRoleBindingRequest) returns (RoleBinding);
 
-  rpc ReadRbacAuthorizationV1ClusterRole (ReadRbacAuthorizationV1ClusterRoleRequest) returns (IoK8sApiRbacV1ClusterRole);
+  rpc ReadClusterRole (ReadClusterRoleRequest) returns (ClusterRole);
 
-  rpc ReadRbacAuthorizationV1ClusterRoleBinding (ReadRbacAuthorizationV1ClusterRoleBindingRequest) returns (IoK8sApiRbacV1ClusterRoleBinding);
+  rpc ReadClusterRoleBinding (ReadClusterRoleBindingRequest) returns (ClusterRoleBinding);
 
-  rpc ReadRbacAuthorizationV1NamespacedRole (ReadRbacAuthorizationV1NamespacedRoleRequest) returns (IoK8sApiRbacV1Role);
+  rpc ReadNamespacedRole (ReadNamespacedRoleRequest) returns (Role);
 
-  rpc ReadRbacAuthorizationV1NamespacedRoleBinding (ReadRbacAuthorizationV1NamespacedRoleBindingRequest) returns (IoK8sApiRbacV1RoleBinding);
+  rpc ReadNamespacedRoleBinding (ReadNamespacedRoleBindingRequest) returns (RoleBinding);
 
-  rpc ReplaceRbacAuthorizationV1ClusterRole (ReplaceRbacAuthorizationV1ClusterRoleRequest) returns (IoK8sApiRbacV1ClusterRole);
+  rpc ReplaceClusterRole (ReplaceClusterRoleRequest) returns (ClusterRole);
 
-  rpc ReplaceRbacAuthorizationV1ClusterRoleBinding (ReplaceRbacAuthorizationV1ClusterRoleBindingRequest) returns (IoK8sApiRbacV1ClusterRoleBinding);
+  rpc ReplaceClusterRoleBinding (ReplaceClusterRoleBindingRequest) returns (ClusterRoleBinding);
 
-  rpc ReplaceRbacAuthorizationV1NamespacedRole (ReplaceRbacAuthorizationV1NamespacedRoleRequest) returns (IoK8sApiRbacV1Role);
+  rpc ReplaceNamespacedRole (ReplaceNamespacedRoleRequest) returns (Role);
 
-  rpc ReplaceRbacAuthorizationV1NamespacedRoleBinding (ReplaceRbacAuthorizationV1NamespacedRoleBindingRequest) returns (IoK8sApiRbacV1RoleBinding);
+  rpc ReplaceNamespacedRoleBinding (ReplaceNamespacedRoleBindingRequest) returns (RoleBinding);
 
-  rpc WatchRbacAuthorizationV1ClusterRole (WatchRbacAuthorizationV1ClusterRoleRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchClusterRole (WatchClusterRoleRequest) returns (WatchEvent);
 
-  rpc WatchRbacAuthorizationV1ClusterRoleBinding (WatchRbacAuthorizationV1ClusterRoleBindingRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchClusterRoleBinding (WatchClusterRoleBindingRequest) returns (WatchEvent);
 
-  rpc WatchRbacAuthorizationV1ClusterRoleBindingList (WatchRbacAuthorizationV1ClusterRoleBindingListRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchClusterRoleBindingList (WatchClusterRoleBindingListRequest) returns (WatchEvent);
 
-  rpc WatchRbacAuthorizationV1ClusterRoleList (WatchRbacAuthorizationV1ClusterRoleListRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchClusterRoleList (WatchClusterRoleListRequest) returns (WatchEvent);
 
-  rpc WatchRbacAuthorizationV1NamespacedRole (WatchRbacAuthorizationV1NamespacedRoleRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchNamespacedRole (WatchNamespacedRoleRequest) returns (WatchEvent);
 
-  rpc WatchRbacAuthorizationV1NamespacedRoleBinding (WatchRbacAuthorizationV1NamespacedRoleBindingRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchNamespacedRoleBinding (WatchNamespacedRoleBindingRequest) returns (WatchEvent);
 
-  rpc WatchRbacAuthorizationV1NamespacedRoleBindingList (WatchRbacAuthorizationV1NamespacedRoleBindingListRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchNamespacedRoleBindingList (WatchNamespacedRoleBindingListRequest) returns (WatchEvent);
 
-  rpc WatchRbacAuthorizationV1NamespacedRoleList (WatchRbacAuthorizationV1NamespacedRoleListRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchNamespacedRoleList (WatchNamespacedRoleListRequest) returns (WatchEvent);
 
-  rpc WatchRbacAuthorizationV1RoleBindingListForAllNamespaces (WatchRbacAuthorizationV1RoleBindingListForAllNamespacesRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchRoleBindingListForAllNamespaces (WatchRoleBindingListForAllNamespacesRequest) returns (WatchEvent);
 
-  rpc WatchRbacAuthorizationV1RoleListForAllNamespaces (WatchRbacAuthorizationV1RoleListForAllNamespacesRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchRoleListForAllNamespaces (WatchRoleListForAllNamespacesRequest) returns (WatchEvent);
 
 }
 
-message CreateRbacAuthorizationV1ClusterRoleRequest {
+message CreateClusterRoleRequest {
   // If 'true', then the output is pretty printed.
   string pretty = 1;
   // When present, indicates that modifications should not be persisted. An invalid or unrecognized dryRun directive will result in an error response and no further processing of the request. Valid values are: - All: all dry run stages will be processed
@@ -122,11 +111,11 @@ message CreateRbacAuthorizationV1ClusterRoleRequest {
   string fieldManager = 3;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 4;
-  IoK8sApiRbacV1ClusterRole ioK8sApiRbacV1ClusterRole = 5;
+  ClusterRole ioK8sApiRbacV1ClusterRole = 5;
 
 }
 
-message CreateRbacAuthorizationV1ClusterRoleBindingRequest {
+message CreateClusterRoleBindingRequest {
   // If 'true', then the output is pretty printed.
   string pretty = 1;
   // When present, indicates that modifications should not be persisted. An invalid or unrecognized dryRun directive will result in an error response and no further processing of the request. Valid values are: - All: all dry run stages will be processed
@@ -135,11 +124,11 @@ message CreateRbacAuthorizationV1ClusterRoleBindingRequest {
   string fieldManager = 3;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 4;
-  IoK8sApiRbacV1ClusterRoleBinding ioK8sApiRbacV1ClusterRoleBinding = 5;
+  ClusterRoleBinding ioK8sApiRbacV1ClusterRoleBinding = 5;
 
 }
 
-message CreateRbacAuthorizationV1NamespacedRoleRequest {
+message CreateNamespacedRoleRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // If 'true', then the output is pretty printed.
@@ -150,11 +139,11 @@ message CreateRbacAuthorizationV1NamespacedRoleRequest {
   string fieldManager = 4;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 5;
-  IoK8sApiRbacV1Role ioK8sApiRbacV1Role = 6;
+  Role ioK8sApiRbacV1Role = 6;
 
 }
 
-message CreateRbacAuthorizationV1NamespacedRoleBindingRequest {
+message CreateNamespacedRoleBindingRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // If 'true', then the output is pretty printed.
@@ -165,11 +154,11 @@ message CreateRbacAuthorizationV1NamespacedRoleBindingRequest {
   string fieldManager = 4;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 5;
-  IoK8sApiRbacV1RoleBinding ioK8sApiRbacV1RoleBinding = 6;
+  RoleBinding ioK8sApiRbacV1RoleBinding = 6;
 
 }
 
-message DeleteRbacAuthorizationV1ClusterRoleRequest {
+message DeleteClusterRoleRequest {
   // name of the ClusterRole
   string name = 1;
   // If 'true', then the output is pretty printed.
@@ -182,11 +171,11 @@ message DeleteRbacAuthorizationV1ClusterRoleRequest {
   bool orphanDependents = 5;
   // Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.
   string propagationPolicy = 6;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 7;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 7;
 
 }
 
-message DeleteRbacAuthorizationV1ClusterRoleBindingRequest {
+message DeleteClusterRoleBindingRequest {
   // name of the ClusterRoleBinding
   string name = 1;
   // If 'true', then the output is pretty printed.
@@ -199,11 +188,11 @@ message DeleteRbacAuthorizationV1ClusterRoleBindingRequest {
   bool orphanDependents = 5;
   // Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.
   string propagationPolicy = 6;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 7;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 7;
 
 }
 
-message DeleteRbacAuthorizationV1CollectionClusterRoleRequest {
+message DeleteCollectionClusterRoleRequest {
   // If 'true', then the output is pretty printed.
   string pretty = 1;
   // The continue option should be set when retrieving more results from the server. Since this value is server defined, clients may only use the continue value from a previous query result with identical query parameters (except for the value of continue) and the server may reject a continue value it does not recognize. If the specified continue value is no longer valid whether due to expiration (generally five to fifteen minutes) or a configuration change on the server, the server will respond with a 410 ResourceExpired error together with a continue token. If the client needs a consistent list, it must restart their list without the continue field. Otherwise, the client may send another list request with the token received with the 410 error, the server will respond with a list starting from the next key, but from the latest snapshot, which is inconsistent from the previous list results - objects that are created, modified, or deleted after the first list request will be included in the response, as long as their keys are after the \"next key\".  This field is not supported when watch is true. Clients may start a watch from the last resourceVersion value returned by the server and not miss any modifications.
@@ -230,11 +219,11 @@ message DeleteRbacAuthorizationV1CollectionClusterRoleRequest {
   bool sendInitialEvents = 12;
   // Timeout for the list/watch call. This limits the duration of the call, regardless of any activity or inactivity.
   int32 timeoutSeconds = 13;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
 
 }
 
-message DeleteRbacAuthorizationV1CollectionClusterRoleBindingRequest {
+message DeleteCollectionClusterRoleBindingRequest {
   // If 'true', then the output is pretty printed.
   string pretty = 1;
   // The continue option should be set when retrieving more results from the server. Since this value is server defined, clients may only use the continue value from a previous query result with identical query parameters (except for the value of continue) and the server may reject a continue value it does not recognize. If the specified continue value is no longer valid whether due to expiration (generally five to fifteen minutes) or a configuration change on the server, the server will respond with a 410 ResourceExpired error together with a continue token. If the client needs a consistent list, it must restart their list without the continue field. Otherwise, the client may send another list request with the token received with the 410 error, the server will respond with a list starting from the next key, but from the latest snapshot, which is inconsistent from the previous list results - objects that are created, modified, or deleted after the first list request will be included in the response, as long as their keys are after the \"next key\".  This field is not supported when watch is true. Clients may start a watch from the last resourceVersion value returned by the server and not miss any modifications.
@@ -261,11 +250,11 @@ message DeleteRbacAuthorizationV1CollectionClusterRoleBindingRequest {
   bool sendInitialEvents = 12;
   // Timeout for the list/watch call. This limits the duration of the call, regardless of any activity or inactivity.
   int32 timeoutSeconds = 13;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
 
 }
 
-message DeleteRbacAuthorizationV1CollectionNamespacedRoleRequest {
+message DeleteCollectionNamespacedRoleRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // If 'true', then the output is pretty printed.
@@ -294,11 +283,11 @@ message DeleteRbacAuthorizationV1CollectionNamespacedRoleRequest {
   bool sendInitialEvents = 13;
   // Timeout for the list/watch call. This limits the duration of the call, regardless of any activity or inactivity.
   int32 timeoutSeconds = 14;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 15;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 15;
 
 }
 
-message DeleteRbacAuthorizationV1CollectionNamespacedRoleBindingRequest {
+message DeleteCollectionNamespacedRoleBindingRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // If 'true', then the output is pretty printed.
@@ -327,11 +316,11 @@ message DeleteRbacAuthorizationV1CollectionNamespacedRoleBindingRequest {
   bool sendInitialEvents = 13;
   // Timeout for the list/watch call. This limits the duration of the call, regardless of any activity or inactivity.
   int32 timeoutSeconds = 14;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 15;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 15;
 
 }
 
-message DeleteRbacAuthorizationV1NamespacedRoleRequest {
+message DeleteNamespacedRoleRequest {
   // name of the Role
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -346,11 +335,11 @@ message DeleteRbacAuthorizationV1NamespacedRoleRequest {
   bool orphanDependents = 6;
   // Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.
   string propagationPolicy = 7;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
 
 }
 
-message DeleteRbacAuthorizationV1NamespacedRoleBindingRequest {
+message DeleteNamespacedRoleBindingRequest {
   // name of the RoleBinding
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -365,11 +354,11 @@ message DeleteRbacAuthorizationV1NamespacedRoleBindingRequest {
   bool orphanDependents = 6;
   // Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.
   string propagationPolicy = 7;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
 
 }
 
-message ListRbacAuthorizationV1ClusterRoleRequest {
+message ListClusterRoleRequest {
   // If 'true', then the output is pretty printed.
   string pretty = 1;
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
@@ -395,7 +384,7 @@ message ListRbacAuthorizationV1ClusterRoleRequest {
 
 }
 
-message ListRbacAuthorizationV1ClusterRoleBindingRequest {
+message ListClusterRoleBindingRequest {
   // If 'true', then the output is pretty printed.
   string pretty = 1;
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
@@ -421,7 +410,7 @@ message ListRbacAuthorizationV1ClusterRoleBindingRequest {
 
 }
 
-message ListRbacAuthorizationV1NamespacedRoleRequest {
+message ListNamespacedRoleRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // If 'true', then the output is pretty printed.
@@ -449,7 +438,7 @@ message ListRbacAuthorizationV1NamespacedRoleRequest {
 
 }
 
-message ListRbacAuthorizationV1NamespacedRoleBindingRequest {
+message ListNamespacedRoleBindingRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // If 'true', then the output is pretty printed.
@@ -477,7 +466,7 @@ message ListRbacAuthorizationV1NamespacedRoleBindingRequest {
 
 }
 
-message ListRbacAuthorizationV1RoleBindingForAllNamespacesRequest {
+message ListRoleBindingForAllNamespacesRequest {
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
   bool allowWatchBookmarks = 1;
   // The continue option should be set when retrieving more results from the server. Since this value is server defined, clients may only use the continue value from a previous query result with identical query parameters (except for the value of continue) and the server may reject a continue value it does not recognize. If the specified continue value is no longer valid whether due to expiration (generally five to fifteen minutes) or a configuration change on the server, the server will respond with a 410 ResourceExpired error together with a continue token. If the client needs a consistent list, it must restart their list without the continue field. Otherwise, the client may send another list request with the token received with the 410 error, the server will respond with a list starting from the next key, but from the latest snapshot, which is inconsistent from the previous list results - objects that are created, modified, or deleted after the first list request will be included in the response, as long as their keys are after the \"next key\".  This field is not supported when watch is true. Clients may start a watch from the last resourceVersion value returned by the server and not miss any modifications.
@@ -503,7 +492,7 @@ message ListRbacAuthorizationV1RoleBindingForAllNamespacesRequest {
 
 }
 
-message ListRbacAuthorizationV1RoleForAllNamespacesRequest {
+message ListRoleForAllNamespacesRequest {
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
   bool allowWatchBookmarks = 1;
   // The continue option should be set when retrieving more results from the server. Since this value is server defined, clients may only use the continue value from a previous query result with identical query parameters (except for the value of continue) and the server may reject a continue value it does not recognize. If the specified continue value is no longer valid whether due to expiration (generally five to fifteen minutes) or a configuration change on the server, the server will respond with a 410 ResourceExpired error together with a continue token. If the client needs a consistent list, it must restart their list without the continue field. Otherwise, the client may send another list request with the token received with the 410 error, the server will respond with a list starting from the next key, but from the latest snapshot, which is inconsistent from the previous list results - objects that are created, modified, or deleted after the first list request will be included in the response, as long as their keys are after the \"next key\".  This field is not supported when watch is true. Clients may start a watch from the last resourceVersion value returned by the server and not miss any modifications.
@@ -529,7 +518,7 @@ message ListRbacAuthorizationV1RoleForAllNamespacesRequest {
 
 }
 
-message PatchRbacAuthorizationV1ClusterRoleRequest {
+message PatchClusterRoleRequest {
   // name of the ClusterRole
   string name = 1;
   // If 'true', then the output is pretty printed.
@@ -546,7 +535,7 @@ message PatchRbacAuthorizationV1ClusterRoleRequest {
 
 }
 
-message PatchRbacAuthorizationV1ClusterRoleBindingRequest {
+message PatchClusterRoleBindingRequest {
   // name of the ClusterRoleBinding
   string name = 1;
   // If 'true', then the output is pretty printed.
@@ -563,7 +552,7 @@ message PatchRbacAuthorizationV1ClusterRoleBindingRequest {
 
 }
 
-message PatchRbacAuthorizationV1NamespacedRoleRequest {
+message PatchNamespacedRoleRequest {
   // name of the Role
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -582,7 +571,7 @@ message PatchRbacAuthorizationV1NamespacedRoleRequest {
 
 }
 
-message PatchRbacAuthorizationV1NamespacedRoleBindingRequest {
+message PatchNamespacedRoleBindingRequest {
   // name of the RoleBinding
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -601,7 +590,7 @@ message PatchRbacAuthorizationV1NamespacedRoleBindingRequest {
 
 }
 
-message ReadRbacAuthorizationV1ClusterRoleRequest {
+message ReadClusterRoleRequest {
   // name of the ClusterRole
   string name = 1;
   // If 'true', then the output is pretty printed.
@@ -609,7 +598,7 @@ message ReadRbacAuthorizationV1ClusterRoleRequest {
 
 }
 
-message ReadRbacAuthorizationV1ClusterRoleBindingRequest {
+message ReadClusterRoleBindingRequest {
   // name of the ClusterRoleBinding
   string name = 1;
   // If 'true', then the output is pretty printed.
@@ -617,7 +606,7 @@ message ReadRbacAuthorizationV1ClusterRoleBindingRequest {
 
 }
 
-message ReadRbacAuthorizationV1NamespacedRoleRequest {
+message ReadNamespacedRoleRequest {
   // name of the Role
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -627,7 +616,7 @@ message ReadRbacAuthorizationV1NamespacedRoleRequest {
 
 }
 
-message ReadRbacAuthorizationV1NamespacedRoleBindingRequest {
+message ReadNamespacedRoleBindingRequest {
   // name of the RoleBinding
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -637,7 +626,7 @@ message ReadRbacAuthorizationV1NamespacedRoleBindingRequest {
 
 }
 
-message ReplaceRbacAuthorizationV1ClusterRoleRequest {
+message ReplaceClusterRoleRequest {
   // name of the ClusterRole
   string name = 1;
   // If 'true', then the output is pretty printed.
@@ -648,11 +637,11 @@ message ReplaceRbacAuthorizationV1ClusterRoleRequest {
   string fieldManager = 4;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 5;
-  IoK8sApiRbacV1ClusterRole ioK8sApiRbacV1ClusterRole = 6;
+  ClusterRole ioK8sApiRbacV1ClusterRole = 6;
 
 }
 
-message ReplaceRbacAuthorizationV1ClusterRoleBindingRequest {
+message ReplaceClusterRoleBindingRequest {
   // name of the ClusterRoleBinding
   string name = 1;
   // If 'true', then the output is pretty printed.
@@ -663,11 +652,11 @@ message ReplaceRbacAuthorizationV1ClusterRoleBindingRequest {
   string fieldManager = 4;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 5;
-  IoK8sApiRbacV1ClusterRoleBinding ioK8sApiRbacV1ClusterRoleBinding = 6;
+  ClusterRoleBinding ioK8sApiRbacV1ClusterRoleBinding = 6;
 
 }
 
-message ReplaceRbacAuthorizationV1NamespacedRoleRequest {
+message ReplaceNamespacedRoleRequest {
   // name of the Role
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -680,11 +669,11 @@ message ReplaceRbacAuthorizationV1NamespacedRoleRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiRbacV1Role ioK8sApiRbacV1Role = 7;
+  Role ioK8sApiRbacV1Role = 7;
 
 }
 
-message ReplaceRbacAuthorizationV1NamespacedRoleBindingRequest {
+message ReplaceNamespacedRoleBindingRequest {
   // name of the RoleBinding
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -697,11 +686,11 @@ message ReplaceRbacAuthorizationV1NamespacedRoleBindingRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default in v1.23+ - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiRbacV1RoleBinding ioK8sApiRbacV1RoleBinding = 7;
+  RoleBinding ioK8sApiRbacV1RoleBinding = 7;
 
 }
 
-message WatchRbacAuthorizationV1ClusterRoleRequest {
+message WatchClusterRoleRequest {
   // name of the ClusterRole
   string name = 1;
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
@@ -729,7 +718,7 @@ message WatchRbacAuthorizationV1ClusterRoleRequest {
 
 }
 
-message WatchRbacAuthorizationV1ClusterRoleBindingRequest {
+message WatchClusterRoleBindingRequest {
   // name of the ClusterRoleBinding
   string name = 1;
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
@@ -757,7 +746,7 @@ message WatchRbacAuthorizationV1ClusterRoleBindingRequest {
 
 }
 
-message WatchRbacAuthorizationV1ClusterRoleBindingListRequest {
+message WatchClusterRoleBindingListRequest {
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
   bool allowWatchBookmarks = 1;
   // The continue option should be set when retrieving more results from the server. Since this value is server defined, clients may only use the continue value from a previous query result with identical query parameters (except for the value of continue) and the server may reject a continue value it does not recognize. If the specified continue value is no longer valid whether due to expiration (generally five to fifteen minutes) or a configuration change on the server, the server will respond with a 410 ResourceExpired error together with a continue token. If the client needs a consistent list, it must restart their list without the continue field. Otherwise, the client may send another list request with the token received with the 410 error, the server will respond with a list starting from the next key, but from the latest snapshot, which is inconsistent from the previous list results - objects that are created, modified, or deleted after the first list request will be included in the response, as long as their keys are after the \"next key\".  This field is not supported when watch is true. Clients may start a watch from the last resourceVersion value returned by the server and not miss any modifications.
@@ -783,7 +772,7 @@ message WatchRbacAuthorizationV1ClusterRoleBindingListRequest {
 
 }
 
-message WatchRbacAuthorizationV1ClusterRoleListRequest {
+message WatchClusterRoleListRequest {
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
   bool allowWatchBookmarks = 1;
   // The continue option should be set when retrieving more results from the server. Since this value is server defined, clients may only use the continue value from a previous query result with identical query parameters (except for the value of continue) and the server may reject a continue value it does not recognize. If the specified continue value is no longer valid whether due to expiration (generally five to fifteen minutes) or a configuration change on the server, the server will respond with a 410 ResourceExpired error together with a continue token. If the client needs a consistent list, it must restart their list without the continue field. Otherwise, the client may send another list request with the token received with the 410 error, the server will respond with a list starting from the next key, but from the latest snapshot, which is inconsistent from the previous list results - objects that are created, modified, or deleted after the first list request will be included in the response, as long as their keys are after the \"next key\".  This field is not supported when watch is true. Clients may start a watch from the last resourceVersion value returned by the server and not miss any modifications.
@@ -809,7 +798,7 @@ message WatchRbacAuthorizationV1ClusterRoleListRequest {
 
 }
 
-message WatchRbacAuthorizationV1NamespacedRoleRequest {
+message WatchNamespacedRoleRequest {
   // name of the Role
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -839,7 +828,7 @@ message WatchRbacAuthorizationV1NamespacedRoleRequest {
 
 }
 
-message WatchRbacAuthorizationV1NamespacedRoleBindingRequest {
+message WatchNamespacedRoleBindingRequest {
   // name of the RoleBinding
   string name = 1;
   // object name and auth scope, such as for teams and projects
@@ -869,7 +858,7 @@ message WatchRbacAuthorizationV1NamespacedRoleBindingRequest {
 
 }
 
-message WatchRbacAuthorizationV1NamespacedRoleBindingListRequest {
+message WatchNamespacedRoleBindingListRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
@@ -897,7 +886,7 @@ message WatchRbacAuthorizationV1NamespacedRoleBindingListRequest {
 
 }
 
-message WatchRbacAuthorizationV1NamespacedRoleListRequest {
+message WatchNamespacedRoleListRequest {
   // object name and auth scope, such as for teams and projects
   string namespace = 1;
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
@@ -925,7 +914,7 @@ message WatchRbacAuthorizationV1NamespacedRoleListRequest {
 
 }
 
-message WatchRbacAuthorizationV1RoleBindingListForAllNamespacesRequest {
+message WatchRoleBindingListForAllNamespacesRequest {
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
   bool allowWatchBookmarks = 1;
   // The continue option should be set when retrieving more results from the server. Since this value is server defined, clients may only use the continue value from a previous query result with identical query parameters (except for the value of continue) and the server may reject a continue value it does not recognize. If the specified continue value is no longer valid whether due to expiration (generally five to fifteen minutes) or a configuration change on the server, the server will respond with a 410 ResourceExpired error together with a continue token. If the client needs a consistent list, it must restart their list without the continue field. Otherwise, the client may send another list request with the token received with the 410 error, the server will respond with a list starting from the next key, but from the latest snapshot, which is inconsistent from the previous list results - objects that are created, modified, or deleted after the first list request will be included in the response, as long as their keys are after the \"next key\".  This field is not supported when watch is true. Clients may start a watch from the last resourceVersion value returned by the server and not miss any modifications.
@@ -951,7 +940,7 @@ message WatchRbacAuthorizationV1RoleBindingListForAllNamespacesRequest {
 
 }
 
-message WatchRbacAuthorizationV1RoleListForAllNamespacesRequest {
+message WatchRoleListForAllNamespacesRequest {
   // allowWatchBookmarks requests watch events with type \"BOOKMARK\". Servers that do not implement bookmarks may ignore this flag and bookmarks are sent at the server's discretion. Clients should not assume bookmarks are returned at any specific interval, nor may they assume the server will send any BOOKMARK event during a session. If this is not a watch, this field is ignored.
   bool allowWatchBookmarks = 1;
   // The continue option should be set when retrieving more results from the server. Since this value is server defined, clients may only use the continue value from a previous query result with identical query parameters (except for the value of continue) and the server may reject a continue value it does not recognize. If the specified continue value is no longer valid whether due to expiration (generally five to fifteen minutes) or a configuration change on the server, the server will respond with a 410 ResourceExpired error together with a continue token. If the client needs a consistent list, it must restart their list without the continue field. Otherwise, the client may send another list request with the token received with the 410 error, the server will respond with a list starting from the next key, but from the latest snapshot, which is inconsistent from the previous list results - objects that are created, modified, or deleted after the first list request will be included in the response, as long as their keys are after the \"next key\".  This field is not supported when watch is true. Clients may start a watch from the last resourceVersion value returned by the server and not miss any modifications.

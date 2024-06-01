@@ -1,7 +1,7 @@
 const { DateTime } = require('luxon');
 const { Readable } = require('stream');
 const Event = require('../objects/event.js');
-const { toProtoBuf, fromProtoBuf } = require('./protoBuf.js');
+const { toProtoBuf, fromProtoBuf, toWatchEvent } = require('./protoBuf.js');
 
 module.exports = {
   find(Model) {
@@ -41,64 +41,35 @@ module.exports = {
           res.set('Content-Type', 'application/json');
         }
         let arr = [req.item, ...req.items].flat().filter((e) => e);
-        arr.forEach((i) => {
-          i.events().on('updated', () => {
-            Model.table([i]).then((table) => {
-              let retObj = {
-                "type": "MODIFIED",
-                "object": table
-              };
-              if (req.headers?.accept?.includes('protobuf') && req.operationId) {
-                try {
-                  eventStream.push(toProtoBuf(retObj, req.operationId, req.protobufTypes));
-                } catch (e) {
-                  console.error(e);
-                  next(Model.unprocessableContentStatus());
-                }
-              } else {
+        let pushToEventStream = (elem, eventType) => {
+          if (req.headers?.accept?.includes('protobuf') && req.operationId) {
+            try {
+              let proto = toProtoBuf(elem.toJSON(), req.operationId, req.protobufTypes);
+              eventStream.push(toWatchEvent(proto, eventType, req.protobufTypes));
+            } catch (e) {
+              console.error(e);
+              next(Model.internalServerErrorStatus());
+            }
+          } else if (req.headers?.accept?.split(';').find((e) => e === 'as=Table')) {
+            Model.table([elem]).then((table) => {
+              if (eventType !== 'ADDED') {
                 table.columnDefinitions = null;
-                eventStream.push(`${JSON.stringify(retObj)}\n`);
               }
-            });
-          });
-          i.events().on('deleted', () => {
-            Model.table([i]).then((table) => {
-              let retObj = {
-                "type": "DELETED",
-                "object": table
+              let obj = {
+                type: eventType,
+                object: table,
               };
-              if (req.headers?.accept?.includes('protobuf') && req.operationId) {
-                try {
-                  eventStream.push(toProtoBuf(retObj, req.operationId, req.protobufTypes));
-                } catch (e) {
-                  console.error(e);
-                  next(Model.unprocessableContentStatus());
-                }
-              } else {
-                table.columnDefinitions = null;
-                eventStream.push(`${JSON.stringify(retObj)}\n`);
-              }
+              eventStream.push(`${JSON.stringify(obj)}\n`);
             });
-          });
+          } else {
+            eventStream.push(`${JSON.stringify(elem.toJSON())}\n`);
+          }
+        }
+        arr.forEach((elem) => {
+          elem.events().on('updated', () => pushToEventStream(elem, 'MODIFIED'));
+          elem.events().on('deleted', () => pushToEventStream(elem, 'DELETED'));
+          pushToEventStream(elem, 'ADDED');
         });
-        Model.table(arr)
-          .then((table) => {
-            let retObj = {
-              type: "ADDED",
-              object: table,
-            }
-            if (req.headers?.accept?.includes('protobuf') && req.operationId) {
-              try {
-                eventStream.push(toProtoBuf(retObj, req.operationId, req.protobufTypes));
-              } catch (e) {
-                console.error(e);
-                next(Model.unprocessableContentStatus());
-              }
-            } else {
-              eventStream.push(`${JSON.stringify(retObj)}\n`);
-            }
-          })
-          .catch(next);
         return;
       }
       if (req.headers?.accept?.split(';').find((e) => e === 'as=Table')) {
@@ -126,7 +97,7 @@ module.exports = {
     return (req, res, next) => {
       let i = req.item || req.items
       if (i || i.length) {
-        return res.status(200).send(i);
+        return res.status(200).send(i.toJSON());
       }
       return res.status(404).send(Model.notFoundStatus(req.params.name));
     };

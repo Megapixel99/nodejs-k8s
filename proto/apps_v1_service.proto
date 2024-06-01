@@ -4,177 +4,163 @@ package openapitools.services.appsv1service;
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
-import public "models/io_k8s_api_apps_v1_controller_revision.proto";
-import public "models/io_k8s_api_apps_v1_controller_revision_list.proto";
-import public "models/io_k8s_api_apps_v1_daemon_set.proto";
-import public "models/io_k8s_api_apps_v1_daemon_set_list.proto";
-import public "models/io_k8s_api_apps_v1_deployment.proto";
-import public "models/io_k8s_api_apps_v1_deployment_list.proto";
-import public "models/io_k8s_api_apps_v1_replica_set.proto";
-import public "models/io_k8s_api_apps_v1_replica_set_list.proto";
-import public "models/io_k8s_api_apps_v1_stateful_set.proto";
-import public "models/io_k8s_api_apps_v1_stateful_set_list.proto";
-import public "models/io_k8s_api_autoscaling_v1_scale.proto";
-import public "models/io_k8s_apimachinery_pkg_apis_meta_v1_api_resource_list.proto";
-import public "models/io_k8s_apimachinery_pkg_apis_meta_v1_delete_options.proto";
-import public "models/io_k8s_apimachinery_pkg_apis_meta_v1_status.proto";
-import public "models/io_k8s_apimachinery_pkg_apis_meta_v1_watch_event.proto";
-
+import public "models/apps_v1.proto";
+import public "models/meta.proto";
 
 service AppsV1Service {
-  rpc CreateAppsV1NamespacedControllerRevision (CreateAppsV1NamespacedControllerRevisionRequest) returns (IoK8sApiAppsV1ControllerRevision);
+  rpc CreateAppsV1NamespacedControllerRevision (CreateAppsV1NamespacedControllerRevisionRequest) returns (ControllerRevision);
 
-  rpc CreateAppsV1NamespacedDaemonSet (CreateAppsV1NamespacedDaemonSetRequest) returns (IoK8sApiAppsV1DaemonSet);
+  rpc CreateAppsV1NamespacedDaemonSet (CreateAppsV1NamespacedDaemonSetRequest) returns (DaemonSet);
 
-  rpc CreateAppsV1NamespacedDeployment (CreateAppsV1NamespacedDeploymentRequest) returns (IoK8sApiAppsV1Deployment);
+  rpc CreateAppsV1NamespacedDeployment (CreateAppsV1NamespacedDeploymentRequest) returns (Deployment);
 
-  rpc CreateAppsV1NamespacedReplicaSet (CreateAppsV1NamespacedReplicaSetRequest) returns (IoK8sApiAppsV1ReplicaSet);
+  rpc CreateAppsV1NamespacedReplicaSet (CreateAppsV1NamespacedReplicaSetRequest) returns (ReplicaSet);
 
-  rpc CreateAppsV1NamespacedStatefulSet (CreateAppsV1NamespacedStatefulSetRequest) returns (IoK8sApiAppsV1StatefulSet);
+  rpc CreateAppsV1NamespacedStatefulSet (CreateAppsV1NamespacedStatefulSetRequest) returns (StatefulSet);
 
-  rpc DeleteAppsV1CollectionNamespacedControllerRevision (DeleteAppsV1CollectionNamespacedControllerRevisionRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteAppsV1CollectionNamespacedControllerRevision (DeleteAppsV1CollectionNamespacedControllerRevisionRequest) returns (Status);
 
-  rpc DeleteAppsV1CollectionNamespacedDaemonSet (DeleteAppsV1CollectionNamespacedDaemonSetRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteAppsV1CollectionNamespacedDaemonSet (DeleteAppsV1CollectionNamespacedDaemonSetRequest) returns (Status);
 
-  rpc DeleteAppsV1CollectionNamespacedDeployment (DeleteAppsV1CollectionNamespacedDeploymentRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteAppsV1CollectionNamespacedDeployment (DeleteAppsV1CollectionNamespacedDeploymentRequest) returns (Status);
 
-  rpc DeleteAppsV1CollectionNamespacedReplicaSet (DeleteAppsV1CollectionNamespacedReplicaSetRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteAppsV1CollectionNamespacedReplicaSet (DeleteAppsV1CollectionNamespacedReplicaSetRequest) returns (Status);
 
-  rpc DeleteAppsV1CollectionNamespacedStatefulSet (DeleteAppsV1CollectionNamespacedStatefulSetRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteAppsV1CollectionNamespacedStatefulSet (DeleteAppsV1CollectionNamespacedStatefulSetRequest) returns (Status);
 
-  rpc DeleteAppsV1NamespacedControllerRevision (DeleteAppsV1NamespacedControllerRevisionRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteAppsV1NamespacedControllerRevision (DeleteAppsV1NamespacedControllerRevisionRequest) returns (Status);
 
-  rpc DeleteAppsV1NamespacedDaemonSet (DeleteAppsV1NamespacedDaemonSetRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteAppsV1NamespacedDaemonSet (DeleteAppsV1NamespacedDaemonSetRequest) returns (Status);
 
-  rpc DeleteAppsV1NamespacedDeployment (DeleteAppsV1NamespacedDeploymentRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteAppsV1NamespacedDeployment (DeleteAppsV1NamespacedDeploymentRequest) returns (Status);
 
-  rpc DeleteAppsV1NamespacedReplicaSet (DeleteAppsV1NamespacedReplicaSetRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteAppsV1NamespacedReplicaSet (DeleteAppsV1NamespacedReplicaSetRequest) returns (Status);
 
-  rpc DeleteAppsV1NamespacedStatefulSet (DeleteAppsV1NamespacedStatefulSetRequest) returns (IoK8sApimachineryPkgApisMetaV1Status);
+  rpc DeleteAppsV1NamespacedStatefulSet (DeleteAppsV1NamespacedStatefulSetRequest) returns (Status);
 
-  rpc GetAppsV1APIResources (google.protobuf.Empty) returns (IoK8sApimachineryPkgApisMetaV1APIResourceList);
+  rpc GetAppsV1APIResources (google.protobuf.Empty) returns (APIResourceList);
 
-  rpc ListAppsV1ControllerRevisionForAllNamespaces (ListAppsV1ControllerRevisionForAllNamespacesRequest) returns (IoK8sApiAppsV1ControllerRevisionList);
+  rpc ListAppsV1ControllerRevisionForAllNamespaces (ListAppsV1ControllerRevisionForAllNamespacesRequest) returns (ControllerRevisionList);
 
-  rpc ListAppsV1DaemonSetForAllNamespaces (ListAppsV1DaemonSetForAllNamespacesRequest) returns (IoK8sApiAppsV1DaemonSetList);
+  rpc ListAppsV1DaemonSetForAllNamespaces (ListAppsV1DaemonSetForAllNamespacesRequest) returns (DaemonSetList);
 
-  rpc ListAppsV1DeploymentForAllNamespaces (ListAppsV1DeploymentForAllNamespacesRequest) returns (IoK8sApiAppsV1DeploymentList);
+  rpc ListAppsV1DeploymentForAllNamespaces (ListAppsV1DeploymentForAllNamespacesRequest) returns (DeploymentList);
 
-  rpc ListAppsV1NamespacedControllerRevision (ListAppsV1NamespacedControllerRevisionRequest) returns (IoK8sApiAppsV1ControllerRevisionList);
+  rpc ListAppsV1NamespacedControllerRevision (ListAppsV1NamespacedControllerRevisionRequest) returns (ControllerRevisionList);
 
-  rpc ListAppsV1NamespacedDaemonSet (ListAppsV1NamespacedDaemonSetRequest) returns (IoK8sApiAppsV1DaemonSetList);
+  rpc ListAppsV1NamespacedDaemonSet (ListAppsV1NamespacedDaemonSetRequest) returns (DaemonSetList);
 
-  rpc ListAppsV1NamespacedDeployment (ListAppsV1NamespacedDeploymentRequest) returns (IoK8sApiAppsV1DeploymentList);
+  rpc ListAppsV1NamespacedDeployment (ListAppsV1NamespacedDeploymentRequest) returns (DeploymentList);
 
-  rpc ListAppsV1NamespacedReplicaSet (ListAppsV1NamespacedReplicaSetRequest) returns (IoK8sApiAppsV1ReplicaSetList);
+  rpc ListAppsV1NamespacedReplicaSet (ListAppsV1NamespacedReplicaSetRequest) returns (ReplicaSetList);
 
-  rpc ListAppsV1NamespacedStatefulSet (ListAppsV1NamespacedStatefulSetRequest) returns (IoK8sApiAppsV1StatefulSetList);
+  rpc ListAppsV1NamespacedStatefulSet (ListAppsV1NamespacedStatefulSetRequest) returns (StatefulSetList);
 
-  rpc ListAppsV1ReplicaSetForAllNamespaces (ListAppsV1ReplicaSetForAllNamespacesRequest) returns (IoK8sApiAppsV1ReplicaSetList);
+  rpc ListAppsV1ReplicaSetForAllNamespaces (ListAppsV1ReplicaSetForAllNamespacesRequest) returns (ReplicaSetList);
 
-  rpc ListAppsV1StatefulSetForAllNamespaces (ListAppsV1StatefulSetForAllNamespacesRequest) returns (IoK8sApiAppsV1StatefulSetList);
+  rpc ListAppsV1StatefulSetForAllNamespaces (ListAppsV1StatefulSetForAllNamespacesRequest) returns (StatefulSetList);
 
-  rpc PatchAppsV1NamespacedControllerRevision (PatchAppsV1NamespacedControllerRevisionRequest) returns (IoK8sApiAppsV1ControllerRevision);
+  rpc PatchAppsV1NamespacedControllerRevision (PatchAppsV1NamespacedControllerRevisionRequest) returns (ControllerRevision);
 
-  rpc PatchAppsV1NamespacedDaemonSet (PatchAppsV1NamespacedDaemonSetRequest) returns (IoK8sApiAppsV1DaemonSet);
+  rpc PatchAppsV1NamespacedDaemonSet (PatchAppsV1NamespacedDaemonSetRequest) returns (DaemonSet);
 
-  rpc PatchAppsV1NamespacedDaemonSetStatus (PatchAppsV1NamespacedDaemonSetStatusRequest) returns (IoK8sApiAppsV1DaemonSet);
+  rpc PatchAppsV1NamespacedDaemonSetStatus (PatchAppsV1NamespacedDaemonSetStatusRequest) returns (DaemonSet);
 
-  rpc PatchAppsV1NamespacedDeployment (PatchAppsV1NamespacedDeploymentRequest) returns (IoK8sApiAppsV1Deployment);
+  rpc PatchAppsV1NamespacedDeployment (PatchAppsV1NamespacedDeploymentRequest) returns (Deployment);
 
   rpc PatchAppsV1NamespacedDeploymentScale (PatchAppsV1NamespacedDeploymentScaleRequest) returns (IoK8sApiAutoscalingV1Scale);
 
-  rpc PatchAppsV1NamespacedDeploymentStatus (PatchAppsV1NamespacedDeploymentStatusRequest) returns (IoK8sApiAppsV1Deployment);
+  rpc PatchAppsV1NamespacedDeploymentStatus (PatchAppsV1NamespacedDeploymentStatusRequest) returns (Deployment);
 
-  rpc PatchAppsV1NamespacedReplicaSet (PatchAppsV1NamespacedReplicaSetRequest) returns (IoK8sApiAppsV1ReplicaSet);
+  rpc PatchAppsV1NamespacedReplicaSet (PatchAppsV1NamespacedReplicaSetRequest) returns (ReplicaSet);
 
   rpc PatchAppsV1NamespacedReplicaSetScale (PatchAppsV1NamespacedReplicaSetScaleRequest) returns (IoK8sApiAutoscalingV1Scale);
 
-  rpc PatchAppsV1NamespacedReplicaSetStatus (PatchAppsV1NamespacedReplicaSetStatusRequest) returns (IoK8sApiAppsV1ReplicaSet);
+  rpc PatchAppsV1NamespacedReplicaSetStatus (PatchAppsV1NamespacedReplicaSetStatusRequest) returns (ReplicaSet);
 
-  rpc PatchAppsV1NamespacedStatefulSet (PatchAppsV1NamespacedStatefulSetRequest) returns (IoK8sApiAppsV1StatefulSet);
+  rpc PatchAppsV1NamespacedStatefulSet (PatchAppsV1NamespacedStatefulSetRequest) returns (StatefulSet);
 
   rpc PatchAppsV1NamespacedStatefulSetScale (PatchAppsV1NamespacedStatefulSetScaleRequest) returns (IoK8sApiAutoscalingV1Scale);
 
-  rpc PatchAppsV1NamespacedStatefulSetStatus (PatchAppsV1NamespacedStatefulSetStatusRequest) returns (IoK8sApiAppsV1StatefulSet);
+  rpc PatchAppsV1NamespacedStatefulSetStatus (PatchAppsV1NamespacedStatefulSetStatusRequest) returns (StatefulSet);
 
-  rpc ReadAppsV1NamespacedControllerRevision (ReadAppsV1NamespacedControllerRevisionRequest) returns (IoK8sApiAppsV1ControllerRevision);
+  rpc ReadAppsV1NamespacedControllerRevision (ReadAppsV1NamespacedControllerRevisionRequest) returns (ControllerRevision);
 
-  rpc ReadAppsV1NamespacedDaemonSet (ReadAppsV1NamespacedDaemonSetRequest) returns (IoK8sApiAppsV1DaemonSet);
+  rpc ReadAppsV1NamespacedDaemonSet (ReadAppsV1NamespacedDaemonSetRequest) returns (DaemonSet);
 
-  rpc ReadAppsV1NamespacedDaemonSetStatus (ReadAppsV1NamespacedDaemonSetStatusRequest) returns (IoK8sApiAppsV1DaemonSet);
+  rpc ReadAppsV1NamespacedDaemonSetStatus (ReadAppsV1NamespacedDaemonSetStatusRequest) returns (DaemonSet);
 
-  rpc ReadAppsV1NamespacedDeployment (ReadAppsV1NamespacedDeploymentRequest) returns (IoK8sApiAppsV1Deployment);
+  rpc ReadAppsV1NamespacedDeployment (ReadAppsV1NamespacedDeploymentRequest) returns (Deployment);
 
   rpc ReadAppsV1NamespacedDeploymentScale (ReadAppsV1NamespacedDeploymentScaleRequest) returns (IoK8sApiAutoscalingV1Scale);
 
-  rpc ReadAppsV1NamespacedDeploymentStatus (ReadAppsV1NamespacedDeploymentStatusRequest) returns (IoK8sApiAppsV1Deployment);
+  rpc ReadAppsV1NamespacedDeploymentStatus (ReadAppsV1NamespacedDeploymentStatusRequest) returns (Deployment);
 
-  rpc ReadAppsV1NamespacedReplicaSet (ReadAppsV1NamespacedReplicaSetRequest) returns (IoK8sApiAppsV1ReplicaSet);
+  rpc ReadAppsV1NamespacedReplicaSet (ReadAppsV1NamespacedReplicaSetRequest) returns (ReplicaSet);
 
   rpc ReadAppsV1NamespacedReplicaSetScale (ReadAppsV1NamespacedReplicaSetScaleRequest) returns (IoK8sApiAutoscalingV1Scale);
 
-  rpc ReadAppsV1NamespacedReplicaSetStatus (ReadAppsV1NamespacedReplicaSetStatusRequest) returns (IoK8sApiAppsV1ReplicaSet);
+  rpc ReadAppsV1NamespacedReplicaSetStatus (ReadAppsV1NamespacedReplicaSetStatusRequest) returns (ReplicaSet);
 
-  rpc ReadAppsV1NamespacedStatefulSet (ReadAppsV1NamespacedStatefulSetRequest) returns (IoK8sApiAppsV1StatefulSet);
+  rpc ReadAppsV1NamespacedStatefulSet (ReadAppsV1NamespacedStatefulSetRequest) returns (StatefulSet);
 
   rpc ReadAppsV1NamespacedStatefulSetScale (ReadAppsV1NamespacedStatefulSetScaleRequest) returns (IoK8sApiAutoscalingV1Scale);
 
-  rpc ReadAppsV1NamespacedStatefulSetStatus (ReadAppsV1NamespacedStatefulSetStatusRequest) returns (IoK8sApiAppsV1StatefulSet);
+  rpc ReadAppsV1NamespacedStatefulSetStatus (ReadAppsV1NamespacedStatefulSetStatusRequest) returns (StatefulSet);
 
-  rpc ReplaceAppsV1NamespacedControllerRevision (ReplaceAppsV1NamespacedControllerRevisionRequest) returns (IoK8sApiAppsV1ControllerRevision);
+  rpc ReplaceAppsV1NamespacedControllerRevision (ReplaceAppsV1NamespacedControllerRevisionRequest) returns (ControllerRevision);
 
-  rpc ReplaceAppsV1NamespacedDaemonSet (ReplaceAppsV1NamespacedDaemonSetRequest) returns (IoK8sApiAppsV1DaemonSet);
+  rpc ReplaceAppsV1NamespacedDaemonSet (ReplaceAppsV1NamespacedDaemonSetRequest) returns (DaemonSet);
 
-  rpc ReplaceAppsV1NamespacedDaemonSetStatus (ReplaceAppsV1NamespacedDaemonSetStatusRequest) returns (IoK8sApiAppsV1DaemonSet);
+  rpc ReplaceAppsV1NamespacedDaemonSetStatus (ReplaceAppsV1NamespacedDaemonSetStatusRequest) returns (DaemonSet);
 
-  rpc ReplaceAppsV1NamespacedDeployment (ReplaceAppsV1NamespacedDeploymentRequest) returns (IoK8sApiAppsV1Deployment);
+  rpc ReplaceAppsV1NamespacedDeployment (ReplaceAppsV1NamespacedDeploymentRequest) returns (Deployment);
 
   rpc ReplaceAppsV1NamespacedDeploymentScale (ReplaceAppsV1NamespacedDeploymentScaleRequest) returns (IoK8sApiAutoscalingV1Scale);
 
-  rpc ReplaceAppsV1NamespacedDeploymentStatus (ReplaceAppsV1NamespacedDeploymentStatusRequest) returns (IoK8sApiAppsV1Deployment);
+  rpc ReplaceAppsV1NamespacedDeploymentStatus (ReplaceAppsV1NamespacedDeploymentStatusRequest) returns (Deployment);
 
-  rpc ReplaceAppsV1NamespacedReplicaSet (ReplaceAppsV1NamespacedReplicaSetRequest) returns (IoK8sApiAppsV1ReplicaSet);
+  rpc ReplaceAppsV1NamespacedReplicaSet (ReplaceAppsV1NamespacedReplicaSetRequest) returns (ReplicaSet);
 
   rpc ReplaceAppsV1NamespacedReplicaSetScale (ReplaceAppsV1NamespacedReplicaSetScaleRequest) returns (IoK8sApiAutoscalingV1Scale);
 
-  rpc ReplaceAppsV1NamespacedReplicaSetStatus (ReplaceAppsV1NamespacedReplicaSetStatusRequest) returns (IoK8sApiAppsV1ReplicaSet);
+  rpc ReplaceAppsV1NamespacedReplicaSetStatus (ReplaceAppsV1NamespacedReplicaSetStatusRequest) returns (ReplicaSet);
 
-  rpc ReplaceAppsV1NamespacedStatefulSet (ReplaceAppsV1NamespacedStatefulSetRequest) returns (IoK8sApiAppsV1StatefulSet);
+  rpc ReplaceAppsV1NamespacedStatefulSet (ReplaceAppsV1NamespacedStatefulSetRequest) returns (StatefulSet);
 
   rpc ReplaceAppsV1NamespacedStatefulSetScale (ReplaceAppsV1NamespacedStatefulSetScaleRequest) returns (IoK8sApiAutoscalingV1Scale);
 
-  rpc ReplaceAppsV1NamespacedStatefulSetStatus (ReplaceAppsV1NamespacedStatefulSetStatusRequest) returns (IoK8sApiAppsV1StatefulSet);
+  rpc ReplaceAppsV1NamespacedStatefulSetStatus (ReplaceAppsV1NamespacedStatefulSetStatusRequest) returns (StatefulSet);
 
-  rpc WatchAppsV1ControllerRevisionListForAllNamespaces (WatchAppsV1ControllerRevisionListForAllNamespacesRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1ControllerRevisionListForAllNamespaces (WatchAppsV1ControllerRevisionListForAllNamespacesRequest) returns (WatchEvent);
 
-  rpc WatchAppsV1DaemonSetListForAllNamespaces (WatchAppsV1DaemonSetListForAllNamespacesRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1DaemonSetListForAllNamespaces (WatchAppsV1DaemonSetListForAllNamespacesRequest) returns (WatchEvent);
 
-  rpc WatchAppsV1DeploymentListForAllNamespaces (WatchAppsV1DeploymentListForAllNamespacesRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1DeploymentListForAllNamespaces (WatchAppsV1DeploymentListForAllNamespacesRequest) returns (WatchEvent);
 
-  rpc WatchAppsV1NamespacedControllerRevision (WatchAppsV1NamespacedControllerRevisionRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1NamespacedControllerRevision (WatchAppsV1NamespacedControllerRevisionRequest) returns (WatchEvent);
 
-  rpc WatchAppsV1NamespacedControllerRevisionList (WatchAppsV1NamespacedControllerRevisionListRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1NamespacedControllerRevisionList (WatchAppsV1NamespacedControllerRevisionListRequest) returns (WatchEvent);
 
-  rpc WatchAppsV1NamespacedDaemonSet (WatchAppsV1NamespacedDaemonSetRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1NamespacedDaemonSet (WatchAppsV1NamespacedDaemonSetRequest) returns (WatchEvent);
 
-  rpc WatchAppsV1NamespacedDaemonSetList (WatchAppsV1NamespacedDaemonSetListRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1NamespacedDaemonSetList (WatchAppsV1NamespacedDaemonSetListRequest) returns (WatchEvent);
 
-  rpc WatchAppsV1NamespacedDeployment (WatchAppsV1NamespacedDeploymentRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1NamespacedDeployment (WatchAppsV1NamespacedDeploymentRequest) returns (WatchEvent);
 
-  rpc WatchAppsV1NamespacedDeploymentList (WatchAppsV1NamespacedDeploymentListRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1NamespacedDeploymentList (WatchAppsV1NamespacedDeploymentListRequest) returns (WatchEvent);
 
-  rpc WatchAppsV1NamespacedReplicaSet (WatchAppsV1NamespacedReplicaSetRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1NamespacedReplicaSet (WatchAppsV1NamespacedReplicaSetRequest) returns (WatchEvent);
 
-  rpc WatchAppsV1NamespacedReplicaSetList (WatchAppsV1NamespacedReplicaSetListRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1NamespacedReplicaSetList (WatchAppsV1NamespacedReplicaSetListRequest) returns (WatchEvent);
 
-  rpc WatchAppsV1NamespacedStatefulSet (WatchAppsV1NamespacedStatefulSetRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1NamespacedStatefulSet (WatchAppsV1NamespacedStatefulSetRequest) returns (WatchEvent);
 
-  rpc WatchAppsV1NamespacedStatefulSetList (WatchAppsV1NamespacedStatefulSetListRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1NamespacedStatefulSetList (WatchAppsV1NamespacedStatefulSetListRequest) returns (WatchEvent);
 
-  rpc WatchAppsV1ReplicaSetListForAllNamespaces (WatchAppsV1ReplicaSetListForAllNamespacesRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1ReplicaSetListForAllNamespaces (WatchAppsV1ReplicaSetListForAllNamespacesRequest) returns (WatchEvent);
 
-  rpc WatchAppsV1StatefulSetListForAllNamespaces (WatchAppsV1StatefulSetListForAllNamespacesRequest) returns (IoK8sApimachineryPkgApisMetaV1WatchEvent);
+  rpc WatchAppsV1StatefulSetListForAllNamespaces (WatchAppsV1StatefulSetListForAllNamespacesRequest) returns (WatchEvent);
 
 }
 
@@ -189,7 +175,7 @@ message CreateAppsV1NamespacedControllerRevisionRequest {
   string fieldManager = 4;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields, provided that the `ServerSideFieldValidation` feature gate is also enabled. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23 and is the default behavior when the `ServerSideFieldValidation` feature gate is disabled. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default when the `ServerSideFieldValidation` feature gate is enabled. - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 5;
-  IoK8sApiAppsV1ControllerRevision ioK8sApiAppsV1ControllerRevision = 6;
+  ControllerRevision ioK8sApiAppsV1ControllerRevision = 6;
 
 }
 
@@ -204,7 +190,7 @@ message CreateAppsV1NamespacedDaemonSetRequest {
   string fieldManager = 4;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields, provided that the `ServerSideFieldValidation` feature gate is also enabled. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23 and is the default behavior when the `ServerSideFieldValidation` feature gate is disabled. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default when the `ServerSideFieldValidation` feature gate is enabled. - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 5;
-  IoK8sApiAppsV1DaemonSet ioK8sApiAppsV1DaemonSet = 6;
+  DaemonSet ioK8sApiAppsV1DaemonSet = 6;
 
 }
 
@@ -219,7 +205,7 @@ message CreateAppsV1NamespacedDeploymentRequest {
   string fieldManager = 4;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields, provided that the `ServerSideFieldValidation` feature gate is also enabled. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23 and is the default behavior when the `ServerSideFieldValidation` feature gate is disabled. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default when the `ServerSideFieldValidation` feature gate is enabled. - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 5;
-  IoK8sApiAppsV1Deployment ioK8sApiAppsV1Deployment = 6;
+  Deployment ioK8sApiAppsV1Deployment = 6;
 
 }
 
@@ -234,7 +220,7 @@ message CreateAppsV1NamespacedReplicaSetRequest {
   string fieldManager = 4;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields, provided that the `ServerSideFieldValidation` feature gate is also enabled. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23 and is the default behavior when the `ServerSideFieldValidation` feature gate is disabled. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default when the `ServerSideFieldValidation` feature gate is enabled. - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 5;
-  IoK8sApiAppsV1ReplicaSet ioK8sApiAppsV1ReplicaSet = 6;
+  ReplicaSet ioK8sApiAppsV1ReplicaSet = 6;
 
 }
 
@@ -249,7 +235,7 @@ message CreateAppsV1NamespacedStatefulSetRequest {
   string fieldManager = 4;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields, provided that the `ServerSideFieldValidation` feature gate is also enabled. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23 and is the default behavior when the `ServerSideFieldValidation` feature gate is disabled. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default when the `ServerSideFieldValidation` feature gate is enabled. - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 5;
-  IoK8sApiAppsV1StatefulSet ioK8sApiAppsV1StatefulSet = 6;
+  StatefulSet ioK8sApiAppsV1StatefulSet = 6;
 
 }
 
@@ -280,7 +266,7 @@ message DeleteAppsV1CollectionNamespacedControllerRevisionRequest {
   string resourceVersionMatch = 12;
   // Timeout for the list/watch call. This limits the duration of the call, regardless of any activity or inactivity.
   int32 timeoutSeconds = 13;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
 
 }
 
@@ -311,7 +297,7 @@ message DeleteAppsV1CollectionNamespacedDaemonSetRequest {
   string resourceVersionMatch = 12;
   // Timeout for the list/watch call. This limits the duration of the call, regardless of any activity or inactivity.
   int32 timeoutSeconds = 13;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
 
 }
 
@@ -342,7 +328,7 @@ message DeleteAppsV1CollectionNamespacedDeploymentRequest {
   string resourceVersionMatch = 12;
   // Timeout for the list/watch call. This limits the duration of the call, regardless of any activity or inactivity.
   int32 timeoutSeconds = 13;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
 
 }
 
@@ -373,7 +359,7 @@ message DeleteAppsV1CollectionNamespacedReplicaSetRequest {
   string resourceVersionMatch = 12;
   // Timeout for the list/watch call. This limits the duration of the call, regardless of any activity or inactivity.
   int32 timeoutSeconds = 13;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
 
 }
 
@@ -404,7 +390,7 @@ message DeleteAppsV1CollectionNamespacedStatefulSetRequest {
   string resourceVersionMatch = 12;
   // Timeout for the list/watch call. This limits the duration of the call, regardless of any activity or inactivity.
   int32 timeoutSeconds = 13;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 14;
 
 }
 
@@ -423,7 +409,7 @@ message DeleteAppsV1NamespacedControllerRevisionRequest {
   bool orphanDependents = 6;
   // Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.
   string propagationPolicy = 7;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
 
 }
 
@@ -442,7 +428,7 @@ message DeleteAppsV1NamespacedDaemonSetRequest {
   bool orphanDependents = 6;
   // Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.
   string propagationPolicy = 7;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
 
 }
 
@@ -461,7 +447,7 @@ message DeleteAppsV1NamespacedDeploymentRequest {
   bool orphanDependents = 6;
   // Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.
   string propagationPolicy = 7;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
 
 }
 
@@ -480,7 +466,7 @@ message DeleteAppsV1NamespacedReplicaSetRequest {
   bool orphanDependents = 6;
   // Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.
   string propagationPolicy = 7;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
 
 }
 
@@ -499,7 +485,7 @@ message DeleteAppsV1NamespacedStatefulSetRequest {
   bool orphanDependents = 6;
   // Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.
   string propagationPolicy = 7;
-  IoK8sApimachineryPkgApisMetaV1DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
+  DeleteOptions ioK8sApimachineryPkgApisMetaV1DeleteOptions = 8;
 
 }
 
@@ -1114,7 +1100,7 @@ message ReplaceAppsV1NamespacedControllerRevisionRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields, provided that the `ServerSideFieldValidation` feature gate is also enabled. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23 and is the default behavior when the `ServerSideFieldValidation` feature gate is disabled. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default when the `ServerSideFieldValidation` feature gate is enabled. - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiAppsV1ControllerRevision ioK8sApiAppsV1ControllerRevision = 7;
+  ControllerRevision ioK8sApiAppsV1ControllerRevision = 7;
 
 }
 
@@ -1131,7 +1117,7 @@ message ReplaceAppsV1NamespacedDaemonSetRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields, provided that the `ServerSideFieldValidation` feature gate is also enabled. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23 and is the default behavior when the `ServerSideFieldValidation` feature gate is disabled. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default when the `ServerSideFieldValidation` feature gate is enabled. - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiAppsV1DaemonSet ioK8sApiAppsV1DaemonSet = 7;
+  DaemonSet ioK8sApiAppsV1DaemonSet = 7;
 
 }
 
@@ -1148,7 +1134,7 @@ message ReplaceAppsV1NamespacedDaemonSetStatusRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields, provided that the `ServerSideFieldValidation` feature gate is also enabled. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23 and is the default behavior when the `ServerSideFieldValidation` feature gate is disabled. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default when the `ServerSideFieldValidation` feature gate is enabled. - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiAppsV1DaemonSet ioK8sApiAppsV1DaemonSet = 7;
+  DaemonSet ioK8sApiAppsV1DaemonSet = 7;
 
 }
 
@@ -1165,7 +1151,7 @@ message ReplaceAppsV1NamespacedDeploymentRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields, provided that the `ServerSideFieldValidation` feature gate is also enabled. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23 and is the default behavior when the `ServerSideFieldValidation` feature gate is disabled. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default when the `ServerSideFieldValidation` feature gate is enabled. - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiAppsV1Deployment ioK8sApiAppsV1Deployment = 7;
+  Deployment ioK8sApiAppsV1Deployment = 7;
 
 }
 
@@ -1199,7 +1185,7 @@ message ReplaceAppsV1NamespacedDeploymentStatusRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields, provided that the `ServerSideFieldValidation` feature gate is also enabled. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23 and is the default behavior when the `ServerSideFieldValidation` feature gate is disabled. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default when the `ServerSideFieldValidation` feature gate is enabled. - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiAppsV1Deployment ioK8sApiAppsV1Deployment = 7;
+  Deployment ioK8sApiAppsV1Deployment = 7;
 
 }
 
@@ -1216,7 +1202,7 @@ message ReplaceAppsV1NamespacedReplicaSetRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields, provided that the `ServerSideFieldValidation` feature gate is also enabled. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23 and is the default behavior when the `ServerSideFieldValidation` feature gate is disabled. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default when the `ServerSideFieldValidation` feature gate is enabled. - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiAppsV1ReplicaSet ioK8sApiAppsV1ReplicaSet = 7;
+  ReplicaSet ioK8sApiAppsV1ReplicaSet = 7;
 
 }
 
@@ -1250,7 +1236,7 @@ message ReplaceAppsV1NamespacedReplicaSetStatusRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields, provided that the `ServerSideFieldValidation` feature gate is also enabled. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23 and is the default behavior when the `ServerSideFieldValidation` feature gate is disabled. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default when the `ServerSideFieldValidation` feature gate is enabled. - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiAppsV1ReplicaSet ioK8sApiAppsV1ReplicaSet = 7;
+  ReplicaSet ioK8sApiAppsV1ReplicaSet = 7;
 
 }
 
@@ -1267,7 +1253,7 @@ message ReplaceAppsV1NamespacedStatefulSetRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields, provided that the `ServerSideFieldValidation` feature gate is also enabled. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23 and is the default behavior when the `ServerSideFieldValidation` feature gate is disabled. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default when the `ServerSideFieldValidation` feature gate is enabled. - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiAppsV1StatefulSet ioK8sApiAppsV1StatefulSet = 7;
+  StatefulSet ioK8sApiAppsV1StatefulSet = 7;
 
 }
 
@@ -1301,7 +1287,7 @@ message ReplaceAppsV1NamespacedStatefulSetStatusRequest {
   string fieldManager = 5;
   // fieldValidation instructs the server on how to handle objects in the request (POST/PUT/PATCH) containing unknown or duplicate fields, provided that the `ServerSideFieldValidation` feature gate is also enabled. Valid values are: - Ignore: This will ignore any unknown fields that are silently dropped from the object, and will ignore all but the last duplicate field that the decoder encounters. This is the default behavior prior to v1.23 and is the default behavior when the `ServerSideFieldValidation` feature gate is disabled. - Warn: This will send a warning via the standard warning response header for each unknown field that is dropped from the object, and for each duplicate field that is encountered. The request will still succeed if there are no other errors, and will only persist the last of any duplicate fields. This is the default when the `ServerSideFieldValidation` feature gate is enabled. - Strict: This will fail the request with a BadRequest error if any unknown fields would be dropped from the object, or if any duplicate fields are present. The error returned from the server will contain all unknown and duplicate fields encountered.
   string fieldValidation = 6;
-  IoK8sApiAppsV1StatefulSet ioK8sApiAppsV1StatefulSet = 7;
+  StatefulSet ioK8sApiAppsV1StatefulSet = 7;
 
 }
 
