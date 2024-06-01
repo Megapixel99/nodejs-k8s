@@ -229,7 +229,7 @@ module.exports = {
       .then((item) => item ? item.delete() : Promise.resolve())
       .then((item) => {
         if (item) {
-          return res.status(200).send(new Model(item).successfulStatus());
+          return res.status(200).send(new Model(item).toJSON());
         }
         return res.status(404).send(Model.notFoundStatus(req.params.name));
       })
