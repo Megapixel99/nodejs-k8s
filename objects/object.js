@@ -66,7 +66,11 @@ class K8Object {
       if (existingObj) {
         throw this.alreadyExistsStatus(config.metadata.name);
       }
-      return new this.Model(config).save();
+      try {
+        return new this.Model(config).save();
+      } catch (e) {
+        Model.unprocessableContentStatus();
+      }
     })
     .then((obj) => {
       new this(obj).events().emit('created');
