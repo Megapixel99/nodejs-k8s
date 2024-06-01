@@ -21,7 +21,7 @@ router.get(routes.map((e) => `${e}/:name/log`), validSchema(apiAppsV1OpenApiV3),
   return res.status(404).send(Pod.notFoundStatus(req.params.name));
 });
 
-router.get(['/api/v1/pods', ...routes], validSchema(apiV1OpenApiV3), general.find(Pod), general.find(Pod), general.format(Pod), general.find(Pod), general.list(Pod), general.find(Pod));
+router.get(['/api/v1/pods', ...routes], validSchema(apiV1OpenApiV3), general.find(Pod), general.find(Pod), general.format(Pod), general.list(Pod));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(Pod));
 
