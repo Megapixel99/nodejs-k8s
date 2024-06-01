@@ -1260,7 +1260,10 @@ const deploymentSchema = Schema({
       type: Number,
       default: 0
     },
-    paused: Boolean,
+    paused: {
+      type: Boolean,
+      default: false,
+    },
     progressDeadlineSeconds: {
       type: Number,
       default: 0
@@ -1999,7 +2002,10 @@ const replicationControllerSchema = Schema({
       type: Number,
       default: 0
     },
-    selector: labelSelector,
+    selector: {
+      type: Map,
+      of: String
+    },
     template: pod,
   },
   status: {
