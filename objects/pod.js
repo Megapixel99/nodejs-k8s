@@ -141,7 +141,7 @@ class Pod extends K8Object {
         });
       })
     });
-    return p;
+    return p.toJSON();
   }
 
   events() {

@@ -16,10 +16,6 @@ class CertificateSigningRequest extends K8Object {
   static kind = 'CertificateSigningRequest';
   static Model = Model;
 
-  static create(config) {
-    return super.create(config, { 'metadata.name': this.metadata.name });
-  }
-
   static async table (queryOptions = {}) {
     return {
         "kind": "Table",

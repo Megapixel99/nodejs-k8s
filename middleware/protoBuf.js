@@ -14,6 +14,8 @@ module.exports = {
       ...typeMeta,
       ...dataInfo
     };
+    console.log('Request Body:');
+    console.log(req.body);
     next();
   },
   toProtoBuf: (data, operationId, protobufTypes) => {

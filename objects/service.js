@@ -154,6 +154,9 @@ class Service extends K8Object {
               });
             })
         })
+        .then(() => {
+          return newService.toJSON();
+        })
     });
   }
 

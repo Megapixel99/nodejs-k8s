@@ -46,7 +46,7 @@ class IngressClass extends K8Object {
           .flat()
           .filter((e) => e);
         }));
-      return ingressClass;
+      return ingressClass.toJSON();
     })
   }
 

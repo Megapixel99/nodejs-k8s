@@ -39,7 +39,7 @@ class Secret extends K8Object {
       }
       return new Model(config).save();
     })
-    .then((secret) => new Secret(secret));
+    .then((secret) => new Secret(secret).toJSON());
   }
 
   static async table (queryOptions = {}) {
