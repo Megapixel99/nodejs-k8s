@@ -85,7 +85,7 @@ class Pod extends K8Object {
                 if ((await isContainerRunning(podName)).object === true) {
                   clearInterval(inter);
                   newPod.events().emit('ContainersReady', newPod);
-                  newPod.update({
+                  newPod.patch({
                     $push: {
                       'status.conditions': [{
                         type: "ContainersReady",
@@ -122,7 +122,7 @@ class Pod extends K8Object {
       .then(() => {
         newPod.events().emit('Ready', newPod);
         newPod.events().emit('PodScheduled', newPod);
-        return newPod.update({
+        return newPod.patch({
           $push: {
             'status.conditions': [{
               type: "Ready",

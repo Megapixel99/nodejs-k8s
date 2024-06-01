@@ -1,3 +1,4 @@
+const { DateTime } = require('luxon');
 const EventEmitter = require('events');
 const Status = require('./status.js');
 
@@ -66,10 +67,11 @@ class K8Object {
       if (existingObj) {
         throw this.alreadyExistsStatus(config.metadata.name);
       }
+      config.metadata.creationTimestamp = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
       try {
         return new this.Model(config).save();
       } catch (e) {
-        Model.unprocessableContentStatus();
+        throw Model.unprocessableContentStatus();
       }
     })
     .then((obj) => {
@@ -91,7 +93,7 @@ class K8Object {
     });
   }
 
-  update(updateObj, searchQ, options = {}) {
+  patch(updateObj, searchQ, options = {}) {
     if (!searchQ) {
       searchQ = { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace };
     }
@@ -274,10 +276,10 @@ class K8Object {
     });
   }
 
-  static unprocessableContentStatus(kind = this.kind, name = undefined, group = undefined, message = undefined) {
+  static unprocessableContentStatus(kind = this.kind, name = undefined, group = undefined, message = undefined, reason = "UnprocessableContent") {
     return new Status({
       status: 'Failure',
-      reason: 'UnprocessableContent',
+      reason,
       code: 422,
       message,
       details: {

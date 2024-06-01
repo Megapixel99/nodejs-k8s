@@ -163,7 +163,7 @@ class Namespace extends K8Object {
         })
         .then((configMap) => {
           // configMap.data.set('ca.crt', certs.join('\n'));
-          return new ConfigMap(configMap).update({ data: configMap.data });
+          return new ConfigMap(configMap).patch({ data: configMap.data });
         })
       ])
       .then(() => new Model(config).save({ validateBeforeSave: false }))

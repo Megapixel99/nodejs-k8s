@@ -98,14 +98,14 @@ class Endpoints extends K8Object {
       return obj;
     }
     podEvents.on('NewContainer', (podRef) => {
-      this.update(
+      this.patch(
       null,
       {
         $push: this.subsets.map(notReadyMap),
       });
     });
     podEvents.on('Ready', (pod) => {
-      this.update(
+      this.patch(
       null,
       {
         $push: this.subsets.map((s, i) => readyMap(
@@ -120,7 +120,7 @@ class Endpoints extends K8Object {
       this.addPod(p.status.podIP);
     });
     podEvents.on('Delete', (pod) => {
-      this.update(
+      this.patch(
       null,
       {
         $pull: this.subsets.map((s, i) => notReadyMap(

@@ -44,7 +44,7 @@ class ReplicationController extends K8Object {
             'status.replicas': -1,
           }
         }
-        return super.update(update);
+        return super.patch(update);
       }));
     })
   }
@@ -74,7 +74,7 @@ class ReplicationController extends K8Object {
     let arr = new Array(numPods ?? this.spec.replicas).fill(
       Promise.all([
         Pod.create(this.spec.template),
-        super.update({
+        super.patch({
           $inc: {
             'status.replicas': 1,
           }
@@ -94,7 +94,7 @@ class ReplicationController extends K8Object {
             'spec.minReadySeconds': minReadySeconds,
           };
         }
-        return super.update(update);
+        return super.patch(update);
       })
     );
     return Promise.all(arr);

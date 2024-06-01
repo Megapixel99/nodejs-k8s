@@ -46,8 +46,12 @@ class Deployment extends K8Object {
                 name: `${newDeployment.metadata.name}-1`
               },
               spec: {
-                minReadySeconds: Infinity,
                 ...newDeployment.spec,
+                selector: {
+                  app: newDeployment.metadata.name,
+                  deployment: `${newDeployment.metadata.name}-1`,
+                },
+                minReadySeconds: Infinity,
               },
             });
           })
@@ -60,7 +64,7 @@ class Deployment extends K8Object {
 
   update(updateObj, searchQ) {
     return Promise.all([
-      super.update(updateObj, searchQ),
+      super.patch(updateObj, searchQ),
       ReplicationController.find(
         { 'metadata.name': { $regex: `^${this.metadata.name}` } , 'metadata.namespace': this.metadata.namespace },
         { sort: { 'created_at': 1 } }
@@ -77,8 +81,12 @@ class Deployment extends K8Object {
               name: `${newDeployment.metadata.name}-${rc.length + 1}`
             },
             spec: {
-              minReadySeconds: 0,
               ...newDeployment.spec,
+              selector: {
+                app: newDeployment.metadata.name,
+                deployment: `${newDeployment.metadata.name}-${rc.length + 1}`,
+              },
+              minReadySeconds: Infinity,
             },
           });
           newDeployment.rollout();
@@ -209,7 +217,7 @@ class Deployment extends K8Object {
           .fill(0)
           .map(() => {
             newPods += 1;
-            this.update({
+            this.patch({
               $set: {
                 'conditions.$.type': "Progressing",
                 'conditions.$.status': "True",
@@ -224,7 +232,7 @@ class Deployment extends K8Object {
             return rc.createPods(1)
             .then((pods) => {
               return Promise.all([
-                this.update({
+                this.patch({
                   $inc: {
                     'status.replicas': 1,
                     'status.readyReplicas': 1,
@@ -252,7 +260,7 @@ class Deployment extends K8Object {
             .then(() => rc.deletePods(1))
             .then(() => {
               return Promise.all([
-                this.update({
+                this.patch({
                   $inc: {
                     'status.replicas': -1,
                     'status.readyReplicas': -1,

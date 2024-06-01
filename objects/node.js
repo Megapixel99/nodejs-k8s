@@ -2,7 +2,7 @@ const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const { Node: Model } = require('../database/models.js');
 const Namespace = require('./namespace.js');
-const ReplicationController = require('./replicationController.js');
+const Deployment = require('./deployment.js');
 const Service = require('./service.js');
 const {
   duration,
@@ -50,13 +50,24 @@ class Node extends K8Object {
           await Promise.all([
             Namespace.findOne({ 'metadata.name': 'kube-system' })
               .then((namespace) => namespace ? Promise.resolve() : createNamespace('kube-system'))
-              .then(() => ReplicationController.find({ 'metadata.name': { $regex: `^core-dns` } , 'metadata.namespace': 'kube-system' }))
-              .then(async (rc) => {
-                let replicationController = await ReplicationController.create({
+              .then(() => Deployment.find({ 'metadata.name': { $regex: `^core-dns` } , 'metadata.namespace': 'kube-system' }))
+              .then((deployment) => {
+                if (deployment) {
+                  return deployment;
+                }
+                return Deployment.create({
                   metadata: {
                     name: `core-dns-${rc.length + 1}`,
+                    namespace: 'kube-system',
                   },
                   spec: {
+                    strategy: {
+                      rollingUpdate: {
+                        maxSurge: '25%',
+                        maxUnavailable: '25%',
+                      },
+                      type: 'RollingUpdate',
+                    },
                     template: {
                       metadata: {
                         name: 'core-dns',
@@ -85,7 +96,6 @@ class Node extends K8Object {
                     }
                   }
                 });
-                return replicationController.createPods(1);
               }),
             Namespace.findOne({ 'metadata.name': 'default' })
               .then((namespace) => namespace ? Promise.resolve() : createNamespace('default'))
@@ -107,7 +117,6 @@ class Node extends K8Object {
                     ports: [],
                     selector: {
                       app: null,
-                      deploymentconfig: null
                     }
                   }
                 });
@@ -120,7 +129,7 @@ class Node extends K8Object {
             .catch((err) => {
               throw err;
             });
-          node.update({
+          node.patch({
             'status.images': [{
               names: [ node.metadata.labels.get('name') ],
               sizeBytes: node.status.capacity.get('ephemeral-storage').match(/[0-9]/g)[0]

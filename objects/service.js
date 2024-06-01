@@ -127,14 +127,14 @@ class Service extends K8Object {
               return getContainerIP(`${endpoints.metadata.name}-${endpoints.metadata.namespace}-loadBalancer`)
               .then((serviceIP) => {
                 let arr = [
-                  new Endpoints(endpoints).update({
+                  new Endpoints(endpoints).patch({
                     $set: {
                       'spec.clusterIPs': [serviceIP],
                     }
                   })
                 ]
                 if (serviceIP) {
-                  return newService.update({
+                  return newService.patch({
                     $set: {
                       'status.status': true,
                       'status.lastTransitionTime': DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
