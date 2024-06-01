@@ -55,7 +55,7 @@ class Pod extends K8Object {
       status: 'True',
       lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
     });
-    new Model(config).save().then((pod) => {
+    return new Model(config).save().then((pod) => {
       let newPod = new Pod(pod);
       newPod.start()
       .then(async (podNames) => {
@@ -252,12 +252,12 @@ class Pod extends K8Object {
   }
 
   delete () {
-    super.delete()
+    return super.delete()
     .then((pod) => pod ? new Pod(pod).stop() : Promise.resolve());
   }
 
   stop() {
-    Promise.all(this.spec.containers.map((e) => {
+    return Promise.all(this.spec.containers.map((e) => {
       return stopContainer(`${this.metadata.generateName}-${e.name}`)
         .catch((err) => {
           if (!err.stderr.includes('No such container') && !err.stderr.includes('No such object')) {
@@ -270,7 +270,9 @@ class Pod extends K8Object {
             throw err;
           }
         })
-    }));
+    })).then(() => {
+      return this.toJSON();
+    });
   }
 
   getEnvVarsFromSecret(secretName) {
