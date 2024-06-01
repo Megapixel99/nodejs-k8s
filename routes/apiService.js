@@ -8,7 +8,7 @@ const routes = [`/apis/${APIService.apiVersion}/apiservices`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(APIService), general.format(APIService), general.raw(APIService));
 
-router.get(['/api/v1/apiservices', ...routes], validSchema(apiV1OpenApiV3), general.find(APIService), general.format(APIService), general.list(APIService));
+router.get([`/apis/${APIService.apiVersion}/apiservices`, ...routes], validSchema(apiV1OpenApiV3), general.find(APIService), general.format(APIService), general.list(APIService));
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(APIService));
 

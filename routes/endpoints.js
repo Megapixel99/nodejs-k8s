@@ -2,22 +2,22 @@ const router = require('express').Router();
 const { Endpoints } = require('../objects');
 const { general, openapi } = require('../middleware');
 
-const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
+const { apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/apis/${Endpoints.apiVersion}/namespaces/:namespace/endpointses`];
+const routes = [`/apis/${Endpoints.apiVersion}/namespaces/:namespace/endpoints`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(Endpoints), general.format(Endpoints), general.raw(Endpoints));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.findOne(Endpoints), general.format(Endpoints), general.raw(Endpoints));
 
-router.get(['/api/v1/endpointses', ...routes], validSchema(apiV1OpenApiV3), general.find(Endpoints), general.format(Endpoints), general.list(Endpoints));
+router.get(['/api/v1/endpoints', ...routes], validSchema(apiV1OpenApiV3), general.find(Endpoints), general.format(Endpoints), general.list(Endpoints));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(Endpoints));
+router.post(routes, validSchema(apiV1OpenApiV3), general.save(Endpoints));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(Endpoints));
+router.put(routes, validSchema(apiV1OpenApiV3), general.update(Endpoints));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(Endpoints));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(Endpoints));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(Endpoints));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.deleteOne(Endpoints));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(Endpoints));
+router.delete(routes, validSchema(apiV1OpenApiV3), general.delete(Endpoints));
 
 module.exports = router;

@@ -2,13 +2,13 @@ const router = require('express').Router();
 const { Pod } = require('../objects');
 const { general, openapi } = require('../middleware');
 
-const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
+const { apiV1OpenApiV3, validSchema } = openapi;
 
 let routes = [`/api/${Pod.apiVersion}/namespaces/:namespace/pods`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(Pod), general.format(Pod), general.raw(Pod));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.findOne(Pod), general.format(Pod), general.raw(Pod));
 
-router.get(routes.map((e) => `${e}/:name/log`), validSchema(apiAppsV1OpenApiV3), (req, res, next) => {
+router.get(routes.map((e) => `${e}/:name/log`), validSchema(apiV1OpenApiV3), (req, res, next) => {
   if (req.query.container) {
     return Pod.findOne({ 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace })
       .then((pod) => {
@@ -23,14 +23,14 @@ router.get(routes.map((e) => `${e}/:name/log`), validSchema(apiAppsV1OpenApiV3),
 
 router.get(['/api/v1/pods', ...routes], validSchema(apiV1OpenApiV3), general.find(Pod), general.find(Pod), general.format(Pod), general.list(Pod));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(Pod));
+router.post(routes, validSchema(apiV1OpenApiV3), general.save(Pod));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(Pod));
+router.put(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.update(Pod));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(Pod));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(Pod));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(Pod));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.deleteOne(Pod));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(Pod));
+router.delete(routes, validSchema(apiV1OpenApiV3), general.delete(Pod));
 
 module.exports = router;
