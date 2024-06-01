@@ -52,7 +52,6 @@ class Node extends K8Object {
               .then((namespace) => namespace ? Promise.resolve() : createNamespace('kube-system'))
               .then(() => ReplicationController.find({ 'metadata.name': { $regex: `^core-dns` } , 'metadata.namespace': 'kube-system' }))
               .then(async (rc) => {
-                console.log(`core-dns-${rc.length + 1}`);
                 let replicationController = await ReplicationController.create({
                   metadata: {
                     name: `core-dns-${rc.length + 1}`,
