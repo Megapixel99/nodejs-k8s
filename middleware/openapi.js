@@ -33,15 +33,16 @@ module.exports = {
            .map((e) => e.charAt(0) === ':' ? `{${e.substring(1, e.length)}}` : e)
            .join('/');
         })
-      console.log(paths);
-      let path = Object.keys(schema.document.paths).find((key) => paths.includes(key));
-      console.log(path);
+      let path = Object.keys(schema.document.paths).find((key) => (req.path.match(/\//g) || []).length === (key.match(/\//g) || []).length && paths.includes(key) && schema.document.paths[key]?.[req.method.toLowerCase()]);
       if (req.headers?.accept?.includes(';')) {
         type = req.headers?.accept?.split(';')?.[0];
       } else if (req.headers?.accept?.includes(',')) {
         type = req.headers?.accept?.split(',')?.[0];
       } else {
         type = req.headers?.accept;
+      }
+      if (!['application/json', 'application/vnd.kubernetes.protobuf', 'application/yaml'].includes(req.headers?.accept)) {
+        type = 'application/json';
       }
       req.operationId = schema.document.paths?.[path]?.[req.method.toLowerCase()].requestBody?.content?.['*/*']?.schema?.['$ref']?.split('.')?.at(-1);
       res.operationId = schema.document.paths?.[path]?.[req.method.toLowerCase()].responses?.['200']?.content?.[type?.trim()]?.schema?.['$ref']?.split('.')?.at(-1);

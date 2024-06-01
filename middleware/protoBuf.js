@@ -45,7 +45,8 @@ module.exports = {
       },
     }
     let encoded = watchEventType.encode(obj).finish();
-    let prefix = Buffer.from([0, 0, 0, 243])
-    return Buffer.concat([prefix, encoded]);
+    // let prefix = Buffer.from([0, 0, 0, 243])
+    // return Buffer.concat([prefix, encoded]);
+    return encoded;
   }
 };

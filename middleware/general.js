@@ -142,19 +142,8 @@ module.exports = {
           query['metadata.name'] = req.params.name;
         }
       }
-      return Model.findOne(query)
-      .then((item) => {
-        if (item) {
-          return res.status(202).send(item);
-        }
-        if (!req.body.metadata?.creationTimestamp || typeof req.body.metadata.creationTimestamp !== 'String') {
-          req.body.metadata.creationTimestamp = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
-        }
-        return Model.create(req.body)
-        .then((item) => {
-          res.status(201).send(item)
-        })
-      })
+      return Model.create(req.body, query)
+      .then((item) => res.status(201).send(item))
       .catch(next);
     };
   },
@@ -171,7 +160,7 @@ module.exports = {
       }
       if (Object.keys(req.body).length > 0) {
         Model.findOne(query)
-        .then((item) => item ? item.update(req.body) : Promise.resolve())
+        .then((item) => item ? item.update(req.body, query) : Promise.resolve())
         .then((item) => {
           if (item) {
             return res.status(201).send(item);
@@ -204,7 +193,7 @@ module.exports = {
       }
       if (Object.keys(req.body).length > 0) {
         Model.findOne(query)
-        .then((item) => item ? item.update(req.body) : Promise.resolve())
+        .then((item) => item ? item.patch(req.body, query) : Promise.resolve())
         .then((item) => {
           if (item) {
             return res.status(201).send(item);
