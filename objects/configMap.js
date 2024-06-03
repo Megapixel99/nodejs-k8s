@@ -21,28 +21,22 @@ class ConfigMap extends K8Object {
   static create(config) {
     const base64RegExp = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
     const isBase64 = (str) => base64RegExp.test(str);
-
-    return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
-    .then((existingConfigMap) => {
-      if (existingConfigMap) {
-        throw this.alreadyExistsStatus(config.metadata.name);
-      }
-      if (config.data) {
-        Object.entries(config.data).forEach(([key, value]) => {
-          if (!isText(null, Buffer.from(value))) {
-            throw this.unprocessableContentStatus(undefined, `Value for ${key} is not UTF-8`);
-          }
-        });
-      }
-      if (config.binaryData) {
-        Object.entries(config.binaryData).forEach(([key, value]) => {
-          if (!isBinary(null, Buffer.from(Buffer.from(value, 'base64').toString('binary'), 'base64'))) {
-            throw this.unprocessableContentStatus(undefined, `Value for ${key} is not Binary`);
-          }
-        });
-      }
-      return new Model(config).save();
-    })
+    let q = { 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace };
+    if (config.data) {
+      Object.entries(config.data).forEach(([key, value]) => {
+        if (!isText(null, Buffer.from(value))) {
+          throw this.unprocessableContentStatus(undefined, `Value for ${key} is not UTF-8`);
+        }
+      });
+    }
+    if (config.binaryData) {
+      Object.entries(config.binaryData).forEach(([key, value]) => {
+        if (!isBinary(null, Buffer.from(Buffer.from(value, 'base64').toString('binary'), 'base64'))) {
+          throw this.unprocessableContentStatus(undefined, `Value for ${key} is not Binary`);
+        }
+      });
+    }
+    return super.create(config, q, { validateBeforeSave: false })
     .then((configMap) => new ConfigMap(configMap));
   }
 

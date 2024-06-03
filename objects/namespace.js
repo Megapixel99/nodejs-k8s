@@ -124,11 +124,8 @@ class Namespace extends K8Object {
     if (!config.metadata.labels) {
       config.metadata.labels = new Map([['name', config.metadata.name]]);
     }
-    return super.findOne({ 'metadata.name': config.metadata.name })
-    .then((existingNamespace) => {
-      if (existingNamespace) {
-        throw super.alreadyExistsStatus(config.metadata.name);
-      }
+    return super.create(config, { 'metadata.name': config.metadata.name }, { validateBeforeSave: false })
+    .then((n) => {
       let genCert = (attrs) => selfsigned.generate(attrs, { keySize: 2048, days: 3650, extensions: [{ name: 'subjectAltName', altNames: [] }] }).cert.trim().replaceAll('\r', '');
       let certs = [
         genCert([{ name: 'commonName', value: 'kube-apiserver-lb-signer' }]),
@@ -136,38 +133,22 @@ class Namespace extends K8Object {
         genCert([{ name: 'commonName', value: 'kube-apiserver-service-network-signer' }]),
       ];
       return Promise.all([
-        ServiceAccount.create({
-          metadata: {
-            name: "builder",
-            namespace: config.metadata.name,
-          }
-        }),
-        ServiceAccount.create({
-          metadata: {
-            name: "default",
-            namespace: config.metadata.name,
-          }
-        }),
-        ServiceAccount.create({
-          metadata: {
-            name: "deployer",
-            namespace: config.metadata.name,
-          }
-        }),
+        ...['builder', 'default', 'deployer']
+          .map((name) => ServiceAccount.create({
+            metadata: {
+              name,
+              namespace: config.metadata.name,
+            }
+          })),
         ConfigMap.create({
           metadata: {
             name: 'kube-root-ca.crt',
             namespace: config.metadata.name,
           },
-          data: new Map()
-        })
-        .then((configMap) => {
-          // configMap.data.set('ca.crt', certs.join('\n'));
-          return new ConfigMap(configMap).patch({ data: configMap.data });
+          data: new Map([['ca.crt', certs.join('\n')]])
         })
       ])
-      .then(() => new Model(config).save({ validateBeforeSave: false }))
-      .then((n) => new Namespace(n));
+      .then(() => new Namespace(n))
     })
   }
 

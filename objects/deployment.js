@@ -28,36 +28,27 @@ class Deployment extends K8Object {
     return super.create(config)
     .then((deployment) => {
       let newDeployment = new Deployment(deployment);
-      if (newDeployment.spec.paused !== true) {
-        newDeployment.rollout();
-      }
-      setInterval(() => {
-        if (newDeployment.rollingOut === false && newDeployment.spec.paused !== true) {
-          Promise.all(
-            newDeployment.spec.template.spec.containers
-              .map((e) => getAllContainersWithName(newDeployment.spec.template.metadata.name, e.image))
+        if (newDeployment.spec.paused !== true) {
+          return ReplicationController.find(
+            { 'metadata.name': { $regex: `^${newDeployment.metadata.name}` } , 'metadata.namespace': newDeployment.metadata.namespace },
+            { sort: { 'created_at': 1 } }
           )
-          .then((containers) => containers.map((e) => e.raw))
-          .then((raw) => raw.toString().split('\n').filter((e) => e !== ''))
-          .then((arr) => {
-            return ReplicationController.create({
-              metadata: {
-                ...newDeployment.metadata,
-                name: `${newDeployment.metadata.name}-1`
+          .then((rcs) => ReplicationController.create({
+            metadata: {
+              ...newDeployment.metadata,
+              name: `${newDeployment.metadata.name}-${rcs.length + 1}`
+            },
+            spec: {
+              ...newDeployment.spec,
+              selector: {
+                app: newDeployment.metadata.name,
+                deployment: `${newDeployment.metadata.name}-${rcs.length + 1}`,
               },
-              spec: {
-                ...newDeployment.spec,
-                selector: {
-                  app: newDeployment.metadata.name,
-                  deployment: `${newDeployment.metadata.name}-1`,
-                },
-                minReadySeconds: Infinity,
-              },
-            });
-          })
-          .then(() => newDeployment.rollout());
+              minReadySeconds: Infinity,
+            },
+          }))
+          .then((rc) => newDeployment.rollout(rc));
         }
-      }, 1000);
       return newDeployment;
     })
   }
@@ -73,9 +64,9 @@ class Deployment extends K8Object {
     .then(async (arr) => {
       let [ deployment, rc ] = arr;
       if (deployment) {
-        let newDeployment = this.setConfig(deployment);
+        let newDeployment = new Deployment(deployment);
         if (newDeployment.spec.paused !== true) {
-          await ReplicationController.create({
+          return ReplicationController.create({
             metadata: {
               ...newDeployment.metadata,
               name: `${newDeployment.metadata.name}-${rc.length + 1}`
@@ -88,8 +79,8 @@ class Deployment extends K8Object {
               },
               minReadySeconds: Infinity,
             },
-          });
-          newDeployment.rollout();
+          })
+          .then((rc) => newDeployment.rollout(rc));
         }
         return newDeployment;
       }
@@ -206,14 +197,17 @@ class Deployment extends K8Object {
     return this.status;
   }
 
-  async rollout() {
-    let rc = (await ReplicationController.findAllSorted({ 'metadata.name': this.spec.metadata.name }))[0];
+  async rollout(_rc) {
+    let rc = _rc
+    if (!_rc) {
+      let rc = (await ReplicationController.findAllSorted({ 'metadata.name': this.spec.template.metadata.name }))[0];
+    }
     if (this.spec.strategy.type === "RollingUpdate") {
-      let percent = Number(`${this.spec.strategy.rollingUpdate.maxUnavailable}`.match(/\d*/)[0]);;
+      let percent = Number(`${this.spec.strategy.rollingUpdate.maxUnavailable}`.match(/\d*/)[0]);
       let newPods = 0;
       do {
         await Promise.all(
-          new Array(Math.ceil(numPods * percent / 100))
+          new Array(Math.ceil(this.spec.replicas * percent / 100))
           .fill(0)
           .map(() => {
             newPods += 1;
@@ -267,17 +261,18 @@ class Deployment extends K8Object {
                     'status.availableReplicas': -1,
                   },
                 }),
-                Service.findOldestPod()
+                Service.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
                 .then((service) => {
                   if (service) {
-                    return service.removePod();
+                    return service.findOldestPod()
+                      .then((service) => service.removePod());
                   }
                 })
               ])
             })
           })
         );
-      } while (this.status.replicas < numPods);
+      } while (newPods < this.spec.replicas);
     } else if (this.spec.strategy.type === "Recreate") {
       return Promise.all(rc.deletePods())
       .then(() => Promise.all(rc.createPods()));
