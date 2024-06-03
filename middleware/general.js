@@ -20,7 +20,7 @@ module.exports = {
     return (req, res, next) => {
       Model.findAllSortedByReq(req.query, req.params)
         .then((items) => {
-          req.items = items;
+          res.data = items;
           next();
         })
         .catch(next);
@@ -33,7 +33,7 @@ module.exports = {
           if (!item) {
             return res.status(404).send(Model.notFoundStatus(req.params.name));
           }
-          req.item = item;
+          res.data = item;
           next();
         })
         .catch(next);
@@ -52,7 +52,7 @@ module.exports = {
         } else {
           res.set('Content-Type', 'application/json');
         }
-        let arr = [req.item, ...req.items].flat().filter((e) => e);
+        let arr = [res.data].flat().filter((e) => e);
         let pushToEventStream = (elem, eventType) => {
           if (req.headers?.accept?.includes('protobuf')) {
             if (!res.operationId) {
@@ -83,33 +83,11 @@ module.exports = {
         return;
       }
       if (req.headers?.accept?.split(';').find((e) => e === 'as=Table')) {
-        let i = req.item || req.items;
-        return Model.table([i].flat())
+        return Model.table([res.data].flat())
           .then((table) => res.status(200).send(table))
           .catch(next);
       }
-      if (req.headers?.accept?.includes('protobuf') && req.operationId) {
-        try {
-          if (req.items) {
-            req.items = toProtoBuf(req.items, req.operationId, req.protobufTypes);
-          } else if (req.item) {
-            req.item = toProtoBuf(req.item, req.operationId, req.protobufTypes);
-          }
-        } catch (e) {
-          console.error(e);
-          next(Model.unprocessableContentStatus());
-        }
-      }
       return next();
-    };
-  },
-  raw(Model) {
-    return (req, res, next) => {
-      let i = req.item || req.items
-      if (i || i.length) {
-        return res.status(200).send(i.toJSON());
-      }
-      return res.status(404).send(Model.notFoundStatus(req.params.name));
     };
   },
   list(Model) {
@@ -122,18 +100,23 @@ module.exports = {
   sendObj(Model) {
     return (req, res, next) => {
       if (res.writableEnded === false) {
+        let data = res.data;
+        if (res.data.toJSON) {
+          data = res.data.toJSON();
+        }
         if (req.headers?.accept?.includes('protobuf')) {
           if (!res.operationId) {
             throw new Error(`Could not convert data from protobuf opID: ${res.operationId}`)
           }
-          return res.send(toProtoBuf(res.data, res.operationId, req.protobufTypes));
-        }
-        if (req.headers?.accept?.includes('json')) {
-          return res.send(res.data);
+          res.set('Content-Type', 'application/vnd.kubernetes.protobuf');
+          return res.send(toProtoBuf(data, res.operationId, req.protobufTypes));
         }
         if (req.headers?.accept?.includes('yaml')) {
-          return res.send(yaml.stringify(res.data))
+          res.set('Content-Type', 'application/yaml');
+          return res.send(yaml.stringify(data))
         }
+        res.set('Content-Type', 'application/json');
+        return res.json(data);
       }
       next();
     };
@@ -164,6 +147,7 @@ module.exports = {
       }
       return Model.create(req.body, query)
       .then((item) => {
+        req.headers.accept = 'application/json';
         res.status(201);
         res.data = item.toJSON();
         return next();
@@ -196,6 +180,7 @@ module.exports = {
         Model.findOne(query)
         .then((item) => {
           if (item) {
+            req.headers.accept = 'application/json';
             res.status(200);
             res.data = item.toJSON();
             return next();
@@ -222,6 +207,7 @@ module.exports = {
         .then((item) => item ? item.patch(req.body, query) : Promise.resolve())
         .then((item) => {
           if (item) {
+            req.headers.accept = 'application/json';
             res.status(201);
             res.data = item.toJSON();
             return next();
@@ -232,6 +218,7 @@ module.exports = {
       } else {
         Model.findOne(query)
         .then((item) => {
+          req.headers.accept = 'application/json';
           res.status(200);
           res.data = item.toJSON() || {};
           return next();
@@ -251,10 +238,10 @@ module.exports = {
       .then((item) => {
         if (item) {
           res.status(200);
-          res.data = new Model(item).toJSON() || {};
+          res.data = item.successfulStatus();
           return next();
         }
-        return res.status(404).send(Model.notFoundStatus(req.params.name));
+        return res.status(404).send(Model.notFoundStatus());
       })
       .catch(next);
     };
@@ -275,6 +262,7 @@ module.exports = {
             res.data = items || {};
             return next();
           }
+          return next();
         })
         .catch(next);
       }
@@ -286,6 +274,7 @@ module.exports = {
           res.data = items || {};
           return next();
         }
+        return next();
       })
       .catch(next);
     };
