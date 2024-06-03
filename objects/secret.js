@@ -71,7 +71,8 @@ class Secret extends K8Object {
         diff = 'apiVersion';
       }
       if (diff !== null) {
-        throw K8Object.unprocessableContentStatus(this.kind, this.metadata.name, null, `Secret "${this.metadata.name}" is invalid: data: Forbidden: field is immutable when \`${diff}\` is set`, 'Invalid');
+        let err = `Secret "${this.metadata.name}" is invalid: data: Forbidden: field is immutable when \`${diff}\` is set`;
+        throw K8Object.unprocessableContentStatus(this.kind, this.metadata.name, null, err, 'Invalid');
       }
     }
     if (!searchQ) {
