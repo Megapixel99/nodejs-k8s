@@ -39,6 +39,11 @@ class Secret extends K8Object {
       if (existingSecret) {
         throw K8Object.alreadyExistsStatus(config.metadata.name);
       }
+      let invalidKey = Object.keys(config.data).find((k) => !k.match(/[-._a-zA-Z0-9]+/g))
+      if (invalidKey !== undefined) {
+        let err = `Error "Invalid value: "${invalidKey}": a valid config key must consist of alphanumeric characters, '-', '_' or '.' (e.g. 'key.name',  or 'KEY_NAME',  or 'key-name', regex used for validation is '[-._a-zA-Z0-9]+')" for field "data[${invalidKey}]".`;
+        throw K8Object.unprocessableContentStatus(config?.kind, config?.metadata?.name, null, err, 'Invalid');
+      }
       if (config.data) {
         config.data = convertData(config.data);
       }
