@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), gen
 
 router.get(['/api/v1/endpointslices', ...routes], validSchema(apiV1OpenApiV3), general.find(EndpointSlice), general.format(EndpointSlice), general.list(EndpointSlice));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(EndpointSlice));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(EndpointSlice), general.sendObj(EndpointSlice));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(EndpointSlice));
+router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(EndpointSlice), general.sendObj(EndpointSlice));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(EndpointSlice));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(EndpointSlice), general.sendObj(EndpointSlice));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(EndpointSlice));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(EndpointSlice), general.sendObj(EndpointSlice));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(EndpointSlice));
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(EndpointSlice), general.sendObj(EndpointSlice));
 
 module.exports = router;

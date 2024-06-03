@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), gen
 
 router.get(['/api/v1/persistentvolumeclaims', ...routes], validSchema(apiV1OpenApiV3), general.find(PersistentVolumeClaim), general.format(PersistentVolumeClaim), general.list(PersistentVolumeClaim));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(PersistentVolumeClaim));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(PersistentVolumeClaim), general.sendObj(PersistentVolumeClaim));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(PersistentVolumeClaim));
+router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(PersistentVolumeClaim), general.sendObj(PersistentVolumeClaim));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(PersistentVolumeClaim));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(PersistentVolumeClaim), general.sendObj(PersistentVolumeClaim));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(PersistentVolumeClaim));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(PersistentVolumeClaim), general.sendObj(PersistentVolumeClaim));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(PersistentVolumeClaim));
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(PersistentVolumeClaim), general.sendObj(PersistentVolumeClaim));
 
 module.exports = router;

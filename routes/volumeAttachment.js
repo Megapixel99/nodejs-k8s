@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), gen
 
 router.get(['/api/v1/volumeattachments', ...routes], validSchema(apiV1OpenApiV3), general.find(VolumeAttachment), general.format(VolumeAttachment), general.list(VolumeAttachment));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(VolumeAttachment));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(VolumeAttachment), general.sendObj(VolumeAttachment));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(VolumeAttachment));
+router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(VolumeAttachment), general.sendObj(VolumeAttachment));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(VolumeAttachment));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(VolumeAttachment), general.sendObj(VolumeAttachment));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(VolumeAttachment));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(VolumeAttachment), general.sendObj(VolumeAttachment));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(VolumeAttachment));
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(VolumeAttachment), general.sendObj(VolumeAttachment));
 
 module.exports = router;

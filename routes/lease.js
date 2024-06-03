@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), gen
 
 router.get(['/api/v1/leases', ...routes], validSchema(apiV1OpenApiV3), general.find(Lease), general.format(Lease), general.list(Lease));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(Lease));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(Lease), general.sendObj(Lease));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(Lease));
+router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(Lease), general.sendObj(Lease));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(Lease));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(Lease), general.sendObj(Lease));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(Lease));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(Lease), general.sendObj(Lease));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(Lease));
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(Lease), general.sendObj(Lease));
 
 module.exports = router;

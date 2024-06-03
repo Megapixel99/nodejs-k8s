@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), gen
 
 router.get(['/api/v1/validatingwebhookconfigurations', ...routes], validSchema(apiV1OpenApiV3), general.find(ValidatingWebhookConfiguration), general.format(ValidatingWebhookConfiguration), general.list(ValidatingWebhookConfiguration));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(ValidatingWebhookConfiguration));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(ValidatingWebhookConfiguration), general.sendObj(ValidatingWebhookConfiguration));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(ValidatingWebhookConfiguration));
+router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(ValidatingWebhookConfiguration), general.sendObj(ValidatingWebhookConfiguration));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(ValidatingWebhookConfiguration));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(ValidatingWebhookConfiguration), general.sendObj(ValidatingWebhookConfiguration));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(ValidatingWebhookConfiguration));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(ValidatingWebhookConfiguration), general.sendObj(ValidatingWebhookConfiguration));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(ValidatingWebhookConfiguration));
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(ValidatingWebhookConfiguration), general.sendObj(ValidatingWebhookConfiguration));
 
 module.exports = router;

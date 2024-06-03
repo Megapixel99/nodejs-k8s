@@ -6,6 +6,6 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/api/${SelfSubjectReview.apiVersion}/selfsubjectreviews`];
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(SelfSubjectReview));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(SelfSubjectReview), general.sendObj(SelfSubjectReview));
 
 module.exports = router;

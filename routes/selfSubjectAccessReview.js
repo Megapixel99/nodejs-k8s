@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), gen
 
 router.get(['/api/v1/selfsubjectaccessreviews', ...routes], validSchema(apiV1OpenApiV3), general.find(SelfSubjectAccessReview), general.format(SelfSubjectAccessReview), general.list(SelfSubjectAccessReview));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(SelfSubjectAccessReview));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(SelfSubjectAccessReview), general.sendObj(SelfSubjectAccessReview));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(SelfSubjectAccessReview));
+router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(SelfSubjectAccessReview), general.sendObj(SelfSubjectAccessReview));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(SelfSubjectAccessReview));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(SelfSubjectAccessReview), general.sendObj(SelfSubjectAccessReview));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(SelfSubjectAccessReview));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(SelfSubjectAccessReview), general.sendObj(SelfSubjectAccessReview));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(SelfSubjectAccessReview));
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(SelfSubjectAccessReview), general.sendObj(SelfSubjectAccessReview));
 
 module.exports = router;

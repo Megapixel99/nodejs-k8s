@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general
 
 router.get([`/api/${ServiceAccount.apiVersion}/serviceaccounts`, ...routes], validSchema(apiV1OpenApiV3), general.find(ServiceAccount), general.format(ServiceAccount), general.list(ServiceAccount));
 
-router.post(routes, validSchema(apiV1OpenApiV3), general.save(ServiceAccount));
+router.post(routes, validSchema(apiV1OpenApiV3), general.save(ServiceAccount), general.sendObj(ServiceAccount));
 
-router.put(routes, validSchema(apiV1OpenApiV3), general.update(ServiceAccount));
+router.put(routes, validSchema(apiV1OpenApiV3), general.save(ServiceAccount), general.sendObj(ServiceAccount));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(ServiceAccount));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.save(ServiceAccount), general.sendObj(ServiceAccount));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.deleteOne(ServiceAccount));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.save(ServiceAccount), general.sendObj(ServiceAccount));
 
-router.delete(routes, validSchema(apiV1OpenApiV3), general.delete(ServiceAccount));
+router.delete(routes, validSchema(apiV1OpenApiV3), general.save(ServiceAccount), general.sendObj(ServiceAccount));
 
 module.exports = router;

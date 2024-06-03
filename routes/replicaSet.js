@@ -10,16 +10,16 @@ router.get(`${route}/:name`, validSchema(apiV1OpenApiV3), general.findOne(Replic
 
 router.get([`/apis/${ReplicaSet.apiVersion}/replicasets`, route], validSchema(apiV1OpenApiV3), general.find(ReplicaSet), general.format(ReplicaSet), general.list(ReplicaSet));
 
-router.post(route, validSchema(apiV1OpenApiV3), general.save(ReplicaSet));
+router.post(route, validSchema(apiV1OpenApiV3), general.save(ReplicaSet), general.sendObj(ReplicaSet));
 
-router.put(route, validSchema(apiV1OpenApiV3), general.update(ReplicaSet));
+router.put(route, validSchema(apiV1OpenApiV3), general.save(ReplicaSet), general.sendObj(ReplicaSet));
 
-router.put(`${route}/:name/status`, validSchema(apiV1OpenApiV3), general.patch(ReplicaSet));
+router.put(`${route}/:name/status`, validSchema(apiV1OpenApiV3), general.save(ReplicaSet), general.sendObj(ReplicaSet));
 
-router.patch(`${route}/:name`, validSchema(apiV1OpenApiV3), general.patch(ReplicaSet));
+router.patch(`${route}/:name`, validSchema(apiV1OpenApiV3), general.save(ReplicaSet), general.sendObj(ReplicaSet));
 
-router.delete(`${route}/:name`, validSchema(apiV1OpenApiV3), general.deleteOne(ReplicaSet));
+router.delete(`${route}/:name`, validSchema(apiV1OpenApiV3), general.save(ReplicaSet), general.sendObj(ReplicaSet));
 
-router.delete(route, validSchema(apiV1OpenApiV3), general.delete(ReplicaSet));
+router.delete(route, validSchema(apiV1OpenApiV3), general.save(ReplicaSet), general.sendObj(ReplicaSet));
 
 module.exports = router;

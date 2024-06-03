@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIo
 
 router.get([`/apis/${RoleBinding.apiVersion}/rolebindings`, ...routes], validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.find(RoleBinding), general.format(RoleBinding), general.list(RoleBinding));
 
-router.post(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(RoleBinding));
+router.post(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(RoleBinding), general.sendObj(RoleBinding));
 
-router.put(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.update(RoleBinding));
+router.put(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(RoleBinding), general.sendObj(RoleBinding));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.patch(RoleBinding));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(RoleBinding), general.sendObj(RoleBinding));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.deleteOne(RoleBinding));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(RoleBinding), general.sendObj(RoleBinding));
 
-router.delete(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.delete(RoleBinding));
+router.delete(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(RoleBinding), general.sendObj(RoleBinding));
 
 module.exports = router;

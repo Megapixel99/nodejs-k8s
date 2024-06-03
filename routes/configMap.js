@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), gen
 
 router.get(['/api/v1/configmaps', ...routes], validSchema(apiV1OpenApiV3), general.find(ConfigMap), general.format(ConfigMap), general.list(ConfigMap));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(ConfigMap));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(ConfigMap), general.sendObj(ConfigMap));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(ConfigMap));
+router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(ConfigMap), general.sendObj(ConfigMap));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(ConfigMap));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(ConfigMap), general.sendObj(ConfigMap));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(ConfigMap));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(ConfigMap), general.sendObj(ConfigMap));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(ConfigMap));
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(ConfigMap), general.sendObj(ConfigMap));
 
 module.exports = router;

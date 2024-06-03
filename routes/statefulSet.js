@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), gen
 
 router.get(['/api/v1/statefulsets', ...routes], validSchema(apiV1OpenApiV3), general.find(StatefulSet), general.format(StatefulSet), general.list(StatefulSet));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(StatefulSet));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(StatefulSet), general.sendObj(StatefulSet));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(StatefulSet));
+router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(StatefulSet), general.sendObj(StatefulSet));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(StatefulSet));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(StatefulSet), general.sendObj(StatefulSet));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(StatefulSet));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(StatefulSet), general.sendObj(StatefulSet));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(StatefulSet));
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(StatefulSet), general.sendObj(StatefulSet));
 
 module.exports = router;

@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), gen
 
 router.get(['/api/v1/cronjobs', ...routes], validSchema(apiV1OpenApiV3), general.find(CronJob), general.format(CronJob), general.list(CronJob));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(CronJob));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(CronJob), general.sendObj(CronJob));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(CronJob));
+router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(CronJob), general.sendObj(CronJob));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(CronJob));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(CronJob), general.sendObj(CronJob));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(CronJob));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(CronJob), general.sendObj(CronJob));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(CronJob));
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(CronJob), general.sendObj(CronJob));
 
 module.exports = router;

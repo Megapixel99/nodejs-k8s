@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), gen
 
 router.get(['/api/v1/controllerrevisions', ...routes], validSchema(apiV1OpenApiV3), general.find(ControllerRevision), general.format(ControllerRevision), general.list(ControllerRevision));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(ControllerRevision));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(ControllerRevision), general.sendObj(ControllerRevision));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(ControllerRevision));
+router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(ControllerRevision), general.sendObj(ControllerRevision));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(ControllerRevision));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(ControllerRevision), general.sendObj(ControllerRevision));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(ControllerRevision));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(ControllerRevision), general.sendObj(ControllerRevision));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(ControllerRevision));
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(ControllerRevision), general.sendObj(ControllerRevision));
 
 module.exports = router;

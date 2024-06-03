@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIo
 
 router.get([`/apis/${Role.apiVersion}/roles`, ...routes], validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.find(Role), general.format(Role), general.list(Role));
 
-router.post(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(Role));
+router.post(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(Role), general.sendObj(Role));
 
-router.put(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.update(Role));
+router.put(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(Role), general.sendObj(Role));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.patch(Role));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(Role), general.sendObj(Role));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.deleteOne(Role));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(Role), general.sendObj(Role));
 
-router.delete(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.delete(Role));
+router.delete(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(Role), general.sendObj(Role));
 
 module.exports = router;

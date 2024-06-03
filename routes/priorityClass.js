@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), gen
 
 router.get(['/api/v1/priorityclasses', ...routes], validSchema(apiV1OpenApiV3), general.find(PriorityClass), general.format(PriorityClass), general.list(PriorityClass));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(PriorityClass));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(PriorityClass), general.sendObj(PriorityClass));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(PriorityClass));
+router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(PriorityClass), general.sendObj(PriorityClass));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(PriorityClass));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(PriorityClass), general.sendObj(PriorityClass));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(PriorityClass));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(PriorityClass), general.sendObj(PriorityClass));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(PriorityClass));
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(PriorityClass), general.sendObj(PriorityClass));
 
 module.exports = router;

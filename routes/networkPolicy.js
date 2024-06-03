@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIo
 
 router.get(['/api/v1/networkpolicies', ...routes], validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.find(NetworkPolicy), general.format(NetworkPolicy), general.list(NetworkPolicy));
 
-router.post(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(NetworkPolicy));
+router.post(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(NetworkPolicy), general.sendObj(NetworkPolicy));
 
-router.put(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.update(NetworkPolicy));
+router.put(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(NetworkPolicy), general.sendObj(NetworkPolicy));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.patch(NetworkPolicy));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(NetworkPolicy), general.sendObj(NetworkPolicy));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.deleteOne(NetworkPolicy));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(NetworkPolicy), general.sendObj(NetworkPolicy));
 
-router.delete(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.delete(NetworkPolicy));
+router.delete(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(NetworkPolicy), general.sendObj(NetworkPolicy));
 
 module.exports = router;

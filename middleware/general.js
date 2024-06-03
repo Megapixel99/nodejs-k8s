@@ -1,5 +1,6 @@
 const { DateTime } = require('luxon');
 const { Readable } = require('stream');
+const yaml = require('yaml');
 const Event = require('../objects/event.js');
 const { toProtoBuf, fromProtoBuf, toWatchEvent } = require('./protoBuf.js');
 
@@ -118,6 +119,25 @@ module.exports = {
       .catch(next);
     }
   },
+  sendObj(Model) {
+    return (req, res, next) => {
+      if (res.writableEnded === false) {
+        if (req.headers?.accept?.includes('protobuf')) {
+          if (!res.operationId) {
+            throw new Error(`Could not convert data from protobuf opID: ${res.operationId}`)
+          }
+          return res.send(toProtoBuf(res.data, res.operationId, req.protobufTypes));
+        }
+        if (req.headers?.accept?.includes('json')) {
+          return res.send(res.data);
+        }
+        if (req.headers?.accept?.includes('yaml')) {
+          return res.send(yaml.stringify(res.data))
+        }
+      }
+      next();
+    };
+  },
   save(Model) {
     return (req, res, next) => {
       try {
@@ -143,7 +163,11 @@ module.exports = {
         }
       }
       return Model.create(req.body, query)
-      .then((item) => res.status(201).send(item))
+      .then((item) => {
+        res.status(201);
+        res.data = item.toJSON();
+        return next();
+      })
       .catch(next);
     };
   },
@@ -172,7 +196,9 @@ module.exports = {
         Model.findOne(query)
         .then((item) => {
           if (item) {
-            return res.status(200).send(item);
+            res.status(200);
+            res.data = item.toJSON();
+            return next();
           }
           return res.status(404).send(Model.notFoundStatus(req.params.name));
         })
@@ -196,14 +222,20 @@ module.exports = {
         .then((item) => item ? item.patch(req.body, query) : Promise.resolve())
         .then((item) => {
           if (item) {
-            return res.status(201).send(item);
+            res.status(201);
+            res.data = item.toJSON();
+            return next();
           }
           return res.status(404).send(Model.notFoundStatus(req.params.name));
         })
         .catch(next);
       } else {
         Model.findOne(query)
-        .then((item) => item ? res.status(200).send(item) : res.status(200).send({}))
+        .then((item) => {
+          res.status(200);
+          res.data = item.toJSON() || {};
+          return next();
+        })
         .catch(next);
       }
     };
@@ -218,7 +250,9 @@ module.exports = {
       .then((item) => item ? item.delete() : Promise.resolve())
       .then((item) => {
         if (item) {
-          return res.status(200).send(new Model(item).toJSON());
+          res.status(200);
+          res.data = new Model(item).toJSON() || {};
+          return next();
         }
         return res.status(404).send(Model.notFoundStatus(req.params.name));
       })
@@ -237,7 +271,9 @@ module.exports = {
         .then((items) => Promise.all(items.map((item) => item.delete({}))))
         .then((items) => {
           if (res.writableEnded === false && sendRes) {
-            items ? res.status(200).send(items) : res.status(200).send({});
+            res.status(200);
+            res.data = items || {};
+            return next();
           }
         })
         .catch(next);
@@ -246,7 +282,9 @@ module.exports = {
       .then((items) => Promise.all(items.map((item) => item.delete({}))))
       .then((items) => {
         if (res.writableEnded === false && sendRes) {
-          items ? res.status(200).send(items) : res.status(200).send({});
+          res.status(200);
+          res.data = items || {};
+          return next();
         }
       })
       .catch(next);

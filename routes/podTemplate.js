@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general
 
 router.get(['/api/v1/podtemplates', ...routes], validSchema(apiV1OpenApiV3), general.find(PodTemplate), general.format(PodTemplate), general.list(PodTemplate));
 
-router.post(routes, validSchema(apiV1OpenApiV3), general.save(PodTemplate));
+router.post(routes, validSchema(apiV1OpenApiV3), general.save(PodTemplate), general.sendObj(PodTemplate));
 
-router.put(routes, validSchema(apiV1OpenApiV3), general.update(PodTemplate));
+router.put(routes, validSchema(apiV1OpenApiV3), general.save(PodTemplate), general.sendObj(PodTemplate));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(PodTemplate));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.save(PodTemplate), general.sendObj(PodTemplate));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.deleteOne(PodTemplate));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.save(PodTemplate), general.sendObj(PodTemplate));
 
-router.delete(routes, validSchema(apiV1OpenApiV3), general.delete(PodTemplate));
+router.delete(routes, validSchema(apiV1OpenApiV3), general.save(PodTemplate), general.sendObj(PodTemplate));
 
 module.exports = router;

@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general
 
 router.get(['/api/v1/endpoints', ...routes], validSchema(apiV1OpenApiV3), general.find(Endpoints), general.format(Endpoints), general.list(Endpoints));
 
-router.post(routes, validSchema(apiV1OpenApiV3), general.save(Endpoints));
+router.post(routes, validSchema(apiV1OpenApiV3), general.save(Endpoints), general.sendObj(Endpoints));
 
-router.put(routes, validSchema(apiV1OpenApiV3), general.update(Endpoints));
+router.put(routes, validSchema(apiV1OpenApiV3), general.save(Endpoints), general.sendObj(Endpoints));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(Endpoints));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.save(Endpoints), general.sendObj(Endpoints));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.deleteOne(Endpoints));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.save(Endpoints), general.sendObj(Endpoints));
 
-router.delete(routes, validSchema(apiV1OpenApiV3), general.delete(Endpoints));
+router.delete(routes, validSchema(apiV1OpenApiV3), general.save(Endpoints), general.sendObj(Endpoints));
 
 module.exports = router;

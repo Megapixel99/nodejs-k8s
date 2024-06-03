@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), gen
 
 router.get(['/api/v1/poddisruptionbudgets', ...routes], validSchema(apiV1OpenApiV3), general.find(PodDisruptionBudget), general.format(PodDisruptionBudget), general.list(PodDisruptionBudget));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(PodDisruptionBudget));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(PodDisruptionBudget), general.sendObj(PodDisruptionBudget));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(PodDisruptionBudget));
+router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(PodDisruptionBudget), general.sendObj(PodDisruptionBudget));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(PodDisruptionBudget));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(PodDisruptionBudget), general.sendObj(PodDisruptionBudget));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(PodDisruptionBudget));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(PodDisruptionBudget), general.sendObj(PodDisruptionBudget));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(PodDisruptionBudget));
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(PodDisruptionBudget), general.sendObj(PodDisruptionBudget));
 
 module.exports = router;

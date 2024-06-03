@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), gen
 
 router.get(['/api/v1/csinodes', ...routes], validSchema(apiV1OpenApiV3), general.find(CSINode), general.format(CSINode), general.list(CSINode));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(CSINode));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(CSINode), general.sendObj(CSINode));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(CSINode));
+router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(CSINode), general.sendObj(CSINode));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(CSINode));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(CSINode), general.sendObj(CSINode));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(CSINode));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(CSINode), general.sendObj(CSINode));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(CSINode));
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(CSINode), general.sendObj(CSINode));
 
 module.exports = router;

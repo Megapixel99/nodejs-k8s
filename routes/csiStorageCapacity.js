@@ -10,14 +10,14 @@ router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), gen
 
 router.get(['/api/v1/csistoragecapacitys', ...routes], validSchema(apiV1OpenApiV3), general.find(CSIStorageCapacity), general.format(CSIStorageCapacity), general.list(CSIStorageCapacity));
 
-router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(CSIStorageCapacity));
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(CSIStorageCapacity), general.sendObj(CSIStorageCapacity));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(CSIStorageCapacity));
+router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(CSIStorageCapacity), general.sendObj(CSIStorageCapacity));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(CSIStorageCapacity));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(CSIStorageCapacity), general.sendObj(CSIStorageCapacity));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(CSIStorageCapacity));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(CSIStorageCapacity), general.sendObj(CSIStorageCapacity));
 
-router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(CSIStorageCapacity));
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(CSIStorageCapacity), general.sendObj(CSIStorageCapacity));
 
 module.exports = router;

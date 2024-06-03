@@ -10,16 +10,16 @@ router.get(`${route}/:name`, validSchema(apiAppsV1OpenApiV3), general.findOne(Da
 
 router.get(`${route}`, validSchema(apiAppsV1OpenApiV3), general.find(DaemonSet), general.format(DaemonSet), general.list(DaemonSet));
 
-router.post(route, validSchema(apiAppsV1OpenApiV3), general.save(DaemonSet));
+router.post(route, validSchema(apiAppsV1OpenApiV3), general.save(DaemonSet), general.sendObj(DaemonSet));
 
-router.put(route, validSchema(apiAppsV1OpenApiV3), general.update(DaemonSet));
+router.put(route, validSchema(apiAppsV1OpenApiV3), general.save(DaemonSet), general.sendObj(DaemonSet));
 
-router.put(`${route}/:name/status`, validSchema(apiAppsV1OpenApiV3), general.patch(DaemonSet));
+router.put(`${route}/:name/status`, validSchema(apiAppsV1OpenApiV3), general.save(DaemonSet), general.sendObj(DaemonSet));
 
-router.patch(`${route}/:name`, validSchema(apiAppsV1OpenApiV3), general.patch(DaemonSet));
+router.patch(`${route}/:name`, validSchema(apiAppsV1OpenApiV3), general.save(DaemonSet), general.sendObj(DaemonSet));
 
-router.delete(`${route}/:name`, validSchema(apiAppsV1OpenApiV3), general.deleteOne(DaemonSet));
+router.delete(`${route}/:name`, validSchema(apiAppsV1OpenApiV3), general.save(DaemonSet), general.sendObj(DaemonSet));
 
-router.delete(route, validSchema(apiAppsV1OpenApiV3), general.delete(DaemonSet));
+router.delete(route, validSchema(apiAppsV1OpenApiV3), general.save(DaemonSet), general.sendObj(DaemonSet));
 
 module.exports = router;
