@@ -93,6 +93,15 @@ class K8Object {
     });
   }
 
+  static deleteMany (searchQ) {
+    return this.Model.deleteMany(searchQ)
+    .then((arr) => {
+      if (arr) {
+        return arr;
+      }
+    });
+  }
+
   patch(updateObj, searchQ, options = {}) {
     if (!searchQ) {
       searchQ = { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace };
