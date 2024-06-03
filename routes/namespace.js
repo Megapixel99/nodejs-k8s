@@ -6,18 +6,18 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 let routes = [`/api/${Namespace.apiVersion}/namespaces`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(Namespace), general.format(Namespace), general.raw(Namespace));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(Namespace), general.format(Namespace), general.sendObj(Namespace));
 
 router.get(routes, validSchema(apiV1OpenApiV3), general.find(Namespace), general.format(Namespace), general.list(Namespace));
 
 router.post(routes, validSchema(apiV1OpenApiV3), general.save(Namespace), general.sendObj(Namespace));
 
-router.put(routes, validSchema(apiV1OpenApiV3), general.save(Namespace), general.sendObj(Namespace));
+router.put(routes, validSchema(apiV1OpenApiV3), general.update(Namespace), general.sendObj(Namespace));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.save(Namespace), general.sendObj(Namespace));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(Namespace), general.sendObj(Namespace));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.save(Namespace), general.sendObj(Namespace));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.deleteOne(Namespace), general.sendObj(Namespace));
 
-router.delete(routes, validSchema(apiV1OpenApiV3), general.save(Namespace), general.sendObj(Namespace));
+router.delete(routes, validSchema(apiV1OpenApiV3), general.delete(Namespace), general.sendObj(Namespace));
 
 module.exports = router;

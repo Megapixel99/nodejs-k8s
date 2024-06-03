@@ -6,7 +6,7 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/apis/${CSIDriver.apiVersion}/:namespace/csidrivers`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(CSIDriver), general.format(CSIDriver), general.raw(CSIDriver));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(CSIDriver), general.format(CSIDriver), general.sendObj(CSIDriver));
 
 router.get(['/api/v1/csidrivers', ...routes], validSchema(apiV1OpenApiV3), general.find(CSIDriver), general.format(CSIDriver), general.list(CSIDriver));
 

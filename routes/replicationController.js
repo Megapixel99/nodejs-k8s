@@ -6,20 +6,20 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const route = `/api/${ReplicationController.apiVersion}/namespaces/:namespace/replicationcontrollers`;
 
-router.get(`${route}/:name`, validSchema(apiV1OpenApiV3), general.findOne(ReplicationController), general.format(ReplicationController), general.raw(ReplicationController));
+router.get(`${route}/:name`, validSchema(apiV1OpenApiV3), general.findOne(ReplicationController), general.format(ReplicationController), general.sendObj(ReplicationController));
 
 router.get([`/api/${ReplicationController.apiVersion}/replicationcontrollers`, route], validSchema(apiV1OpenApiV3), general.find(ReplicationController), general.format(ReplicationController), general.list(ReplicationController));
 
 router.post(route, validSchema(apiV1OpenApiV3), general.save(ReplicationController), general.sendObj(ReplicationController));
 
-router.put(route, validSchema(apiV1OpenApiV3), general.save(ReplicationController), general.sendObj(ReplicationController));
+router.put(route, validSchema(apiV1OpenApiV3), general.update(ReplicationController), general.sendObj(ReplicationController));
 
-router.put(`${route}/:name/status`, validSchema(apiV1OpenApiV3), general.save(ReplicationController), general.sendObj(ReplicationController));
+router.put(`${route}/:name/status`, validSchema(apiV1OpenApiV3), general.patch(ReplicationController), general.sendObj(ReplicationController));
 
-router.patch(`${route}/:name`, validSchema(apiV1OpenApiV3), general.save(ReplicationController), general.sendObj(ReplicationController));
+router.patch(`${route}/:name`, validSchema(apiV1OpenApiV3), general.patch(ReplicationController), general.sendObj(ReplicationController));
 
-router.delete(`${route}/:name`, validSchema(apiV1OpenApiV3), general.save(ReplicationController), general.sendObj(ReplicationController));
+router.delete(`${route}/:name`, validSchema(apiV1OpenApiV3), general.deleteOne(ReplicationController), general.sendObj(ReplicationController));
 
-router.delete(route, validSchema(apiV1OpenApiV3), general.save(ReplicationController), general.sendObj(ReplicationController));
+router.delete(route, validSchema(apiV1OpenApiV3), general.delete(ReplicationController), general.sendObj(ReplicationController));
 
 module.exports = router;

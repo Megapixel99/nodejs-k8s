@@ -6,7 +6,7 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/api/${CSINode.apiVersion}/:namespace/csinodes`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(CSINode), general.format(CSINode), general.raw(CSINode));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(CSINode), general.format(CSINode), general.sendObj(CSINode));
 
 router.get(['/api/v1/csinodes', ...routes], validSchema(apiV1OpenApiV3), general.find(CSINode), general.format(CSINode), general.list(CSINode));
 

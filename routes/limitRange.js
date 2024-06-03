@@ -6,7 +6,7 @@ const { apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/api/${LimitRange.apiVersion}/:namespace/limitranges`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.findOne(LimitRange), general.format(LimitRange), general.raw(LimitRange));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.findOne(LimitRange), general.format(LimitRange), general.sendObj(LimitRange));
 
 router.get([`/api/${LimitRange.apiVersion}/limitranges`, ...routes], validSchema(apiV1OpenApiV3), general.find(LimitRange), general.format(LimitRange), general.list(LimitRange));
 

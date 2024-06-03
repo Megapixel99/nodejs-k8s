@@ -6,7 +6,7 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/api/${PodDisruptionBudget.apiVersion}/:namespace/poddisruptionbudgets`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(PodDisruptionBudget), general.format(PodDisruptionBudget), general.raw(PodDisruptionBudget));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(PodDisruptionBudget), general.format(PodDisruptionBudget), general.sendObj(PodDisruptionBudget));
 
 router.get(['/api/v1/poddisruptionbudgets', ...routes], validSchema(apiV1OpenApiV3), general.find(PodDisruptionBudget), general.format(PodDisruptionBudget), general.list(PodDisruptionBudget));
 

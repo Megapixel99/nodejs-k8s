@@ -6,7 +6,7 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/api/${Job.apiVersion}/:namespace/jobs`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(Job), general.format(Job), general.raw(Job));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(Job), general.format(Job), general.sendObj(Job));
 
 router.get(['/api/v1/jobs', ...routes], validSchema(apiV1OpenApiV3), general.find(Job), general.format(Job), general.list(Job));
 

@@ -6,7 +6,7 @@ const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/apis/${Lease.apiVersion}/leases`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(Lease), general.format(Lease), general.raw(Lease));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(Lease), general.format(Lease), general.sendObj(Lease));
 
 router.get(['/api/v1/leases', ...routes], validSchema(apiV1OpenApiV3), general.find(Lease), general.format(Lease), general.list(Lease));
 

@@ -6,7 +6,7 @@ const { apiV1OpenApiV3, validSchema } = openapi;
 
 let routes = [`/api/${Pod.apiVersion}/namespaces/:namespace/pods`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.findOne(Pod), general.format(Pod), general.raw(Pod));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.findOne(Pod), general.format(Pod), general.sendObj(Pod));
 
 router.get(routes.map((e) => `${e}/:name/log`), validSchema(apiV1OpenApiV3), (req, res, next) => {
   if (req.query.container) {
@@ -25,12 +25,12 @@ router.get(['/api/v1/pods', ...routes], validSchema(apiV1OpenApiV3), general.fin
 
 router.post(routes, validSchema(apiV1OpenApiV3), general.save(Pod), general.sendObj(Pod));
 
-router.put(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.save(Pod), general.sendObj(Pod));
+router.put(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.update(Pod), general.sendObj(Pod));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.save(Pod), general.sendObj(Pod));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(Pod), general.sendObj(Pod));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.save(Pod), general.sendObj(Pod));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.deleteOne(Pod), general.sendObj(Pod));
 
-router.delete(routes, validSchema(apiV1OpenApiV3), general.save(Pod), general.sendObj(Pod));
+router.delete(routes, validSchema(apiV1OpenApiV3), general.delete(Pod), general.sendObj(Pod));
 
 module.exports = router;
