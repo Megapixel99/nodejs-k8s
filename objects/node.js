@@ -170,7 +170,7 @@ class Node extends K8Object {
             });
         }
       }, 1000);
-      return node.toJSON();
+      return node;
     })
   }
 

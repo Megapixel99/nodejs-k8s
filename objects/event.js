@@ -39,7 +39,7 @@ class Event extends K8Object {
       otherEvent = await Event.findOne({ 'metadata.generateName': config.metadata.generateName });
     } while (otherEvent);
     return new Model(config).save()
-      .then((event) => new Event(event));
+      .then((e) => new Event(e));
   }
 
   static async table (queryOptions = {}) {

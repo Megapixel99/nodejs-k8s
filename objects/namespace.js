@@ -167,6 +167,7 @@ class Namespace extends K8Object {
         })
       ])
       .then(() => new Model(config).save({ validateBeforeSave: false }))
+      .then((n) => new Namespace(n));
     })
   }
 

@@ -50,7 +50,8 @@ class Secret extends K8Object {
       if (!config.type) {
         config.type = 'Opaque';
       }
-      return super.create(config);
+      return super.create(config)
+        .then((s) => new Secret(s));
     });
   }
 

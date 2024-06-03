@@ -43,7 +43,7 @@ class ConfigMap extends K8Object {
       }
       return new Model(config).save();
     })
-    .then((configMap) => new ConfigMap(configMap).toJSON());
+    .then((configMap) => new ConfigMap(configMap));
   }
 
   static async table (configMaps) {

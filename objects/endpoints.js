@@ -61,9 +61,7 @@ class Endpoints extends K8Object {
           return runImage('loadbalancer', `${newEndpoints.metadata.name}-${newEndpoints.metadata.namespace}-loadBalancer`, options)
         })
         .then(() => newEndpoints.listenForPods())
-        .then(() => {
-          return newEndpoints.toJSON();
-        })
+        .then(() => newEndpoints);
     });
   }
 

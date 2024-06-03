@@ -58,7 +58,7 @@ class Deployment extends K8Object {
           .then(() => newDeployment.rollout());
         }
       }, 1000);
-      return newDeployment.toJSON();
+      return newDeployment;
     })
   }
 
