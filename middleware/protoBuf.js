@@ -33,7 +33,7 @@ module.exports = {
       contentType: '',
     };
     let encoded = unknownType.encode(obj).finish();
-    let prefix = Buffer.from([107, 56, 115]);
+    let prefix = Buffer.from([107, 56, 115, 0]);
     return Buffer.concat([prefix, encoded]);
   },
   toWatchEvent: (buffer, eventType, protobufTypes) => {
@@ -45,8 +45,8 @@ module.exports = {
       },
     }
     let encoded = watchEventType.encode(obj).finish();
-    // let prefix = Buffer.from([0, 0, 0, 243])
-    // return Buffer.concat([prefix, encoded]);
-    return encoded;
+    let prefix = Buffer.from([0, 0, 0, 243])
+    return Buffer.concat([prefix, encoded]);
+    // return encoded;
   }
 };
