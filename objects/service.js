@@ -114,7 +114,7 @@ class Service extends K8Object {
       let newService = new Service(service);
       return Pod.find({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
         .then((pods) => {
-          Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+          return Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
             .then(async (existingEndpoint) => {
               let endpoints = existingEndpoint;
               if (!endpoints) {
@@ -156,9 +156,7 @@ class Service extends K8Object {
               });
             })
         })
-        .then(() => {
-          return newService.toJSON();
-        })
+        .then(() => newService);
     });
   }
 
