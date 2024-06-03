@@ -55,92 +55,10 @@ class Pod extends K8Object {
       status: 'True',
       lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
     });
-    return new Model(config).save().then((pod) => {
-      let newPod = new Pod(pod);
-      newPod.start()
-      .then(async (podNames) => {
-        return Promise.all(podNames.map((podName) => {
-          return getContainerIP(podName)
-            .then((ip) => {
-              newPod.events().emit('NewContainer', {
-                ip,
-                nodeName: '',
-                targetRef: {
-                  kind: this.kind,
-                  namespace: newPod.metadata.namespace,
-                  name: podName,
-                  uid: newPod.metadata.uid
-                }
-              });
-              return [ip, podName];
-            });
-        }))
-      })
-      .then(async (podsInfo) => {
-        return Promise.all(podsInfo.map((podInfo) => {
-          let [podIP, podName] = podInfo;
-          return new Promise(function(resolve, reject) {
-            let inter = setInterval(async () => {
-              try {
-                if ((await isContainerRunning(podName)).object === true) {
-                  clearInterval(inter);
-                  newPod.events().emit('ContainersReady', newPod);
-                  newPod.patch({
-                    $push: {
-                      'status.conditions': [{
-                        type: "ContainersReady",
-                        status: 'True',
-                        lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
-                      }],
-                      'status.podIPs': [{
-                        ip: podIP
-                      }],
-                      'status.containerStatuses': [{
-                        "restartCount": 0,
-                        "started": true,
-                        "ready": true,
-                        "name": config.metadata.name,
-                        "imageID": "",
-                        "image": "",
-                        "lastState": {},
-                        "containerID": podName
-                      }],
-                    },
-                    $set: {
-                      'status.podIP': podIP,
-                    }
-                  })
-                  .then(() => resolve());
-                }
-              } catch (e) {
-                reject(e);
-              }
-            }, 1000);
-          });
-        }));
-      })
-      .then(() => {
-        newPod.events().emit('Ready', newPod);
-        newPod.events().emit('PodScheduled', newPod);
-        return newPod.patch({
-          $push: {
-            'status.conditions': [{
-              type: "Ready",
-              status: 'True',
-              lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
-            }, {
-              type: "PodScheduled",
-              status: 'True',
-              lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
-            }],
-          },
-          $set: {
-            'status.phase': 'Running'
-          }
-        });
-      });
-      return newPod.toJSON();
-    });
+    return super.create(config)
+    .then((pod) => new Pod(pod))
+    .then((newPod) => newPod.start())
+    .then((newPod) => newPod.toJSON());
   }
 
   events() {
@@ -277,7 +195,12 @@ class Pod extends K8Object {
 
   getEnvVarsFromSecret(secretName) {
     return Secret.findOne({ 'metadata.name': secretName, 'metadata.namespace': this.metadata.namespace })
-      .then((secret) => (secret?.mapVariables() || []));
+      .then((secret) => {
+        if (secret) {
+          return secret.mapVariables()
+        }
+        throw K8Object.unprocessableContentStatus(this.kind, this.metadata.name, null, `Secret "${this.metadata.name}" is invalid: data: Forbidden: field is immutable when \`${diff}\` is set`, 'Invalid')
+      });
   }
 
   getEnvVarsFromConfigMaps(configNames) {
@@ -298,6 +221,7 @@ class Pod extends K8Object {
 
   start() {
     let p = this.spec.containers.map(async (e) => {
+      console.log(e);
       let options = {
         expose: e.ports.map((a) => a.containerPort),
       }
@@ -329,7 +253,30 @@ class Pod extends K8Object {
         if (e.envFrom) {
           await Promise.all(e.envFrom.map(async (a) => {
             if (e.secretRef) {
-              return this.getEnvVarsFromSecret(a.secretRef.name);
+              return this.getEnvVarsFromSecret(a.secretRef.name)
+                .catch((err) => {
+                  console.log("p");
+                  newPod.patch({
+                    $push: {
+                      'status.conditions': [{
+                        type: "ContainersReady",
+                        status: 'False',
+                        lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+                      }],
+                      'status.containerStatuses': [{
+                        "restartCount": 0,
+                        "started": false,
+                        "ready": false,
+                        "name": this.metadata.name,
+                        "imageID": "",
+                        "image": "",
+                        "lastState": {},
+                        "containerID": podName
+                      }],
+                    },
+                  })
+                  throw err;
+                });
             }
             return null;
           }))
@@ -344,7 +291,88 @@ class Pod extends K8Object {
       await runImage(e.image, this.metadata.generateName, options);
       return this.metadata.generateName;
     });
-    return Promise.all(p);
+    return Promise.all(p)
+    .then(async (podNames) => {
+      return Promise.all(podNames.map((podName) => {
+        return getContainerIP(podName)
+          .then((ip) => {
+            this.events().emit('NewContainer', {
+              ip,
+              nodeName: '',
+              targetRef: {
+                kind: this.kind,
+                namespace: this.metadata.namespace,
+                name: podName,
+                uid: this.metadata.uid
+              }
+            });
+            return [ip, podName];
+          });
+      }))
+    })
+    .then(async (podsInfo) => {
+      return Promise.all(podsInfo.map((podInfo) => {
+        let [podIP, podName] = podInfo;
+        return new Promise((resolve, reject) => {
+          let inter = setInterval(async () => {
+            try {
+              if ((await isContainerRunning(podName)).object === true) {
+                clearInterval(inter);
+                this.events().emit('ContainersReady', this);
+                this.patch({
+                  $push: {
+                    'status.conditions': [{
+                      type: "ContainersReady",
+                      status: 'True',
+                      lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+                    }],
+                    'status.podIPs': [{
+                      ip: podIP
+                    }],
+                    'status.containerStatuses': [{
+                      "restartCount": 0,
+                      "started": true,
+                      "ready": true,
+                      "name": this.metadata.name,
+                      "imageID": "",
+                      "image": "",
+                      "lastState": {},
+                      "containerID": podName
+                    }],
+                  },
+                  $set: {
+                    'status.podIP': podIP,
+                  }
+                })
+                .then(() => resolve());
+              }
+            } catch (e) {
+              reject(e);
+            }
+          }, 1000);
+        });
+      }));
+    })
+    .then(() => {
+      this.events().emit('Ready', this);
+      this.events().emit('PodScheduled', this);
+      return this.patch({
+        $push: {
+          'status.conditions': [{
+            type: "Ready",
+            status: 'True',
+            lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+          }, {
+            type: "PodScheduled",
+            status: 'True',
+            lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+          }],
+        },
+        $set: {
+          'status.phase': 'Running'
+        }
+      });
+    });
   }
 
   getSpec() {
