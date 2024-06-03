@@ -52,7 +52,7 @@ class K8Object {
     return this.eventEmitter;
   }
 
-  static create(config, searchQ) {
+  static create(config, searchQ, options = {}) {
     if (!config.metadata) {
       return Promise.reject(this.unprocessableContentStatus());
     }
@@ -65,11 +65,11 @@ class K8Object {
     return this.findOne(searchQ)
     .then((existingObj) => {
       if (existingObj) {
-        throw this.alreadyExistsStatus(config.metadata.name);
+        throw this.alreadyExistsStatus(this.kind, config.metadata.name);
       }
       config.metadata.creationTimestamp = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
       try {
-        return new this.Model(config).save();
+        return new this.Model(config).save(options);
       } catch (e) {
         throw Model.unprocessableContentStatus();
       }
