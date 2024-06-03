@@ -234,7 +234,7 @@ class K8Object {
     return this.arrayBufferTo53bitNumber(sha256);
   }
 
-  static notFoundStatus(kind = this.kind, name = undefined, group = undefined) {
+  static notFoundStatus(kind = this.kind, name = this?.metadata?.name, group = undefined) {
     return new Status({
       status: 'Failure',
       reason: 'NotFound',
@@ -262,7 +262,7 @@ class K8Object {
     });
   }
 
-  static forbiddenStatus(kind = this.kind, name = undefined, group = undefined) {
+  static forbiddenStatus(kind = this.kind, name = this?.metadata?.name, group = undefined) {
     return new Status({
       status: 'Failure',
       reason: 'Forbidden',
@@ -276,7 +276,7 @@ class K8Object {
     });
   }
 
-  static unprocessableContentStatus(kind = this.kind, name = undefined, group = undefined, message = undefined, reason = "UnprocessableContent") {
+  static unprocessableContentStatus(kind = this.kind, name = this?.metadata?.name, group = undefined, message = undefined, reason = "UnprocessableContent") {
     return new Status({
       status: 'Failure',
       reason,
@@ -290,7 +290,7 @@ class K8Object {
     });
   }
 
-  static alreadyExistsStatus(kind = this.kind, name = undefined, group = undefined) {
+  static alreadyExistsStatus(kind = this.kind, name = this?.metadata?.name, group = undefined) {
     return new Status({
       status: 'Failure',
       reason: 'AlreadyExists',
@@ -304,7 +304,7 @@ class K8Object {
     });
   }
 
-  static internalServerErrorStatus(kind = this.kind, name = undefined, group = undefined) {
+  static internalServerErrorStatus(kind = this.kind, name = this?.metadata?.name, group = undefined) {
     return new Status({
       status: 'Failure',
       reason: 'InternalServerError',
