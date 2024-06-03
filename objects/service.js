@@ -253,7 +253,7 @@ class Service extends K8Object {
   }
 
   removePort(port) {
-    return Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+    return Endpoints.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
       .then(async (endpoint) => {
         if (endpoint) {
           return endpoint.removePort(port);
@@ -262,7 +262,7 @@ class Service extends K8Object {
   }
 
   addPorts(ports) {
-    return Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+    return Endpoints.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
       .then(async (endpoint) => {
         if (endpoint) {
           return endpoint.addPorts(orts);
@@ -271,7 +271,7 @@ class Service extends K8Object {
   }
 
   addPort(port) {
-    return Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+    return Endpoints.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
       .then(async (endpoint) => {
         if (endpoint) {
           return endpoint.addPort(port);
@@ -279,22 +279,27 @@ class Service extends K8Object {
       });
   }
 
-  addPod() {
-    return Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+  addPod(pod) {
+    return Endpoints.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
       .then(async (endpoint) => {
         if (endpoint) {
-          return endpoint.addPod(port);
+          return endpoint.addPod(pod);
         }
       });
   }
 
   removePod() {
-    return Endpoints.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
-      .then(async (endpoint) => {
-        if (endpoint) {
-          return endpoint.removePod(port);
-        }
-      });
+    return this.findOldestPod()
+    .then((pod) => {
+      if (pod) {
+        return Endpoints.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
+          .then(async (endpoint) => {
+            if (endpoint) {
+              return endpoint.removePod(pod);
+            }
+          });
+      }
+    })
   }
 
   async findOldestPod() {
