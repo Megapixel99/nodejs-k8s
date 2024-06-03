@@ -221,7 +221,6 @@ class Pod extends K8Object {
 
   start() {
     let p = this.spec.containers.map(async (e) => {
-      console.log(e);
       let options = {
         expose: e.ports.map((a) => a.containerPort),
       }
@@ -255,7 +254,6 @@ class Pod extends K8Object {
             if (e.secretRef) {
               return this.getEnvVarsFromSecret(a.secretRef.name)
                 .catch((err) => {
-                  console.log("p");
                   newPod.patch({
                     $push: {
                       'status.conditions': [{
