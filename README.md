@@ -1,4 +1,6 @@
-# Kubernetes in NodeJS
+# Kubernetes in Node.js
+
+> A from-scratch reimplementation of Kubernetes' core APIs in pure Node.js — compatible with the real `kubectl` CLI and standard Kubernetes YAML.
 
 This project was/is an attempt to recreate the core functionality of [v1.29.1 Kubernetes](https://v1-29.docs.kubernetes.io/) in NodeJS, while being fully compatible with the [`kubectl` CLI](https://kubernetes.io/docs/reference/kubectl/). Though this project only implements some resources, the resources which were partially/fully implemented seem to be the most used (i.e. Pods, Services, etc) and the others may be implemented in the future.
 
