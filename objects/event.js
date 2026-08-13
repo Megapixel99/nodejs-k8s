@@ -78,33 +78,71 @@ class Event extends K8Object {
         "metadata": {
           "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
+        // Name and Age only: `kubectl get events` showed a list of opaque
+        // event names and nothing about what happened. These are the columns
+        // kubectl's own event printer uses.
         "columnDefinitions": [
+          {
+            "name": "Last Seen",
+            "type": "string",
+            "format": "",
+            "description": "The time at which the most recent occurrence of this event was recorded.",
+            "priority": 0
+          },
+          {
+            "name": "Type",
+            "type": "string",
+            "format": "",
+            "description": "Type of this event (Normal, Warning).",
+            "priority": 0
+          },
+          {
+            "name": "Reason",
+            "type": "string",
+            "format": "",
+            "description": "A short, machine understandable string that gives the reason for this event.",
+            "priority": 0
+          },
+          {
+            "name": "Object",
+            "type": "string",
+            "format": "",
+            "description": "The object this event is about.",
+            "priority": 0
+          },
+          {
+            "name": "Message",
+            "type": "string",
+            "format": "",
+            "description": "A human-readable description of the status of this operation.",
+            "priority": 0
+          },
           {
             "name": "Name",
             "type": "string",
             "format": "name",
-            "description": "Name must be unique within a event. Is required when creating resources, although some resources may allow a client to request the generation of an appropriate name automatically. Name is primarily intended for creation idempotence and configuration definition. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
-            "priority": 0
-          },
-          {
-            "name": "Age",
-            "type": "string",
-            "format": "",
-            "description": "CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.\n\nPopulated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
-            "priority": 0
+            "description": "Name must be unique within a namespace.",
+            "priority": 1
           },
         ],
-        "rows": items.map((e) => ({
-          "cells": [
-            e.metadata.name,
-            age(e.metadata.creationTimestamp),
-          ],
-          object: {
-            "kind": "PartialObjectMetadata",
-            "apiVersion": "meta.k8s.io/v1",
-            metadata: e.metadata,
-          }
-        })),
+        "rows": items.map((e) => {
+          let about = e.involvedObject || e.regarding || {};
+          return {
+            "cells": [
+              age(e.lastTimestamp || e.deprecatedLastTimestamp || e.eventTime || e.metadata.creationTimestamp),
+              e.type || 'Normal',
+              e.reason || '<none>',
+              about.kind ? `${`${about.kind}`.toLowerCase()}/${about.name || ''}` : '<none>',
+              e.message || e.note || '',
+              e.metadata.name,
+            ],
+            object: {
+              "kind": "PartialObjectMetadata",
+              "apiVersion": "meta.k8s.io/v1",
+              metadata: e.metadata,
+            }
+        };
+        }),
     }
   }
 
