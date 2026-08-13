@@ -110,6 +110,11 @@ function flattenMergePatch(body) {
 // Apply a RFC 6902 JSON Patch (array of ops) against a plain-object copy of
 // the mongoose doc, returning a flattened Mongo-style update.
 function applyJsonPatch(ops, doc) {
+  let work = applyJsonPatchToDoc(ops, doc);
+  return flattenMergePatch({ metadata: work.metadata, spec: work.spec, status: work.status, data: work.data, stringData: work.stringData, type: work.type, rules: work.rules });
+}
+
+function applyJsonPatchToDoc(ops, doc) {
   let work = JSON.parse(JSON.stringify(doc));
   for (const op of ops) {
     let tokens = op.path.split('/').slice(1).map((t) => t.replace(/~1/g, '/').replace(/~0/g, '~'));
@@ -126,7 +131,7 @@ function applyJsonPatch(ops, doc) {
       else delete cursor[leaf];
     }
   }
-  return flattenMergePatch({ metadata: work.metadata, spec: work.spec, status: work.status, data: work.data, stringData: work.stringData, type: work.type, rules: work.rules });
+  return work;
 }
 
 // Content negotiation for a response body. Lists used to bypass this and
@@ -226,6 +231,60 @@ function rejectsImmutableChange(Model, req, res, item) {
     'Invalid',
   ), 'Status');
   return true;
+}
+
+// `?dryRun=All` means: validate and tell me what would happen, but change
+// nothing. It was ignored, so `kubectl apply --dry-run=server` printed
+// "(server dry run)" and created the object anyway — the one outcome a dry run
+// exists to prevent.
+function isDryRun(req) {
+  // Creates and patches carry it in the query string; a delete carries it in
+  // a DeleteOptions body instead, which is why checking only the query still
+  // let `kubectl delete --dry-run=server` delete the object.
+  for (const value of [req.query?.dryRun, req.body?.dryRun]) {
+    if (Array.isArray(value) ? value.includes('All') : value === 'All') {
+      return true;
+    }
+  }
+  return false;
+}
+
+// The object a create would have produced, without storing it.
+function projectedCreate(Model, req) {
+  let body = req.body || {};
+  let metadata = { ...(body.metadata || {}) };
+  metadata.creationTimestamp = metadata.creationTimestamp
+    || DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
+  return {
+    apiVersion: body.apiVersion || Model.apiVersion,
+    kind: body.kind || Model.kind,
+    ...body,
+    metadata,
+  };
+}
+
+// The object a patch or replace would have produced, without storing it.
+function projectedWrite(item, req) {
+  let current = item?.toJSON ? item.toJSON() : { ...item };
+  let body = req.body;
+  if (Array.isArray(body)) {
+    return applyJsonPatchToDoc(body, current);
+  }
+  return mergeDeep(current, body || {});
+}
+
+function mergeDeep(target, source) {
+  let out = Array.isArray(target) ? [...target] : { ...target };
+  for (const [key, value] of Object.entries(source || {})) {
+    if (value === null) {
+      delete out[key];
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      out[key] = mergeDeep(out[key] && typeof out[key] === 'object' ? out[key] : {}, value);
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
 }
 
 // `patch` resolves the raw mongo document, whose toJSON carries `_id`/`__v` and
@@ -499,6 +558,11 @@ module.exports = {
           query = undefined;
         }
       }
+      if (isDryRun(req)) {
+        res.status(201);
+        res.data = projectedCreate(Model, req);
+        return next();
+      }
       return Model.create(req.body, query)
       .then((item) => {
         res.status(201);
@@ -525,6 +589,7 @@ module.exports = {
           if (!item) return undefined;
           if (conflictsOnResourceVersion(Model, req, res, item)) return null;
           if (rejectsImmutableChange(Model, req, res, item)) return null;
+          if (isDryRun(req)) return projectedWrite(item, req);
           return item.update(req.body, query);
         })
         .then((item) => {
@@ -572,6 +637,11 @@ module.exports = {
             if (!item) return sendNotFound(Model, req, res);
             if (conflictsOnResourceVersion(Model, req, res, item)) return undefined;
             if (rejectsImmutableChange(Model, req, res, item)) return undefined;
+            if (isDryRun(req)) {
+              res.status(200);
+              res.data = projectedWrite(item, req);
+              return next();
+            }
             let doc = item.toJSON ? item.toJSON() : item;
             let flat = applyJsonPatch(req.body, doc);
             return item.patch(flat, query).then((updated) => {
@@ -599,6 +669,7 @@ module.exports = {
           if (!item) return undefined;
           if (conflictsOnResourceVersion(Model, req, res, item)) return null;
           if (rejectsImmutableChange(Model, req, res, item)) return null;
+          if (isDryRun(req)) return projectedWrite(item, req);
           return item.patch(update, query);
         })
         .then((item) => {
@@ -632,7 +703,11 @@ module.exports = {
         query = { 'metadata.name': req.params.name };
       }
       Model.findOne(query)
-      .then((item) => item ? Promise.all([item, item.delete()]) : Promise.resolve())
+      .then((item) => {
+        if (!item) return undefined;
+        if (isDryRun(req)) return [item, item];
+        return Promise.all([item, item.delete()]);
+      })
       .then((pair) => {
         if (pair) {
           let [item] = pair;
@@ -652,7 +727,7 @@ module.exports = {
       // every row in the DB.
       let q = Model.genFindQuery(req.query || {}, req.params || {}).params || {};
       return Model.find(q)
-      .then((items) => Promise.all(items.map((item) => item.delete())))
+      .then((items) => (isDryRun(req) ? items : Promise.all(items.map((item) => item.delete()))))
       .then((items) => (items || []).filter(Boolean))
       // A bare array isn't a Kubernetes response object — it has no kind, so a
       // client can't tell what came back and the protobuf encoder had nothing

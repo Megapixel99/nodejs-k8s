@@ -13,19 +13,19 @@ const RESOURCES = [
   { group: 'admissionregistration.k8s.io', version: 'v1', kind: 'ValidatingWebhookConfiguration', plural: 'validatingwebhookconfigurations', singular: 'validatingwebhookconfiguration', namespaced: false },
   { group: 'apiregistration.k8s.io', version: 'v1', kind: 'APIService', plural: 'apiservices', singular: 'apiservice', namespaced: false },
   { group: 'apps', version: 'v1', kind: 'ControllerRevision', plural: 'controllerrevisions', singular: 'controllerrevision', namespaced: true },
-  { group: 'apps', version: 'v1', kind: 'DaemonSet', plural: 'daemonsets', singular: 'daemonset', namespaced: true, shortNames: ['ds'] },
-  { group: 'apps', version: 'v1', kind: 'Deployment', plural: 'deployments', singular: 'deployment', namespaced: true, shortNames: ['deploy'] },
-  { group: 'apps', version: 'v1', kind: 'ReplicaSet', plural: 'replicasets', singular: 'replicaset', namespaced: true, shortNames: ['rs'] },
-  { group: 'apps', version: 'v1', kind: 'StatefulSet', plural: 'statefulsets', singular: 'statefulset', namespaced: true, shortNames: ['sts'] },
+  { group: 'apps', version: 'v1', categories: ['all'], kind: 'DaemonSet', plural: 'daemonsets', singular: 'daemonset', namespaced: true, shortNames: ['ds'] },
+  { group: 'apps', version: 'v1', categories: ['all'], kind: 'Deployment', plural: 'deployments', singular: 'deployment', namespaced: true, shortNames: ['deploy'] },
+  { group: 'apps', version: 'v1', categories: ['all'], kind: 'ReplicaSet', plural: 'replicasets', singular: 'replicaset', namespaced: true, shortNames: ['rs'] },
+  { group: 'apps', version: 'v1', categories: ['all'], kind: 'StatefulSet', plural: 'statefulsets', singular: 'statefulset', namespaced: true, shortNames: ['sts'] },
   { group: 'authentication.k8s.io', version: 'v1', kind: 'SelfSubjectReview', plural: 'selfsubjectreviews', singular: 'selfsubjectreview', namespaced: false, verbs: ['create'] },
   { group: 'authentication.k8s.io', version: 'v1', kind: 'TokenReview', plural: 'tokenreviews', singular: 'tokenreview', namespaced: false },
   { group: 'authorization.k8s.io', version: 'v1', kind: 'LocalSubjectAccessReview', plural: 'localsubjectaccessreviews', singular: 'localsubjectaccessreview', namespaced: true },
   { group: 'authorization.k8s.io', version: 'v1', kind: 'SelfSubjectAccessReview', plural: 'selfsubjectaccessreviews', singular: 'selfsubjectaccessreview', namespaced: false },
   { group: 'authorization.k8s.io', version: 'v1', kind: 'SelfSubjectRulesReview', plural: 'selfsubjectrulesreviews', singular: 'selfsubjectrulesreview', namespaced: false },
   { group: 'authorization.k8s.io', version: 'v1', kind: 'SubjectAccessReview', plural: 'subjectaccessreviews', singular: 'subjectaccessreview', namespaced: false },
-  { group: 'autoscaling', version: 'v2', kind: 'HorizontalPodAutoscaler', plural: 'horizontalpodautoscalers', singular: 'horizontalpodautoscaler', namespaced: true, shortNames: ['hpa'] },
-  { group: 'batch', version: 'v1', kind: 'CronJob', plural: 'cronjobs', singular: 'cronjob', namespaced: true, shortNames: ['cj'] },
-  { group: 'batch', version: 'v1', kind: 'Job', plural: 'jobs', singular: 'job', namespaced: true },
+  { group: 'autoscaling', version: 'v2', categories: ['all'], kind: 'HorizontalPodAutoscaler', plural: 'horizontalpodautoscalers', singular: 'horizontalpodautoscaler', namespaced: true, shortNames: ['hpa'] },
+  { group: 'batch', version: 'v1', categories: ['all'], kind: 'CronJob', plural: 'cronjobs', singular: 'cronjob', namespaced: true, shortNames: ['cj'] },
+  { group: 'batch', version: 'v1', categories: ['all'], kind: 'Job', plural: 'jobs', singular: 'job', namespaced: true },
   { group: 'certificates.k8s.io', version: 'v1', kind: 'CertificateSigningRequest', plural: 'certificatesigningrequests', singular: 'certificatesigningrequest', namespaced: false, shortNames: ['csr'] },
   // Cluster-scoped in real Kubernetes; this server stores leases without a
   // namespace and routes them at the cluster path, so say so.
@@ -61,12 +61,12 @@ const CORE_RESOURCES = [
   { kind: 'Node', plural: 'nodes', singular: 'node', namespaced: false, shortNames: ['no'] },
   { kind: 'PersistentVolume', plural: 'persistentvolumes', singular: 'persistentvolume', namespaced: false, shortNames: ['pv'] },
   { kind: 'PersistentVolumeClaim', plural: 'persistentvolumeclaims', singular: 'persistentvolumeclaim', namespaced: true, shortNames: ['pvc'] },
-  { kind: 'Pod', plural: 'pods', singular: 'pod', namespaced: true, shortNames: ['po'] },
+  { categories: ['all'], kind: 'Pod', plural: 'pods', singular: 'pod', namespaced: true, shortNames: ['po'] },
   { kind: 'PodTemplate', plural: 'podtemplates', singular: 'podtemplate', namespaced: true },
-  { kind: 'ReplicationController', plural: 'replicationcontrollers', singular: 'replicationcontroller', namespaced: true, shortNames: ['rc'] },
+  { categories: ['all'], kind: 'ReplicationController', plural: 'replicationcontrollers', singular: 'replicationcontroller', namespaced: true, shortNames: ['rc'] },
   { kind: 'ResourceQuota', plural: 'resourcequotas', singular: 'resourcequota', namespaced: true, shortNames: ['quota'] },
   { kind: 'Secret', plural: 'secrets', singular: 'secret', namespaced: true },
-  { kind: 'Service', plural: 'services', singular: 'service', namespaced: true, shortNames: ['svc'] },
+  { categories: ['all'], kind: 'Service', plural: 'services', singular: 'service', namespaced: true, shortNames: ['svc'] },
   { kind: 'ServiceAccount', plural: 'serviceaccounts', singular: 'serviceaccount', namespaced: true, shortNames: ['sa'] },
 ];
 
@@ -114,6 +114,9 @@ function apiResourceList(group, version) {
       kind: r.kind,
       verbs: r.verbs || DEFAULT_VERBS,
       ...(r.shortNames ? { shortNames: r.shortNames } : {}),
+      // `kubectl get all` is a category lookup against discovery, not a
+      // resource; without this it fails with "no resource type all".
+      ...(r.categories ? { categories: r.categories } : {}),
     })),
   };
 }
@@ -130,6 +133,7 @@ function coreResourceList() {
       kind: r.kind,
       verbs: r.verbs || DEFAULT_VERBS,
       ...(r.shortNames ? { shortNames: r.shortNames } : {}),
+      ...(r.categories ? { categories: r.categories } : {}),
     })),
   };
 }

@@ -189,6 +189,29 @@ function checkTable(label, res) {
       }
     }
 
+    // A dry run must not touch anything. This was ignored entirely: kubectl
+    // printed "(server dry run)" and the object was created or deleted.
+    let dryName = `${name}-dry`;
+    let dryCreate = await req('POST', `${resource.path}?dryRun=All`, {
+      body: { ...resource.body, metadata: { ...resource.body.metadata, name: dryName } },
+    });
+    if (dryCreate.status >= 400) {
+      fails.push(`POST ${resource.path}?dryRun=All: ${dryCreate.status}`);
+    } else {
+      let shouldNotExist = await req('GET', `${resource.path}/${dryName}`);
+      if (shouldNotExist.status !== 404) {
+        fails.push(`POST ${resource.path}?dryRun=All: object was actually created`);
+        await req('DELETE', `${resource.path}/${dryName}`);
+      }
+    }
+    let dryDelete = await req('DELETE', `${single}?dryRun=All`);
+    if (dryDelete.status < 400) {
+      let shouldStillExist = await req('GET', single);
+      if (shouldStillExist.status !== 200) {
+        fails.push(`DELETE ${single}?dryRun=All: object was actually deleted`);
+      }
+    }
+
     let deleted = await req('DELETE', single, { accept: ACCEPT.proto });
     if (deleted.status >= 400) {
       fails.push(`DELETE ${single}: ${deleted.status}`);
