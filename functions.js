@@ -41,34 +41,45 @@ let countEntries = (value) => {
   return Object.keys(value).length;
 };
 
-let duration = (timeDiff, loop = true) => {
-  let y = 365 * 24 * 60 * 60 * 1000;
-  // 10000, not 1000: a day was worth ten, so anything under ten days old was
-  // reported in hours and "1d" meant a week and a half.
-  let d = 24 * 60 * 60 * 1000;
-  let h = 60 * 60 * 1000;
-  let m = 60 * 1000;
-  let s = 1000;
-  if (timeDiff >= y) {
-    let val = Math.floor(timeDiff / y);
-    return `${val}y${duration(timeDiff - (y * val))}`;
+// Kubernetes' HumanDuration, which is what an AGE column shows. The previous
+// implementation concatenated every unit it could — a node up for four months
+// printed "113d2h10m5s" where kubectl prints "113d".
+let duration = (timeDiff) => {
+  let seconds = Math.floor(timeDiff / 1000);
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    return '0s';
   }
-  if (timeDiff >= d) {
-    let val = Math.floor(timeDiff / d);
-    return `${val}d${duration(timeDiff - (d * val))}`;
+  let minutes = Math.floor(seconds / 60);
+  let hours = Math.floor(minutes / 60);
+  let days = Math.floor(hours / 24);
+  let years = Math.floor(days / 365);
+
+  if (seconds < 120) {
+    return `${seconds}s`;
   }
-  if (timeDiff >= h) {
-    let val = Math.floor(timeDiff / h);
-    return `${val}h${duration(timeDiff - (h * val))}`;
+  if (minutes < 10) {
+    let remainder = seconds % 60;
+    return remainder === 0 ? `${minutes}m` : `${minutes}m${remainder}s`;
   }
-  if (timeDiff >= m) {
-    let val = Math.floor(timeDiff / m);
-    return `${val}m${duration(timeDiff - (m * val))}`;
+  if (minutes < 180) {
+    return `${minutes}m`;
   }
-  if (timeDiff >= s) {
-    return `${Math.floor(timeDiff / s)}s`;
+  if (hours < 8) {
+    let remainder = minutes % 60;
+    return remainder === 0 ? `${hours}h` : `${hours}h${remainder}m`;
   }
-  return '0s';
+  if (hours < 48) {
+    return `${hours}h`;
+  }
+  if (days < 8) {
+    let remainder = hours % 24;
+    return remainder === 0 ? `${days}d` : `${days}d${remainder}h`;
+  }
+  if (days < 365) {
+    return `${days}d`;
+  }
+  let remainder = days % 365;
+  return remainder === 0 ? `${years}y` : `${years}y${remainder}d`;
 };
 
 // The AGE cell of a Table. Every caller used to compute this by subtracting

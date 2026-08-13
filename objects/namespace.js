@@ -194,6 +194,13 @@ class Namespace extends K8Object {
             "priority": 0
           },
           {
+            "name": "Status",
+            "type": "string",
+            "format": "",
+            "description": "The status of the namespace",
+            "priority": 0
+          },
+          {
             "name": "Age",
             "type": "string",
             "format": "",
@@ -204,6 +211,7 @@ class Namespace extends K8Object {
         "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
+            e.status?.phase ?? 'Active',
             age(e.metadata.creationTimestamp),
           ],
           object: {
