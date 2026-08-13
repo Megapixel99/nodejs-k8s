@@ -11,7 +11,8 @@
     "test:smoke": "node ./test/boot-clean.js",
     "test:proto": "node ./test/proto-roundtrip.js",
     "test:wire": "node ./test/wire-matrix.js",
-    "test:rv": "node ./test/resource-version.js"
+    "test:rv": "node ./test/resource-version.js",
+    "test:workload": "node ./test/workload.js"
   },
   "author": "",
   "license": "ISC",

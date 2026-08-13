@@ -2,7 +2,7 @@ const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const Pod = require('./pod.js');
 const { ReplicationController: Model } = require('../database/models.js');
-const { duration, isContainerRunning, age } = require('../functions.js');
+const { duration, isContainerRunning, age, randomBytes } = require('../functions.js');
 
 class ReplicationController extends K8Object {
   constructor(config) {
@@ -26,8 +26,13 @@ class ReplicationController extends K8Object {
     if (numPods) {
       opts.limit = numPods;
     }
+    // Replicas are named `<controller>-<suffix>`, so matching the template's
+    // single name found nothing once each pod got its own name.
     return Pod.find(
-      { 'metadata.name': this.spec.template.metadata.name, 'metadata.namespace': this.metadata.namespace },
+      {
+        'metadata.name': { $regex: `^${this.metadata.name}-` },
+        'metadata.namespace': this.metadata.namespace,
+      },
       opts,
     )
     .then((pods) => {
@@ -68,9 +73,27 @@ class ReplicationController extends K8Object {
     }
     let start = DateTime.now();
     let minReadySeconds = Infinity;
-    let arr = new Array(numPods ?? this.spec.replicas).fill(
+    // Every replica used to be created from the same template object, which
+    // carries a fixed metadata.name — so the second pod collided with the
+    // first and the whole create failed with AlreadyExists. Each pod gets its
+    // own copy of the template and a generated name, the way a controller
+    // names the pods it owns.
+    let podTemplate = () => {
+      let template = JSON.parse(JSON.stringify(this.spec.template));
+      template.metadata = template.metadata || {};
+      // Pod.create treats generateName as its own container-name prefix and
+      // falls back to the literal name "default" when there is no name, so the
+      // controller has to hand each replica a distinct name itself.
+      template.metadata.name = `${this.metadata.name}-${randomBytes(3).toString('hex')}`;
+      template.metadata.namespace = template.metadata.namespace || this.metadata.namespace;
+      return template;
+    };
+    // `.fill(promise)` puts the *same* already-started promise in every slot,
+    // so a replica count of N created exactly one pod. Each slot has to be its
+    // own call.
+    let arr = Array.from({ length: numPods ?? this.spec.replicas }, () =>
       Promise.all([
-        Pod.create(this.spec.template),
+        Pod.create(podTemplate()),
         super.patch({
           $inc: {
             'status.replicas': 1,

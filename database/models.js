@@ -1283,12 +1283,21 @@ const deploymentSchema = Schema({
       default: 0
     },
     fieldSelector,
+    // spec.selector is required on an apps/v1 Deployment, but the schema never
+    // declared it — mongoose dropped it on save, so every stored Deployment
+    // came back without one and `kubectl get deployments` 500'd reading
+    // selector.matchLabels.
+    selector: labelSelector,
+    // Defaulted the way the apiserver defaults them. Without this a Deployment
+    // created without an explicit strategy stored `{rollingUpdate:{}}`, and
+    // rollout() — which switches on strategy.type — matched neither branch and
+    // silently created no pods at all.
     strategy: {
       rollingUpdate: {
-        maxSurge: String,
-        maxUnavailable: String,
+        maxSurge: { type: String, default: '25%' },
+        maxUnavailable: { type: String, default: '25%' },
       },
-      type: { type: String },
+      type: { type: String, default: 'RollingUpdate' },
     },
     template: pod,
   },

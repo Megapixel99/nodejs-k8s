@@ -66,6 +66,7 @@ class Deployment extends K8Object {
       let [ deployment, rc ] = arr;
       if (deployment) {
         let newDeployment = new Deployment(deployment);
+        let previousRc = (rc || []).at(-1);
         if (newDeployment.spec.paused !== true) {
           return ReplicationController.create({
             metadata: {
@@ -81,7 +82,7 @@ class Deployment extends K8Object {
               minReadySeconds: Infinity,
             },
           })
-          .then((rc) => newDeployment.rollout(rc));
+          .then((created) => newDeployment.rollout(created, previousRc));
         }
         return newDeployment;
       }
@@ -166,13 +167,16 @@ class Deployment extends K8Object {
         "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
-            `${e.status.availableReplicas}/${e.spec.replicas}`,
-            e.status.updatedReplicas,
-            e.status.availableReplicas,
+            `${e.status?.availableReplicas ?? 0}/${e.spec?.replicas ?? 0}`,
+            e.status?.updatedReplicas ?? 0,
+            e.status?.availableReplicas ?? 0,
             age(e.metadata.creationTimestamp),
-            e.spec.template.spec.containers.map((e) => e.name).join(', '),
-            e.spec.template.spec.containers.map((e) => e.image).join(', '),
-            Object.values(e.spec.selector.matchLabels).join(', '),
+            (e.spec?.template?.spec?.containers || []).map((c) => c.name).join(', '),
+            (e.spec?.template?.spec?.containers || []).map((c) => c.image).join(', '),
+            // A display cell must not be able to fail the request: a missing
+            // selector used to throw here and answer `kubectl get deployments`
+            // with a 500.
+            Object.entries(e.spec?.selector?.matchLabels || {}).map(([k, v]) => `${k}=${v}`).join(','),
           ],
           object: {
             "kind": "PartialObjectMetadata",
@@ -198,86 +202,82 @@ class Deployment extends K8Object {
     return this.status;
   }
 
-  async rollout(_rc) {
-    let rc = _rc
-    if (!_rc) {
-      let rc = (await ReplicationController.findAllSorted({ 'metadata.name': this.spec.template.metadata.name }))[0];
+  async rollout(_rc, previousRc) {
+    let rc = _rc;
+    if (!rc) {
+      // This re-declared `rc` with `let`, so the lookup's result was thrown
+      // away and the outer rc stayed undefined.
+      rc = (await ReplicationController.findAllSorted({
+        'metadata.name': { $regex: `^${this.metadata.name}` },
+        'metadata.namespace': this.metadata.namespace,
+      }))[0];
     }
-    if (this.spec.strategy.type === "RollingUpdate") {
-      let percent = Number(`${this.spec.strategy.rollingUpdate.maxUnavailable}`.match(/\d*/)[0]);
-      let newPods = 0;
-      do {
-        await Promise.all(
-          new Array(Math.ceil(this.spec.replicas * percent / 100))
-          .fill(0)
-          .map(() => {
-            newPods += 1;
-            this.patch({
-              $set: {
-                'conditions.$.type': "Progressing",
-                'conditions.$.status': "True",
-                'conditions.$.lastUpdateTime': DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
-                'conditions.$.lastTransitionTime': DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
-              }
-            }, {
-              'conditions.type': 'Progressing',
-              'metadata.name': this.metadata.name,
-              'metadata.namespace': this.metadata.namespace
-            })
-            return rc.createPods(1)
-            .then((pods) => {
-              return Promise.all([
-                this.patch({
-                  $inc: {
-                    'status.replicas': 1,
-                    'status.readyReplicas': 1,
-                    'status.availableReplicas': 1,
-                  },
-                  $set: {
-                    'conditions.$.type': "Available",
-                    'conditions.$.status': "True",
-                    'conditions.$.lastUpdateTime': DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
-                    'conditions.$.lastTransitionTime': DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
-                  }
-                }, {
-                  'conditions.type': 'Available',
-                  'metadata.name': this.metadata.name,
-                  'metadata.namespace': this.metadata.namespace
-                }),
-                Service.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-                .then((service) => {
-                  if (service) {
-                    return service.addPod(pods[0]);
-                  }
-                })
-              ])
-            })
-            .then(() => rc.deletePods(1))
-            .then(() => {
-              return Promise.all([
-                this.patch({
-                  $inc: {
-                    'status.replicas': -1,
-                    'status.readyReplicas': -1,
-                    'status.availableReplicas': -1,
-                  },
-                }),
-                Service.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-                .then((service) => {
-                  if (service) {
-                    return service.findOldestPod()
-                      .then((service) => service.removePod());
-                  }
-                })
-              ])
-            })
-          })
-        );
-      } while (newPods < this.spec.replicas);
-    } else if (this.spec.strategy.type === "Recreate") {
-      return Promise.all(rc.deletePods())
-      .then(() => Promise.all(rc.createPods()));
+    if (!rc) {
+      return undefined;
     }
+    // The old loop was written as if every rollout were replacing an existing
+    // generation: it created a pod, then deleted one, and adjusted the
+    // deployment's counters with a `conditions.$` positional query that never
+    // matched on a fresh object — so the +1 silently did nothing while the -1
+    // (which had no query at all) always applied. A new deployment ended up
+    // with churned pods and a negative replica count.
+    let percent = Number(`${this.spec.strategy?.rollingUpdate?.maxUnavailable ?? '25%'}`.match(/\d+/)?.[0] || 25);
+    let desired = this.spec.replicas ?? 1;
+    let batchSize = Math.max(1, Math.ceil(desired * percent / 100));
+
+    if (this.spec.strategy.type === "Recreate") {
+      if (previousRc) {
+        await previousRc.deletePods();
+      }
+      await rc.createPods(desired);
+      return this.patch({
+        $set: {
+          'status.replicas': desired,
+          'status.readyReplicas': desired,
+          'status.availableReplicas': desired,
+          'status.updatedReplicas': desired,
+        },
+      });
+    }
+
+    let created = 0;
+    while (created < desired) {
+      let batch = Math.min(batchSize, desired - created);
+      let pods = await rc.createPods(batch);
+      created += batch;
+
+      let service = await Service.findOne({
+        'metadata.name': this.metadata.name,
+        'metadata.namespace': this.metadata.namespace,
+      });
+      if (service) {
+        for (const pod of pods.flat().filter(Boolean)) {
+          await service.addPod(pod);
+        }
+      }
+
+      // Only a previous generation gets retired. Deleting from `rc` here is
+      // deleting the replicas we just created.
+      if (previousRc) {
+        await previousRc.deletePods(batch);
+        if (service) {
+          let oldest = await service.findOldestPod();
+          if (oldest) {
+            await oldest.removePod();
+          }
+        }
+      }
+
+      await this.patch({
+        $inc: {
+          'status.replicas': batch,
+          'status.readyReplicas': batch,
+          'status.availableReplicas': batch,
+          'status.updatedReplicas': batch,
+        },
+      });
+    }
+    return this;
   }
 }
 

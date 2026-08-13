@@ -397,9 +397,15 @@ class K8Object {
     let self = this;
     return K8Object.nextResourceVersion()
       .then((resourceVersion) => {
-        // The body arrives either flattened into $set/$unset or as a plain
+        // The body arrives either as a mongo operator update or as a plain
         // replacement; either way the stored object gets the new version.
-        updateObj = updateObj && (updateObj.$set || updateObj.$unset)
+        // Testing only for $set/$unset missed operator updates that use
+        // neither — `{$inc: {...}}`, which the controllers use constantly —
+        // and mixed a bare `metadata` field into them, replacing the whole
+        // metadata subdocument with just the resourceVersion. The object kept
+        // its data and lost its name, namespace and uid.
+        let usesOperators = updateObj && Object.keys(updateObj).some((key) => key.startsWith('$'));
+        updateObj = usesOperators
           ? { ...updateObj, $set: { ...updateObj.$set, 'metadata.resourceVersion': resourceVersion } }
           : { ...updateObj, metadata: { ...(updateObj?.metadata || {}), resourceVersion } };
         return this.Model.findOneAndUpdate(
