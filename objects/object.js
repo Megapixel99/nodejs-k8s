@@ -54,6 +54,38 @@ function parseSelector(selector) {
   return parsed;
 }
 
+// `continue` is an opaque token to the client; we only need it to carry how
+// far into the sorted result the next page starts. `limit` was accepted and
+// applied, but the response never returned a token and reported
+// remainingItemCount 0 — after the first page a client had no way to ask for
+// the rest, and no way to know there was a rest.
+function encodeContinue(skip) {
+  return Buffer.from(JSON.stringify({ skip })).toString('base64');
+}
+
+function decodeContinue(token) {
+  if (!token) {
+    return 0;
+  }
+  try {
+    let { skip } = JSON.parse(Buffer.from(String(token), 'base64').toString('utf8'));
+    return Number.isFinite(skip) && skip > 0 ? skip : 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+// The suffix Kubernetes appends to a generateName: five characters from an
+// alphabet that avoids vowels and lookalikes.
+function randomSuffix() {
+  const alphabet = 'bcdfghjklmnpqrstvwxz2456789';
+  let out = '';
+  for (let i = 0; i < 5; i++) {
+    out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return out;
+}
+
 // Fire-and-forget write of an Event record so conformance tests that assert
 // CRUD on a resource emits events succeed. Required by [sig-instrumentation]
 // Events should delete a collection of events — it creates PodTemplates and
@@ -148,9 +180,28 @@ class K8Object {
     return this.eventEmitter;
   }
 
+  // `generateName` means the server picks the name. Without this the object was
+  // stored with no name at all: 201 was returned, but nothing could GET, patch
+  // or delete it again, and it printed as a blank row. It has to happen before
+  // anyone builds a uniqueness query, because a query with an undefined name
+  // drops that clause and matches an unrelated object instead.
+  static applyGenerateName(metadata) {
+    if (metadata && !metadata.name && metadata.generateName) {
+      metadata.name = `${metadata.generateName}${randomSuffix()}`;
+    }
+    return metadata;
+  }
+
   static create(config, searchQ, options = {}) {
     if (!config.metadata) {
       return Promise.reject(this.unprocessableContentStatus());
+    }
+    K8Object.applyGenerateName(config.metadata);
+    if (!config.metadata.name) {
+      return Promise.reject(this.unprocessableContentStatus(
+        this.kind, undefined, undefined,
+        `${this.kind} "": name or generateName is required`, 'Invalid',
+      ));
     }
     if (!config.metadata.labels) {
       config.metadata.labels = new Map([['name', config.metadata.name]]);
@@ -204,6 +255,32 @@ class K8Object {
     if (!searchQ) {
       searchQ = { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace };
     }
+    // Finalizers were ignored: an object carrying one was removed immediately,
+    // so the controller that registered it never got its chance to run and a
+    // client waiting for the object to disappear on its own terms saw it
+    // vanish first. A delete now only stamps deletionTimestamp; the object
+    // goes when the last finalizer is cleared (see `finalizeIfReleased`).
+    let hasFinalizers = (this.metadata?.finalizers || []).length > 0;
+    if (hasFinalizers && !this.metadata?.deletionTimestamp) {
+      return K8Object.nextResourceVersion()
+        .then((resourceVersion) => this.Model.findOneAndUpdate(
+          searchQ,
+          {
+            $set: {
+              'metadata.deletionTimestamp': DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+              'metadata.resourceVersion': resourceVersion,
+            },
+          },
+          { new: true },
+        ))
+        .then((obj) => {
+          if (obj) {
+            this.events().emit('updated');
+            busFor(this.kind).emit('updated', obj);
+          }
+          return obj;
+        });
+    }
     return this.Model.findOneAndDelete(searchQ)
     .then((obj) => {
       if (obj) {
@@ -211,6 +288,26 @@ class K8Object {
         busFor(this.kind).emit('deleted', obj);
         return obj;
       }
+    });
+  }
+
+  // Once a delete has been requested and the last finalizer is gone, the object
+  // is actually removed. Called after any write, since clearing the finalizer
+  // is an ordinary patch or update.
+  finalizeIfReleased(obj, searchQ) {
+    let meta = obj?.metadata;
+    if (!meta?.deletionTimestamp || (meta.finalizers || []).length > 0) {
+      return Promise.resolve(obj);
+    }
+    let Model = this.Model;
+    let kind = this.kind;
+    return Model.findOneAndDelete(searchQ || {
+      'metadata.name': meta.name,
+      'metadata.namespace': meta.namespace,
+    }).then((deleted) => {
+      this.events().emit('deleted');
+      busFor(kind).emit('deleted', deleted || obj);
+      return deleted || obj;
     });
   }
 
@@ -244,6 +341,7 @@ class K8Object {
     let Model = this.Model;
     let kind = this.kind;
     let emitter = this.eventEmitter;
+    let self = this;
     return K8Object.nextResourceVersion()
       .then((resourceVersion) => {
         replacement.metadata.resourceVersion = resourceVersion;
@@ -260,7 +358,7 @@ class K8Object {
         if (obj) {
           emitter?.emit?.('updated');
           busFor(kind).emit('updated', obj);
-          return obj;
+          return self.finalizeIfReleased(obj, searchQ);
         }
       });
   }
@@ -303,7 +401,7 @@ class K8Object {
       if (obj) {
         emitter?.emit?.('updated');
         busFor(kind).emit('updated', obj);
-        return obj;
+        return self.finalizeIfReleased(obj, searchQ);
       }
     });
   }
@@ -317,12 +415,20 @@ class K8Object {
   }
 
   static async list (queryOptions = {}, data = []) {
+    // `data` has already been limited by the query, so it can never be longer
+    // than the limit — the old comparison was between a number and itself and
+    // never produced a token. The count of everything matching is what says
+    // whether another page exists.
+    let consumed = (queryOptions.skip || 0) + data.length;
+    let remaining = Number.isFinite(queryOptions.total)
+      ? Math.max(0, queryOptions.total - consumed)
+      : 0;
     return {
       apiVersion: this.apiVersion,
       kind: `${this.kind}List`,
       metadata: {
-        continue: queryOptions?.limit < data.length ? "true" : undefined,
-        remainingItemCount: queryOptions.limit && queryOptions.limit < data.length ? data.length - queryOptions.limit : 0,
+        continue: remaining > 0 ? encodeContinue(consumed) : undefined,
+        remainingItemCount: remaining,
         // The cluster version this list was read at, not a hash of its
         // contents: a client lists, then watches from this version, and
         // expects to receive exactly what happened after the read.
@@ -333,8 +439,16 @@ class K8Object {
   }
 
   static listByReq (reqQuery = {}, reqParams = {}, queryOptions = {}) {
-    return this.findAllSortedByReq(reqQuery, reqParams, queryOptions)
-      .then((arr) => this.list(queryOptions, arr));
+    let q = this.genFindQuery(reqQuery, reqParams);
+    return Promise.all([
+      this.findAllSortedByReq(reqQuery, reqParams, queryOptions),
+      q.options.limit ? this.Model.countDocuments(q.params) : Promise.resolve(undefined),
+    ]).then(([arr, total]) => this.list({
+      ...queryOptions,
+      limit: q.options.limit,
+      skip: q.options.skip || 0,
+      total,
+    }, arr));
   }
 
   static listByQuery (queryOptions = {}) {
@@ -421,10 +535,17 @@ class K8Object {
     }
     let options = {};
     if (Object.keys(sortOptions).length > 0) {
-      options.sort = sortOptions;
+      // Tie-break on _id. Paging by offset only works if the order is the same
+      // between requests, and the default sort key (`created_at`) isn't a
+      // field any of these documents actually have.
+      options.sort = { ...sortOptions, _id: 1 };
     }
     if (reqQuery.limit) {
       options.limit = Number(reqQuery.limit);
+    }
+    let skip = decodeContinue(reqQuery.continue);
+    if (skip) {
+      options.skip = skip;
     }
     return {
       params,

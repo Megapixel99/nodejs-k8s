@@ -176,6 +176,34 @@ function checkTable(label, res) {
     if (deleted.status >= 400) {
       fails.push(`DELETE ${single}: ${deleted.status}`);
     }
+
+    // generateName: the server names the object. It used to store one with no
+    // name at all, which nothing could fetch again.
+    let generated = await req('POST', resource.path, {
+      body: {
+        ...resource.body,
+        metadata: { ...resource.body.metadata, name: undefined, generateName: `${name}-gen-` },
+      },
+    });
+    if (generated.status >= 400) {
+      fails.push(`POST ${resource.path} (generateName): ${generated.status}`);
+    } else {
+      let generatedName;
+      try {
+        generatedName = JSON.parse(generated.body.toString())?.metadata?.name;
+      } catch (e) {
+        generatedName = undefined;
+      }
+      if (!generatedName || !generatedName.startsWith(`${name}-gen-`)) {
+        fails.push(`POST ${resource.path} (generateName): server returned name ${JSON.stringify(generatedName)}`);
+      } else {
+        let refetch = await req('GET', `${resource.path}/${generatedName}`);
+        if (refetch.status !== 200) {
+          fails.push(`GET ${resource.path}/${generatedName} (generateName): ${refetch.status}`);
+        }
+        await req('DELETE', `${resource.path}/${generatedName}`);
+      }
+    }
   }
 
   console.log('---FAILS---');

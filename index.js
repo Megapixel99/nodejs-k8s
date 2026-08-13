@@ -158,7 +158,7 @@ app.use(storageClass);
 app.use(version);
 
 app.use(namespace);
-// app.use(namespaceCheck);
+app.use(namespaceCheck);
 app.use(certificateSigningRequest);
 app.use(clusterRole);
 app.use(clusterRoleBinding);

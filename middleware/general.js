@@ -148,7 +148,10 @@ function negotiate(req, res, payload, operationId = res.operationId) {
       res.set('Content-Type', 'application/vnd.kubernetes.protobuf');
       return res.send(encoded);
     } catch (e) {
-      // Fall through to JSON so we don't 500 on clients that accept both.
+      // Fall through to JSON so we don't 500 on clients that accept both — but
+      // say so. A protobuf-only client gets a body it can't read, and one
+      // unencodable item in a list silently downgrades the whole response.
+      console.warn(`[protobuf] falling back to JSON for ${operationId}: ${e.message}`);
     }
   }
   if (req.headers?.accept?.includes('yaml')) {
@@ -362,6 +365,10 @@ module.exports = {
       if (!req.body?.metadata) {
         req.body.metadata = {};
       }
+      // Generate the name before anything builds a query out of it — several
+      // models construct their own uniqueness query in `create`, and an
+      // undefined name silently drops that clause.
+      Model.applyGenerateName(req.body.metadata);
       let query = { 'metadata.namespace': req.body.metadata.namespace };
       if (['Node', 'APIService', 'Binding', 'ComponentStatus', 'Lease', 'RuntimeClass', 'Namespace'].includes(Model.kind)) {
         if (!req.body.metadata?.name) {
@@ -380,6 +387,12 @@ module.exports = {
         let name = req.params.name || req.body.metadata?.name;
         if (name) {
           query['metadata.name'] = name;
+        } else {
+          // No name yet — the server is about to generate one from
+          // generateName. A namespace-only query would match some unrelated
+          // object and report AlreadyExists, so let create build the query
+          // once the name exists.
+          query = undefined;
         }
       }
       return Model.create(req.body, query)
