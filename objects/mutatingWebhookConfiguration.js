@@ -17,7 +17,7 @@ class MutatingWebhookConfiguration extends K8Object {
     this.Model = MutatingWebhookConfiguration.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'admissionregistration.k8s.io/v1';
   static kind = 'MutatingWebhookConfiguration';
   static Model = Model;
 

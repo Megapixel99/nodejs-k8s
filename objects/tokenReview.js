@@ -17,7 +17,7 @@ class TokenReview extends K8Object {
     this.Model = TokenReview.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'authentication.k8s.io/v1';
   static kind = 'TokenReview';
   static Model = Model;
 

@@ -17,7 +17,7 @@ class PriorityClass extends K8Object {
     this.Model = PriorityClass.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'scheduling.k8s.io/v1';
   static kind = 'PriorityClass';
   static Model = Model;
 

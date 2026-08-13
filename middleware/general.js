@@ -211,17 +211,23 @@ module.exports = {
       if (req.query?.watch === 'true') {
         let eventStream = new Readable({ read() {} });
         eventStream.pipe(res);
-        if (req.headers?.accept?.includes('protobuf') && req.operationId) {
-          res.set('Content-Type', 'application/vnd.kubernetes.protobuf');
+        // `;stream=watch` is what a real apiserver sends, and it's how a client
+        // knows the body is a frame stream rather than one object.
+        if (req.headers?.accept?.includes('protobuf')) {
+          res.set('Content-Type', 'application/vnd.kubernetes.protobuf;stream=watch');
         } else {
-          res.set('Content-Type', 'application/json');
+          res.set('Content-Type', 'application/json;stream=watch');
         }
         let toJson = (x) => (x && typeof x.toJSON === 'function') ? x.toJSON() : x;
         let pushToEventStream = (elem, eventType) => {
           let asJson = toJson(elem);
           if (req.headers?.accept?.includes('protobuf')) {
-            if (!res.operationId) return;
-            let proto = toProtoBuf(asJson, res.operationId, req.protobufTypes);
+            // Same fallback as the non-watch path: without it a group with no
+            // operationId produced a protobuf stream that never emitted an
+            // event, and the client just hung.
+            let operationId = res.operationId || asJson?.kind;
+            if (!operationId) return;
+            let proto = toProtoBuf(asJson, operationId, req.protobufTypes);
             eventStream.push(toWatchEvent(proto, eventType, req.protobufTypes));
             return;
           }

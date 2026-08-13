@@ -5,7 +5,8 @@ const { general, openapi } = require('../middleware');
 const { apiV1OpenApiV3, validSchema } = openapi;
 
 // Endpoints is a core resource; it was only reachable under the group path.
-const routes = [`/api/v1/namespaces/:namespace/endpoints`, `/apis/${Endpoints.apiVersion}/namespaces/:namespace/endpoints`];
+// Endpoints is core; the group path is the legacy one this server used.
+const routes = [`/api/${Endpoints.apiVersion}/namespaces/:namespace/endpoints`, `/apis/networking.k8s.io/v1/namespaces/:namespace/endpoints`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.findOne(Endpoints), general.format(Endpoints), general.sendObj(Endpoints));
 

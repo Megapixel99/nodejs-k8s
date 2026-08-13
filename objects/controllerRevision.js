@@ -17,7 +17,7 @@ class ControllerRevision extends K8Object {
     this.Model = ControllerRevision.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'apps/v1';
   static kind = 'ControllerRevision';
   static Model = Model;
 

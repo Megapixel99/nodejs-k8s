@@ -6,7 +6,8 @@ const { apiRbacAuthorizatonK8sIoV1OpenApiV3, apiV1OpenApiV3, validSchema } = ope
 
 // The canonical path is group-qualified; the model's apiVersion is bare
 // 'v1', so serve both — discovery advertises the canonical one.
-let routes = [`/apis/networking.k8s.io/v1/networkpolicies`, `/apis/${NetworkPolicy.apiVersion}/networkpolicies`];
+// Second entry is the legacy un-grouped path this server used to serve.
+let routes = [`/apis/${NetworkPolicy.apiVersion}/networkpolicies`, `/apis/v1/networkpolicies`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.findOne(NetworkPolicy), general.format(NetworkPolicy), general.sendObj(NetworkPolicy));
 

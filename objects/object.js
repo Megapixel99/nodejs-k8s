@@ -3,6 +3,56 @@ const EventEmitter = require('events');
 const Status = require('./status.js');
 const { busFor, keyFor } = require('./bus.js');
 
+// Parse a label or field selector into [key, op, value] triples. Splitting the
+// whole string on ',' is wrong for the set-based forms — `app in (x,y)` becomes
+// `app in (x` and `y)`, which silently matched nothing — so commas inside
+// parentheses don't separate clauses.
+// Supports: key=value, key==value, key!=value, key in (a,b), key notin (a,b),
+// key (exists) and !key (doesn't exist).
+function parseSelector(selector) {
+  let clauses = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of String(selector)) {
+    if (ch === '(') depth++;
+    if (ch === ')') depth--;
+    if (ch === ',' && depth === 0) {
+      clauses.push(current);
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  clauses.push(current);
+
+  let parsed = [];
+  for (const raw of clauses) {
+    let clause = raw.trim();
+    if (!clause) continue;
+    let set = clause.match(/^(.+?)\s+(notin|in)\s*\((.*)\)$/);
+    if (set) {
+      parsed.push([set[1].trim(), set[2], set[3].split(',').map((v) => v.trim()).filter((v) => v)]);
+      continue;
+    }
+    let neq = clause.match(/^(.+?)\s*!=\s*(.*)$/);
+    if (neq) {
+      parsed.push([neq[1].trim(), '!=', neq[2].trim()]);
+      continue;
+    }
+    let eq = clause.match(/^(.+?)\s*==?\s*(.*)$/);
+    if (eq) {
+      parsed.push([eq[1].trim(), '=', eq[2].trim()]);
+      continue;
+    }
+    if (clause.startsWith('!')) {
+      parsed.push([clause.slice(1).trim(), '!exists', undefined]);
+      continue;
+    }
+    parsed.push([clause, 'exists', undefined]);
+  }
+  return parsed;
+}
+
 // Fire-and-forget write of an Event record so conformance tests that assert
 // CRUD on a resource emits events succeed. Required by [sig-instrumentation]
 // Events should delete a collection of events — it creates PodTemplates and
@@ -301,29 +351,31 @@ class K8Object {
       params['metadata.resourceVersion'] = reqQuery.resourceVersionMatch;
     }
     if (reqQuery.fieldSelector) {
-      if ('true' === reqQuery.fieldSelector?.split('=')[1]) {
-        projection[reqQuery.fieldSelector.split('=')[0]] = 1;
-      } else if ('false' === reqQuery.fieldSelector?.split('=')[1]) {
-        projection[reqQuery.fieldSelector.split('=')[0]] = 0;
-      } else {
-        params[reqQuery.fieldSelector.split('=')[0]] = reqQuery.fieldSelector?.split('=')[1];
+      for (const [path, op, value] of parseSelector(reqQuery.fieldSelector)) {
+        if (op === '!=') {
+          params[path] = { $ne: value };
+        } else if (op === '=') {
+          params[path] = value;
+        }
+        // Field selectors have no set-based or existence forms; anything else
+        // is a malformed selector and matching nothing is the safer answer.
       }
     }
     if (reqQuery.labelSelector) {
-      // Comma-separated list of key=value / key!=value / key (presence).
-      for (const clause of String(reqQuery.labelSelector).split(',')) {
-        let c = clause.trim();
-        if (!c) continue;
-        let neq = c.split('!=');
-        if (neq.length === 2) {
-          params[`metadata.labels.${neq[0].trim()}`] = { $ne: neq[1].trim() };
-          continue;
-        }
-        let eq = c.split('=');
-        if (eq.length === 2) {
-          params[`metadata.labels.${eq[0].trim()}`] = eq[1].trim();
-        } else {
-          params[`metadata.labels.${c}`] = { $exists: true };
+      for (const [key, op, value] of parseSelector(reqQuery.labelSelector)) {
+        let path = `metadata.labels.${key}`;
+        if (op === '=') {
+          params[path] = value;
+        } else if (op === '!=') {
+          params[path] = { $ne: value };
+        } else if (op === 'in') {
+          params[path] = { $in: value };
+        } else if (op === 'notin') {
+          params[path] = { $nin: value };
+        } else if (op === 'exists') {
+          params[path] = { $exists: true };
+        } else if (op === '!exists') {
+          params[path] = { $exists: false };
         }
       }
     }

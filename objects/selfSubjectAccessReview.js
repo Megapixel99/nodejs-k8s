@@ -17,7 +17,7 @@ class SelfSubjectAccessReview extends K8Object {
     this.Model = SelfSubjectAccessReview.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'authorization.k8s.io/v1';
   static kind = 'SelfSubjectAccessReview';
   static Model = Model;
 

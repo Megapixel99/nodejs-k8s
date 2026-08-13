@@ -17,7 +17,7 @@ class CSINode extends K8Object {
     this.Model = CSINode.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'storage.k8s.io/v1';
   static kind = 'CSINode';
   static Model = Model;
 

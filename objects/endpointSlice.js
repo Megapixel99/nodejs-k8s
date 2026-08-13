@@ -17,7 +17,7 @@ class EndpointSlice extends K8Object {
     this.Model = EndpointSlice.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'discovery.k8s.io/v1';
   static kind = 'EndpointSlice';
   static Model = Model;
 

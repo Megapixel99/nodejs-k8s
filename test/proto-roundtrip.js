@@ -140,11 +140,71 @@ async function testWire() {
   }
 }
 
+// A protobuf watch is a stream of length-delimited frames. Without the 4-byte
+// prefix the messages run together and can't be split back apart, so assert on
+// framing and on decoding the nested object, not just on bytes arriving.
+async function testWatchFraming() {
+  let reachable = await fetch(`${base}/api`).then(() => true).catch(() => false);
+  if (!reachable) {
+    return;
+  }
+  let name = 'proto-watch-probe';
+  await fetch(`${base}/api/v1/namespaces/default/configmaps/${name}`, { method: 'DELETE' });
+
+  let controller = new AbortController();
+  let res = await fetch(`${base}/api/v1/namespaces/default/configmaps?watch=true`, {
+    headers: { Accept: 'application/vnd.kubernetes.protobuf' },
+    signal: controller.signal,
+  });
+  check('watch: content-type marks a watch stream', `${res.headers.get('content-type')}`.includes('stream=watch'), res.headers.get('content-type'));
+
+  setTimeout(() => {
+    fetch(`${base}/api/v1/namespaces/default/configmaps`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiVersion: 'v1', kind: 'ConfigMap', metadata: { name, namespace: 'default' }, data: { a: 'b' } }),
+    }).catch(() => {});
+  }, 300);
+  let stop = setTimeout(() => controller.abort(), 4000);
+
+  let reader = res.body.getReader();
+  let buffer = Buffer.alloc(0);
+  let frames = [];
+  try {
+    while (frames.length < 1) {
+      let { value, done } = await reader.read();
+      if (done) break;
+      buffer = Buffer.concat([buffer, Buffer.from(value)]);
+      while (buffer.length >= 4) {
+        let length = buffer.readUInt32BE(0);
+        if (buffer.length < 4 + length) break;
+        frames.push(buffer.subarray(4, 4 + length));
+        buffer = buffer.subarray(4 + length);
+      }
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') throw e;
+  }
+  clearTimeout(stop);
+  controller.abort();
+
+  if (!frames.length) {
+    fails.push('watch: no complete frame decoded from the protobuf stream');
+    return;
+  }
+  let outer = decode(frames[0], 'WatchEvent');
+  check('watch: frame is a WatchEvent', outer.typeMeta.kind === 'WatchEvent', outer.typeMeta);
+  check('watch: event type is set', typeof outer.object.type === 'string' && outer.object.type.length > 0, outer.object.type);
+  let inner = decode(Buffer.from(outer.object.object.raw, 'base64'), 'ConfigMap');
+  check('watch: nested object decodes', inner.object?.metadata?.name?.length > 0, inner.object?.metadata);
+}
+
 (async () => {
   testEvent();
   testEventList();
   testBareArrayList();
   await testWire();
+  await testWatchFraming();
 
   console.log('---FAILS---');
   fails.forEach((f) => console.log(f));

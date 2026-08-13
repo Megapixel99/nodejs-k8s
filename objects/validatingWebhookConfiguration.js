@@ -17,7 +17,7 @@ class ValidatingWebhookConfiguration extends K8Object {
     this.Model = ValidatingWebhookConfiguration.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'admissionregistration.k8s.io/v1';
   static kind = 'ValidatingWebhookConfiguration';
   static Model = Model;
 

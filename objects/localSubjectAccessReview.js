@@ -17,7 +17,7 @@ class LocalSubjectAccessReview extends K8Object {
     this.Model = LocalSubjectAccessReview.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'authorization.k8s.io/v1';
   static kind = 'LocalSubjectAccessReview';
   static Model = Model;
 

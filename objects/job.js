@@ -17,7 +17,7 @@ class Job extends K8Object {
     this.Model = Job.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'batch/v1';
   static kind = 'Job';
   static Model = Model;
 

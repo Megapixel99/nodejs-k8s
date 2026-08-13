@@ -17,7 +17,7 @@ class SubjectAccessReview extends K8Object {
     this.Model = SubjectAccessReview.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'authorization.k8s.io/v1';
   static kind = 'SubjectAccessReview';
   static Model = Model;
 

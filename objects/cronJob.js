@@ -17,7 +17,7 @@ class CronJob extends K8Object {
     this.Model = CronJob.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'batch/v1';
   static kind = 'CronJob';
   static Model = Model;
 

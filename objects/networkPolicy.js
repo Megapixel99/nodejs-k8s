@@ -17,7 +17,7 @@ class NetworkPolicy extends K8Object {
     this.Model = NetworkPolicy.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'networking.k8s.io/v1';
   static kind = 'NetworkPolicy';
   static Model = Model;
 

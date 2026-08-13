@@ -17,7 +17,7 @@ class HorizontalPodAutoscaler extends K8Object {
     this.Model = HorizontalPodAutoscaler.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'autoscaling/v2';
   static kind = 'HorizontalPodAutoscaler';
   static Model = Model;
 

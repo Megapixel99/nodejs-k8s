@@ -129,8 +129,22 @@ module.exports = {
       },
     }
     let encoded = watchEventType.encode(obj).finish();
-    // let prefix = Buffer.from([0, 0, 0, 243])
-    // return Buffer.concat([prefix, encoded]);
-    return encoded;
+    // The WatchEvent goes on the wire like any other object: magic prefix and
+    // Unknown envelope, so the client knows what it is decoding.
+    let unknownType = protobufTypes.lookup('Unknown');
+    let wrapped = unknownType.encode({
+      typeMeta: { kind: 'WatchEvent', apiVersion: 'v1' },
+      raw: encoded,
+      contentEncoding: '',
+      contentType: '',
+    }).finish();
+    let message = Buffer.concat([Buffer.from([107, 56, 115, 0]), wrapped]);
+    // Protobuf messages aren't self-delimiting, so a stream of them can't be
+    // split back apart. Each frame is length-delimited with a 4-byte
+    // big-endian prefix; without it the second event in a watch is
+    // unreadable, and so is the first if the client waits for a boundary.
+    let length = Buffer.alloc(4);
+    length.writeUInt32BE(message.length, 0);
+    return Buffer.concat([length, message]);
   }
 };

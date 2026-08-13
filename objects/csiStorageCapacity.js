@@ -17,7 +17,7 @@ class CSIStorageCapacity extends K8Object {
     this.Model = CSIStorageCapacity.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'storage.k8s.io/v1';
   static kind = 'CSIStorageCapacity';
   static Model = Model;
 

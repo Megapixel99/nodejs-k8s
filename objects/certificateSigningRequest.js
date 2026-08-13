@@ -17,7 +17,7 @@ class CertificateSigningRequest extends K8Object {
     this.Model = CertificateSigningRequest.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'certificates.k8s.io/v1';
   static kind = 'CertificateSigningRequest';
   static Model = Model;
 
