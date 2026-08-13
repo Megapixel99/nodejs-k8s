@@ -144,6 +144,13 @@ function checkTable(label, res) {
         checkTable(`GET ${single} (table)`, one);
       } else if (label === 'yaml' && !one.type.includes('yaml')) {
         fails.push(`GET ${single} (yaml): got ${one.type}`);
+      } else if (label === 'json') {
+        // Mongoose's own bookkeeping is not part of the API object, and it
+        // survives a `get -o yaml | apply` round trip if we serve it.
+        let text = one.body.toString();
+        if (text.includes('"_id"') || text.includes('"__v"')) {
+          fails.push(`GET ${single} (json): response carries mongo internals`);
+        }
       }
     }
 

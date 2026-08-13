@@ -75,6 +75,27 @@ function decodeContinue(token) {
   }
 }
 
+// Mongoose gives every array subdocument its own `_id`, and they were being
+// served as part of the object: `spec.ports[0]._id`, `involvedObject._id`, and
+// so on. No Kubernetes object has those fields, and they survive a
+// `get -o yaml | apply` round trip back into the stored object.
+function stripMongoInternals(value) {
+  if (Array.isArray(value)) {
+    return value.map(stripMongoInternals);
+  }
+  if (value && typeof value === 'object') {
+    let out = {};
+    for (const [key, child] of Object.entries(value)) {
+      if (key === '_id' || key === '__v') {
+        continue;
+      }
+      out[key] = stripMongoInternals(child);
+    }
+    return out;
+  }
+  return value;
+}
+
 // Kinds a client legitimately posts without a name: they are answers to a
 // question ("may I do this?"), not objects anyone will look up later.
 const NAMELESS_KINDS = new Set([
@@ -594,7 +615,7 @@ class K8Object {
     delete shallow.eventEmitter;
     delete shallow._emitter;
     delete shallow._probeIntervals;
-    return JSON.parse(JSON.stringify(shallow));
+    return stripMongoInternals(JSON.parse(JSON.stringify(shallow)));
   }
 
   getKind() {
