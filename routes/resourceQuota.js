@@ -5,10 +5,13 @@ const { general, openapi } = require('../middleware');
 const { apiV1OpenApiV3, validSchema } = openapi;
 
 const routes = [`/api/v1/namespaces/:namespace/resourcequotas`];
+// `kubectl get <kind> -A` asks for the cluster-wide collection path; only
+// the namespaced one was registered, so --all-namespaces 404'd.
+const clusterRoutes = routes.map((e) => e.replace('/namespaces/:namespace', ''));
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.findOne(ResourceQuota), general.format(ResourceQuota), general.sendObj(ResourceQuota));
 
-router.get([`/api/${ResourceQuota.apiVersion}/resourcequotas`, ...routes], validSchema(apiV1OpenApiV3), general.find(ResourceQuota), general.format(ResourceQuota), general.list(ResourceQuota));
+router.get([...clusterRoutes, `/api/${ResourceQuota.apiVersion}/resourcequotas`, ...routes], validSchema(apiV1OpenApiV3), general.find(ResourceQuota), general.format(ResourceQuota), general.list(ResourceQuota));
 
 router.post(routes, validSchema(apiV1OpenApiV3), general.save(ResourceQuota), general.sendObj(ResourceQuota));
 

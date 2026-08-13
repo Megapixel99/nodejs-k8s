@@ -5,10 +5,13 @@ const { general, openapi } = require('../middleware');
 const { apiAppsV1OpenApiV3, validSchema } = openapi;
 
 let route = `/apis/${DaemonSet.apiVersion}/namespaces/:namespace/daemonsets`;
+// `kubectl get <kind> -A` asks for the cluster-wide collection path; only
+// the namespaced one was registered, so --all-namespaces 404'd.
+const clusterRoute = route.replace('/namespaces/:namespace', '');
 
 router.get(`${route}/:name`, validSchema(apiAppsV1OpenApiV3), general.findOne(DaemonSet), general.format(DaemonSet), general.sendObj(DaemonSet));
 
-router.get(`${route}`, validSchema(apiAppsV1OpenApiV3), general.find(DaemonSet), general.format(DaemonSet), general.list(DaemonSet));
+router.get([clusterRoute, route], validSchema(apiAppsV1OpenApiV3), general.find(DaemonSet), general.format(DaemonSet), general.list(DaemonSet));
 
 router.post(route, validSchema(apiAppsV1OpenApiV3), general.save(DaemonSet), general.sendObj(DaemonSet));
 

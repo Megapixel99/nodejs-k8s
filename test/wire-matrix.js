@@ -131,6 +131,16 @@ function checkTable(label, res) {
       if (CREATE_ONLY.has(kind)) {
         continue;
       }
+      // `kubectl get <kind> -A` uses the cluster-wide collection path, which
+      // for namespaced kinds was registered under /api/v1 or not at all.
+      if (label === 'json' && resource.path.includes('/namespaces/')) {
+        let clusterWide = resource.path.replace(/\/namespaces\/[^/]+/, '');
+        let allNamespaces = await req('GET', clusterWide);
+        if (allNamespaces.status !== 200) {
+          fails.push(`LIST ${clusterWide} (all namespaces): ${allNamespaces.status}`);
+        }
+      }
+
       let list = await req('GET', resource.path, { accept });
       if (list.status !== 200) {
         fails.push(`LIST ${resource.path} (${label}): ${list.status}`);

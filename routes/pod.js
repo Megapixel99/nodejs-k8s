@@ -5,6 +5,9 @@ const { general, openapi } = require('../middleware');
 const { apiV1OpenApiV3, validSchema } = openapi;
 
 let routes = [`/api/${Pod.apiVersion}/namespaces/:namespace/pods`];
+// `kubectl get <kind> -A` asks for the cluster-wide collection path; only
+// the namespaced one was registered, so --all-namespaces 404'd.
+const clusterRoutes = routes.map((e) => e.replace('/namespaces/:namespace', ''));
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.findOne(Pod), general.format(Pod), general.sendObj(Pod));
 
@@ -21,7 +24,7 @@ router.get(routes.map((e) => `${e}/:name/log`), validSchema(apiV1OpenApiV3), (re
   return general.notFound(Pod, req, res);
 });
 
-router.get(['/api/v1/pods', ...routes], validSchema(apiV1OpenApiV3), general.find(Pod), general.find(Pod), general.format(Pod), general.list(Pod));
+router.get([...clusterRoutes, '/api/v1/pods', ...routes], validSchema(apiV1OpenApiV3), general.find(Pod), general.find(Pod), general.format(Pod), general.list(Pod));
 
 router.post(routes, validSchema(apiV1OpenApiV3), general.save(Pod), general.sendObj(Pod));
 
