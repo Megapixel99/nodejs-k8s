@@ -114,6 +114,16 @@ function checkTable(label, res) {
     if (post2.status >= 400) {
       fails.push(`POST ${resource.path} (second object "${second}"): ${post2.status}`);
     } else {
+      // uid is an identity, and the schema default was evaluated once at
+      // module load — every object created in a process shared one uid, which
+      // also collapsed the watch stream's dedupe key.
+      try {
+        let firstUid = JSON.parse(post.body.toString())?.metadata?.uid;
+        let secondUid = JSON.parse(post2.body.toString())?.metadata?.uid;
+        if (firstUid && firstUid === secondUid) {
+          fails.push(`POST ${resource.path}: two objects share metadata.uid ${firstUid}`);
+        }
+      } catch (e) { /* non-JSON body is caught by the checks above */ }
       await req('DELETE', `${resource.path}/${second}`);
     }
 

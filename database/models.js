@@ -9,6 +9,19 @@ const {
   v4: uuid
 } = require('uuid');
 
+// A real OwnerReference. `ownerReferences` was declared as `[ref]` — the
+// EndpointAddress shape below — so mongoose threw away apiVersion, kind, name,
+// uid and controller on save and stored a `targetRef` with a defaulted uid
+// instead. Every pod came back owned by the same nonexistent thing.
+const ownerReference = {
+  apiVersion: String,
+  kind: String,
+  name: String,
+  uid: String,
+  controller: Boolean,
+  blockOwnerDeletion: Boolean,
+};
+
 const ref = {
   ip: String,
   nodeName: String,
@@ -18,7 +31,7 @@ const ref = {
     name: String,
     uid: {
       type: String,
-      default: uuid()
+      default: () => uuid()
     }
   }
 };
@@ -26,11 +39,11 @@ const ref = {
 const metadata = {
   creationTimestamp: {
     type: String,
-    default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
   },
   uid: {
     type: String,
-    default: uuid()
+    default: () => uuid()
   },
   name: {
     type: String,
@@ -66,10 +79,10 @@ const metadata = {
     subresource: String,
     time: {
       type: String,
-      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
   }],
-  ownerReferences: [ref],
+  ownerReferences: [ownerReference],
   selfLink: String,
   labels: {
     type: Map,
@@ -144,7 +157,7 @@ const configMapInfo = {
   resourceVersion: String,
   uid: {
     type: String,
-    default: uuid()
+    default: () => uuid()
   },
 };
 
@@ -164,7 +177,7 @@ const statusConditions = {
   },
   lastTransitionTime: {
     type: String,
-    default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+    default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
   },
   message: String,
   reason: String,
@@ -799,7 +812,7 @@ const persistentVolumeClaimSchema = Schema({
       ...statusConditions,
       lastProbeTime: {
         type: String,
-        default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+        default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
       },
     }],
     phase: String,
@@ -1188,7 +1201,7 @@ const jobInfo = {
     completedIndexes: String,
     completionTime: {
       type: String,
-      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
     conditions: [statusConditions],
     failed: {
@@ -1201,7 +1214,7 @@ const jobInfo = {
     },
     startTime: {
       type: String,
-      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
     succeeded: {
       type: Number,
@@ -1690,7 +1703,7 @@ const certificateSigningRequestSchema = Schema({
     signerName: String,
     uid: {
       type: String,
-      default: uuid()
+      default: () => uuid()
     },
     usages: [String],
     username: String,
@@ -1759,7 +1772,7 @@ const nodeSchema = Schema({
       ...statusConditions,
       lastHeartbeatTime: {
         type: String,
-        default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+        default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
       },
     }],
     config: {
@@ -1819,7 +1832,7 @@ const objectReferenceSchema = Schema({
   name: String,
   uid: {
     type: String,
-    default: uuid()
+    default: () => uuid()
   },
   apiVersion: {
     type: String,
@@ -1846,11 +1859,11 @@ const eventSchema = Schema({
   },
   deprecatedFirstTimestamp: {
     type: String,
-    default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000")
+    default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000")
   },
   deprecatedLastTimestamp: {
     type: String,
-    default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000")
+    default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000")
   },
   deprecatedSource: {
     component: String,
@@ -1869,7 +1882,7 @@ const eventSchema = Schema({
     },
     lastObservedTime: {
       type: String,
-      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000")
+      default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ".000000")
     },
   },
   type: {
@@ -2198,7 +2211,7 @@ const jobSchema = Schema({
     completedIndexes: String,
     completionTime: {
       type: String,
-      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
     conditions: [statusConditions],
     failed: {
@@ -2211,7 +2224,7 @@ const jobSchema = Schema({
     },
     startTime: {
       type: String,
-      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
     succeeded: {
       type: Number,
@@ -2257,11 +2270,11 @@ const cronJobSchema = Schema({
     active: [ref],
     lastScheduleTime: {
       type: String,
-      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
     lastSuccessfulTime: {
       type: String,
-      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
   },
 });
@@ -2528,7 +2541,7 @@ const horizontalPodAutoscalerSchema = Schema({
     },
     lastScaleTime: {
       type: String,
-      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
     observedGeneration: {
       type: Number,
@@ -2572,7 +2585,7 @@ const leaseSchema = Schema({
   spec: {
     acquireTime: {
       type: String,
-      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
     holderIdentity: String,
     leaseDurationSeconds: {
@@ -2585,7 +2598,7 @@ const leaseSchema = Schema({
     },
     renewTime: {
       type: String,
-      default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+      default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
     },
   },
 });
@@ -2636,7 +2649,7 @@ const localSubjectAccessReviewSchema = Schema({
     },
     uid: {
       type: String,
-      default: uuid()
+      default: () => uuid()
     },
     user: String,
   },
@@ -3045,7 +3058,7 @@ const selfSubjectReviewSchema = Schema({
       groups: [String],
       uid: {
         type: String,
-        default: uuid()
+        default: () => uuid()
       },
       username: String,
     }
@@ -3239,7 +3252,7 @@ const subjectAccessReviewSchema = Schema({
     },
     uid: {
       type: String,
-      default: uuid()
+      default: () => uuid()
     },
     user: String,
   },
@@ -3275,7 +3288,7 @@ const tokenRequestSchema = Schema({
       name: String,
       uid: {
         type: String,
-        default: uuid()
+        default: () => uuid()
       },
     },
     expirationSeconds: Number
@@ -3315,7 +3328,7 @@ const tokenReviewSchema = Schema({
       groups: [String],
       uid: {
         type: String,
-        default: uuid()
+        default: () => uuid()
       },
       username: String,
     },
@@ -3394,7 +3407,7 @@ const volumeAttachmentSchema = Schema({
       message: String,
       time: {
         type: String,
-        default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+        default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
       },
     },
     attached: Boolean,
@@ -3406,7 +3419,7 @@ const volumeAttachmentSchema = Schema({
       message: String,
       time: {
         type: String,
-        default: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
+        default: () => DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")
       },
     },
   },
