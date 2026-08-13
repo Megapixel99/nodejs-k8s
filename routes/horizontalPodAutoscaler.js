@@ -12,7 +12,7 @@ router.get(['/api/v1/horizontalpodautoscalers', ...routes], validSchema(apiV1Ope
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(HorizontalPodAutoscaler), general.sendObj(HorizontalPodAutoscaler));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(HorizontalPodAutoscaler), general.sendObj(HorizontalPodAutoscaler));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(HorizontalPodAutoscaler), general.sendObj(HorizontalPodAutoscaler));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(HorizontalPodAutoscaler), general.sendObj(HorizontalPodAutoscaler));
 

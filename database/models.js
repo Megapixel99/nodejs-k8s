@@ -3403,7 +3403,20 @@ const volumeAttachmentSchema = Schema({
   },
 });
 
+// One cluster-wide counter behind every object's metadata.resourceVersion.
+// Kubernetes treats the value as opaque, but clients compare and order it, so
+// it has to come from a single monotonic source rather than being derived from
+// the object's own contents.
+const resourceVersionSchema = Schema({
+  _id: String,
+  value: {
+    type: Number,
+    default: 0,
+  },
+});
+
 module.exports = {
+  ResourceVersion: model('ResourceVersion', resourceVersionSchema),
   APIService: model('APIService', apiServiceSchema),
   Binding: model('Binding', bindingSchema),
   CertificateSigningRequest: model('CertificateSigningRequest', certificateSigningRequestSchema),

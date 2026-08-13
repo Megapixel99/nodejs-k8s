@@ -10,7 +10,8 @@
     "test": "node ./test/test.js",
     "test:smoke": "node ./test/boot-clean.js",
     "test:proto": "node ./test/proto-roundtrip.js",
-    "test:wire": "node ./test/wire-matrix.js"
+    "test:wire": "node ./test/wire-matrix.js",
+    "test:rv": "node ./test/resource-version.js"
   },
   "author": "",
   "license": "ISC",

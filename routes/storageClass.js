@@ -12,7 +12,7 @@ router.get(['/api/v1/storageclasses', ...routes], validSchema(apiV1OpenApiV3), g
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(StorageClass), general.sendObj(StorageClass));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(StorageClass), general.sendObj(StorageClass));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(StorageClass), general.sendObj(StorageClass));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(StorageClass), general.sendObj(StorageClass));
 

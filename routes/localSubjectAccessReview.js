@@ -12,7 +12,7 @@ router.get(['/api/v1/localsubjectaccessreviews', ...routes], validSchema(apiV1Op
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(LocalSubjectAccessReview), general.sendObj(LocalSubjectAccessReview));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(LocalSubjectAccessReview), general.sendObj(LocalSubjectAccessReview));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(LocalSubjectAccessReview), general.sendObj(LocalSubjectAccessReview));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(LocalSubjectAccessReview), general.sendObj(LocalSubjectAccessReview));
 

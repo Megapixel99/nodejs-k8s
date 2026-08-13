@@ -12,7 +12,7 @@ router.get(['/api/v1/csistoragecapacitys', ...routes], validSchema(apiV1OpenApiV
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(CSIStorageCapacity), general.sendObj(CSIStorageCapacity));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(CSIStorageCapacity), general.sendObj(CSIStorageCapacity));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(CSIStorageCapacity), general.sendObj(CSIStorageCapacity));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(CSIStorageCapacity), general.sendObj(CSIStorageCapacity));
 

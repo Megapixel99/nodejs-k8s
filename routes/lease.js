@@ -12,7 +12,7 @@ router.get(['/api/v1/leases', ...routes], validSchema(apiV1OpenApiV3), general.f
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(Lease), general.sendObj(Lease));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(Lease), general.sendObj(Lease));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(Lease), general.sendObj(Lease));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(Lease), general.sendObj(Lease));
 

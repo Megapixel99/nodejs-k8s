@@ -22,7 +22,7 @@ router.get(`${route}`, validSchema(apiV1OpenApiV3), general.find(Node), general.
 
 router.post(route, validSchema(apiV1OpenApiV3), general.save(Node), general.sendObj(Node));
 
-router.put(route, validSchema(apiV1OpenApiV3), general.update(Node), general.sendObj(Node));
+router.put([`${route}/:name`, route], validSchema(apiV1OpenApiV3), general.update(Node), general.sendObj(Node));
 
 router.put(`${route}/:name/status`, validSchema(apiV1OpenApiV3), general.patch(Node), general.sendObj(Node));
 

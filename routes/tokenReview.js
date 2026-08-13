@@ -12,7 +12,7 @@ router.get(['/api/v1/tokenreviews', ...routes], validSchema(apiV1OpenApiV3), gen
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(TokenReview), general.sendObj(TokenReview));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(TokenReview), general.sendObj(TokenReview));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(TokenReview), general.sendObj(TokenReview));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(TokenReview), general.sendObj(TokenReview));
 

@@ -12,7 +12,7 @@ router.get(['/api/v1/controllerrevisions', ...routes], validSchema(apiV1OpenApiV
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(ControllerRevision), general.sendObj(ControllerRevision));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(ControllerRevision), general.sendObj(ControllerRevision));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(ControllerRevision), general.sendObj(ControllerRevision));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(ControllerRevision), general.sendObj(ControllerRevision));
 

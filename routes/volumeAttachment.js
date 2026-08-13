@@ -12,7 +12,7 @@ router.get(['/api/v1/volumeattachments', ...routes], validSchema(apiV1OpenApiV3)
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(VolumeAttachment), general.sendObj(VolumeAttachment));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(VolumeAttachment), general.sendObj(VolumeAttachment));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(VolumeAttachment), general.sendObj(VolumeAttachment));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(VolumeAttachment), general.sendObj(VolumeAttachment));
 

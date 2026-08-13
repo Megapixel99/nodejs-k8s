@@ -12,7 +12,7 @@ router.get(['/api/v1/cronjobs', ...routes], validSchema(apiV1OpenApiV3), general
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(CronJob), general.sendObj(CronJob));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(CronJob), general.sendObj(CronJob));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(CronJob), general.sendObj(CronJob));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(CronJob), general.sendObj(CronJob));
 

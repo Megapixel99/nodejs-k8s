@@ -14,7 +14,7 @@ router.get(['/api/v1/componentstatuses', ...routes], validSchema(apiV1OpenApiV3)
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(ComponentStatus), general.sendObj(ComponentStatus));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(ComponentStatus), general.sendObj(ComponentStatus));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(ComponentStatus), general.sendObj(ComponentStatus));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(ComponentStatus), general.sendObj(ComponentStatus));
 

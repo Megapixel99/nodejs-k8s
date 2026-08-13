@@ -12,7 +12,7 @@ router.get([`/apis/${Role.apiVersion}/roles`, ...routes], validSchema(apiRbacAut
 
 router.post(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(Role), general.sendObj(Role));
 
-router.put(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.update(Role), general.sendObj(Role));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.update(Role), general.sendObj(Role));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.patch(Role), general.sendObj(Role));
 

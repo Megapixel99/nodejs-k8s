@@ -12,7 +12,7 @@ router.get([`/api/${ServiceAccount.apiVersion}/serviceaccounts`, ...routes], val
 
 router.post(routes, validSchema(apiV1OpenApiV3), general.save(ServiceAccount), general.sendObj(ServiceAccount));
 
-router.put(routes, validSchema(apiV1OpenApiV3), general.update(ServiceAccount), general.sendObj(ServiceAccount));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiV1OpenApiV3), general.update(ServiceAccount), general.sendObj(ServiceAccount));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(ServiceAccount), general.sendObj(ServiceAccount));
 

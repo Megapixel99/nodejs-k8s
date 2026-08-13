@@ -12,7 +12,7 @@ router.get(['/api/v1/statefulsets', ...routes], validSchema(apiV1OpenApiV3), gen
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(StatefulSet), general.sendObj(StatefulSet));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(StatefulSet), general.sendObj(StatefulSet));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(StatefulSet), general.sendObj(StatefulSet));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(StatefulSet), general.sendObj(StatefulSet));
 

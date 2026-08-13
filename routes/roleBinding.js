@@ -12,7 +12,7 @@ router.get([`/apis/${RoleBinding.apiVersion}/rolebindings`, ...routes], validSch
 
 router.post(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(RoleBinding), general.sendObj(RoleBinding));
 
-router.put(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.update(RoleBinding), general.sendObj(RoleBinding));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.update(RoleBinding), general.sendObj(RoleBinding));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.patch(RoleBinding), general.sendObj(RoleBinding));
 

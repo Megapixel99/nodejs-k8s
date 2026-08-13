@@ -12,7 +12,7 @@ router.get([`/api/${ResourceQuota.apiVersion}/resourcequotas`, ...routes], valid
 
 router.post(routes, validSchema(apiV1OpenApiV3), general.save(ResourceQuota), general.sendObj(ResourceQuota));
 
-router.put(routes, validSchema(apiV1OpenApiV3), general.update(ResourceQuota), general.sendObj(ResourceQuota));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiV1OpenApiV3), general.update(ResourceQuota), general.sendObj(ResourceQuota));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(ResourceQuota), general.sendObj(ResourceQuota));
 

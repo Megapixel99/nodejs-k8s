@@ -12,7 +12,7 @@ router.get(['/api/v1/endpointslices', ...routes], validSchema(apiV1OpenApiV3), g
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(EndpointSlice), general.sendObj(EndpointSlice));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(EndpointSlice), general.sendObj(EndpointSlice));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(EndpointSlice), general.sendObj(EndpointSlice));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(EndpointSlice), general.sendObj(EndpointSlice));
 

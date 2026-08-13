@@ -14,7 +14,7 @@ router.get(['/api/v1/endpoints', ...routes], validSchema(apiV1OpenApiV3), genera
 
 router.post(routes, validSchema(apiV1OpenApiV3), general.save(Endpoints), general.sendObj(Endpoints));
 
-router.put(routes, validSchema(apiV1OpenApiV3), general.update(Endpoints), general.sendObj(Endpoints));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiV1OpenApiV3), general.update(Endpoints), general.sendObj(Endpoints));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(Endpoints), general.sendObj(Endpoints));
 

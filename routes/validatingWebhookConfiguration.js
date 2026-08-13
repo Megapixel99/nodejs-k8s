@@ -12,7 +12,7 @@ router.get(['/api/v1/validatingwebhookconfigurations', ...routes], validSchema(a
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(ValidatingWebhookConfiguration), general.sendObj(ValidatingWebhookConfiguration));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(ValidatingWebhookConfiguration), general.sendObj(ValidatingWebhookConfiguration));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(ValidatingWebhookConfiguration), general.sendObj(ValidatingWebhookConfiguration));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(ValidatingWebhookConfiguration), general.sendObj(ValidatingWebhookConfiguration));
 

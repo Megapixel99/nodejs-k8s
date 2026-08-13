@@ -12,7 +12,7 @@ router.get([`/api/${ReplicationController.apiVersion}/replicationcontrollers`, r
 
 router.post(route, validSchema(apiV1OpenApiV3), general.save(ReplicationController), general.sendObj(ReplicationController));
 
-router.put(route, validSchema(apiV1OpenApiV3), general.update(ReplicationController), general.sendObj(ReplicationController));
+router.put([`${route}/:name`, route], validSchema(apiV1OpenApiV3), general.update(ReplicationController), general.sendObj(ReplicationController));
 
 router.put(`${route}/:name/status`, validSchema(apiV1OpenApiV3), general.patch(ReplicationController), general.sendObj(ReplicationController));
 

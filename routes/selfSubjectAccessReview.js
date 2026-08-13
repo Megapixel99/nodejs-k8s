@@ -12,7 +12,7 @@ router.get(['/api/v1/selfsubjectaccessreviews', ...routes], validSchema(apiV1Ope
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(SelfSubjectAccessReview), general.sendObj(SelfSubjectAccessReview));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(SelfSubjectAccessReview), general.sendObj(SelfSubjectAccessReview));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(SelfSubjectAccessReview), general.sendObj(SelfSubjectAccessReview));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(SelfSubjectAccessReview), general.sendObj(SelfSubjectAccessReview));
 

@@ -12,7 +12,7 @@ router.get(['/api/v1/runtimeclasses', ...routes], validSchema(apiV1OpenApiV3), g
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(RuntimeClass), general.sendObj(RuntimeClass));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(RuntimeClass), general.sendObj(RuntimeClass));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(RuntimeClass), general.sendObj(RuntimeClass));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(RuntimeClass), general.sendObj(RuntimeClass));
 

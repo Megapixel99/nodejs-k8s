@@ -12,7 +12,7 @@ router.get([`/apis/${ClusterRoleBinding.apiVersion}/clusterrolebindings`, ...rou
 
 router.post(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(ClusterRoleBinding), general.sendObj(ClusterRoleBinding));
 
-router.put(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.update(ClusterRoleBinding), general.sendObj(ClusterRoleBinding));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.update(ClusterRoleBinding), general.sendObj(ClusterRoleBinding));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.patch(ClusterRoleBinding), general.sendObj(ClusterRoleBinding));
 

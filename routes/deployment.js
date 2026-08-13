@@ -12,7 +12,7 @@ router.get([`/apis/${Deployment.apiVersion}/deployments`, ...routes], validSchem
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(Deployment), general.sendObj(Deployment));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(Deployment), general.sendObj(Deployment));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(Deployment), general.sendObj(Deployment));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(Deployment), general.sendObj(Deployment));
 

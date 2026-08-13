@@ -12,7 +12,7 @@ router.get(['/api/v1/persistentvolumeclaims', ...routes], validSchema(apiV1OpenA
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(PersistentVolumeClaim), general.sendObj(PersistentVolumeClaim));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(PersistentVolumeClaim), general.sendObj(PersistentVolumeClaim));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(PersistentVolumeClaim), general.sendObj(PersistentVolumeClaim));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(PersistentVolumeClaim), general.sendObj(PersistentVolumeClaim));
 

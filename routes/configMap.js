@@ -12,7 +12,7 @@ router.get([`/api/${ConfigMap.apiVersion}/configmaps`, ...routes], validSchema(a
 
 router.post(routes, validSchema(apiV1OpenApiV3), general.save(ConfigMap), general.sendObj(ConfigMap));
 
-router.put(routes, validSchema(apiV1OpenApiV3), general.update(ConfigMap), general.sendObj(ConfigMap));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiV1OpenApiV3), general.update(ConfigMap), general.sendObj(ConfigMap));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(ConfigMap), general.sendObj(ConfigMap));
 

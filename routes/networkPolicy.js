@@ -15,7 +15,7 @@ router.get(['/api/v1/networkpolicies', ...routes], validSchema(apiRbacAuthorizat
 
 router.post(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.save(NetworkPolicy), general.sendObj(NetworkPolicy));
 
-router.put(routes, validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.update(NetworkPolicy), general.sendObj(NetworkPolicy));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.update(NetworkPolicy), general.sendObj(NetworkPolicy));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiRbacAuthorizatonK8sIoV1OpenApiV3), general.patch(NetworkPolicy), general.sendObj(NetworkPolicy));
 

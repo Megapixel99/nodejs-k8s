@@ -12,7 +12,7 @@ router.get([`/apis/${APIService.apiVersion}/apiservices`, ...routes], validSchem
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(APIService), general.sendObj(APIService));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(APIService), general.sendObj(APIService));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(APIService), general.sendObj(APIService));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(APIService), general.sendObj(APIService));
 

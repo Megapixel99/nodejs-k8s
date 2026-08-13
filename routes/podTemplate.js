@@ -12,7 +12,7 @@ router.get(['/api/v1/podtemplates', ...routes], validSchema(apiV1OpenApiV3), gen
 
 router.post(routes, validSchema(apiV1OpenApiV3), general.save(PodTemplate), general.sendObj(PodTemplate));
 
-router.put(routes, validSchema(apiV1OpenApiV3), general.update(PodTemplate), general.sendObj(PodTemplate));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiV1OpenApiV3), general.update(PodTemplate), general.sendObj(PodTemplate));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(PodTemplate), general.sendObj(PodTemplate));
 

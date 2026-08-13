@@ -14,7 +14,7 @@ router.get(['/api/v1/certificatesigningrequests', ...routes], validSchema(apiV1O
 
 router.post(routes, validSchema(apiCertificatesK8sIoApiV3), general.save(CertificateSigningRequest), general.sendObj(CertificateSigningRequest));
 
-router.put(routes, validSchema(apiCertificatesK8sIoApiV3), general.update(CertificateSigningRequest), general.sendObj(CertificateSigningRequest));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiCertificatesK8sIoApiV3), general.update(CertificateSigningRequest), general.sendObj(CertificateSigningRequest));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiCertificatesK8sIoApiV3), general.patch(CertificateSigningRequest), general.sendObj(CertificateSigningRequest));
 

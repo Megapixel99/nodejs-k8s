@@ -84,6 +84,9 @@ API-level (verified against `kubetest2` Conformance):
 - Services with a synthetic ClusterIP (no real routing, see below)
 - Watch streams over HTTP with newline-delimited JSON, plus protobuf support
   for clients that negotiate it (`client-go`'s default; `kubectl` asks for JSON)
+- `resourceVersion` from a cluster-wide counter: watches resume from a version
+  instead of replaying the collection, and a write carrying a stale version is
+  rejected with a `Conflict` rather than silently overwriting
 - Discovery for every routed kind: `/api`, `/api/v1`, `/apis` and
   `/apis/{group}/{version}`, so `kubectl api-resources` and `kubectl get <kind>`
   resolve without a warm discovery cache
@@ -113,6 +116,13 @@ and Table, plus all four patch types, asserting on the decoded response:
 
 ```bash
 npm run test:wire    # requires server + mongo running
+```
+
+resourceVersion semantics — allocation, watch resume and optimistic
+concurrency:
+
+```bash
+npm run test:rv      # requires server + mongo running
 ```
 
 The variable-expansion conformance test (`[sig-node] Variable Expansion

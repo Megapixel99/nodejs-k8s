@@ -12,7 +12,7 @@ router.get([`/api/${LimitRange.apiVersion}/limitranges`, ...routes], validSchema
 
 router.post(routes, validSchema(apiV1OpenApiV3), general.save(LimitRange), general.sendObj(LimitRange));
 
-router.put(routes, validSchema(apiV1OpenApiV3), general.update(LimitRange), general.sendObj(LimitRange));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiV1OpenApiV3), general.update(LimitRange), general.sendObj(LimitRange));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(LimitRange), general.sendObj(LimitRange));
 

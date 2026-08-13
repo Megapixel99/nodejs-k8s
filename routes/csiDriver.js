@@ -13,7 +13,7 @@ router.get(['/api/v1/csidrivers', ...routes], validSchema(apiV1OpenApiV3), gener
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(CSIDriver), general.sendObj(CSIDriver));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(CSIDriver), general.sendObj(CSIDriver));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(CSIDriver), general.sendObj(CSIDriver));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(CSIDriver), general.sendObj(CSIDriver));
 

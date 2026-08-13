@@ -12,7 +12,7 @@ router.get(['/api/v1/poddisruptionbudgets', '/apis/policy/v1/poddisruptionbudget
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(PodDisruptionBudget), general.sendObj(PodDisruptionBudget));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(PodDisruptionBudget), general.sendObj(PodDisruptionBudget));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(PodDisruptionBudget), general.sendObj(PodDisruptionBudget));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(PodDisruptionBudget), general.sendObj(PodDisruptionBudget));
 

@@ -12,7 +12,7 @@ router.get(['/api/v1/priorityclasses', ...routes], validSchema(apiV1OpenApiV3), 
 
 router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(PriorityClass), general.sendObj(PriorityClass));
 
-router.put(routes, validSchema(apiAppsV1OpenApiV3), general.update(PriorityClass), general.sendObj(PriorityClass));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(PriorityClass), general.sendObj(PriorityClass));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(PriorityClass), general.sendObj(PriorityClass));
 

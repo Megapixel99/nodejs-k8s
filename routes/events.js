@@ -12,7 +12,7 @@ router.get(['/api/v1/events', ...routes], validSchema(apiV1OpenApiV3), general.f
 
 router.post(routes, validSchema(apiV1OpenApiV3), general.save(Event), general.sendObj(Event));
 
-router.put(routes, validSchema(apiV1OpenApiV3), general.update(Event), general.sendObj(Event));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiV1OpenApiV3), general.update(Event), general.sendObj(Event));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(Event), general.sendObj(Event));
 

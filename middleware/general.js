@@ -2,6 +2,7 @@ const { DateTime } = require('luxon');
 const { Readable } = require('stream');
 const yaml = require('yaml');
 const Event = require('../objects/event.js');
+const Status = require('../objects/status.js');
 const { busFor, keyFor } = require('../objects/bus.js');
 const { toProtoBuf, fromProtoBuf, toWatchEvent, normalizeDecoded } = require('./protoBuf.js');
 
@@ -164,6 +165,30 @@ function sendNotFound(Model, req, res, name = req.params?.name) {
   return negotiate(req, res.status(404), Model.notFoundStatus(name), 'Status');
 }
 
+// Optimistic concurrency. A write that carries metadata.resourceVersion is
+// saying "apply this only if the object is still at that version" — read,
+// modify, write is only safe if a stale version is rejected. Nothing checked
+// it, so the last writer silently won.
+function conflictsOnResourceVersion(Model, req, res, item) {
+  let sent = req.body?.metadata?.resourceVersion;
+  if (!sent) {
+    return false;
+  }
+  let current = item?.metadata?.resourceVersion;
+  if (`${sent}` === `${current}`) {
+    return false;
+  }
+  let name = req.params?.name || req.body?.metadata?.name;
+  negotiate(req, res.status(409), new Status({
+    status: 'Failure',
+    reason: 'Conflict',
+    code: 409,
+    message: `Operation cannot be fulfilled on ${`${Model.kind}`.toLowerCase()} "${name}": the object has been modified; please apply your changes to the latest version and try again`,
+    details: { name, kind: `${Model.kind}`.toLowerCase() },
+  }), 'Status');
+  return true;
+}
+
 // `patch` resolves the raw mongo document, whose toJSON carries `_id`/`__v` and
 // skips whatever the model derives on construction. Re-wrap it so a patched
 // object looks like the same object fetched any other way.
@@ -218,6 +243,11 @@ module.exports = {
         } else {
           res.set('Content-Type', 'application/json;stream=watch');
         }
+        // Send the headers before any event exists. Express holds them until
+        // the first write, so a watch on an empty collection — or one resuming
+        // from a version, which replays nothing — left the client waiting on
+        // response headers that never came.
+        res.flushHeaders();
         let toJson = (x) => (x && typeof x.toJSON === 'function') ? x.toJSON() : x;
         let pushToEventStream = (elem, eventType) => {
           let asJson = toJson(elem);
@@ -241,25 +271,43 @@ module.exports = {
           eventStream.push(`${JSON.stringify({ type: eventType, object: asJson })}\n`);
         };
 
+        // `resourceVersion` was ignored entirely, so a client that listed and
+        // then watched from the list's version was re-sent the whole
+        // collection as ADDED — the standard informer sequence produced a
+        // duplicate of everything it already had. Absent or 0 still means
+        // "send me current state first"; anything else means "only what
+        // happened after that version".
+        let fromVersion = Number(req.query?.resourceVersion);
+        let resumeFrom = Number.isFinite(fromVersion) && fromVersion > 0 ? fromVersion : null;
+        let isNewerThanResume = (obj) => {
+          if (resumeFrom === null) return true;
+          let version = Number(toJson(obj)?.metadata?.resourceVersion);
+          return !Number.isFinite(version) || version > resumeFrom;
+        };
+
         let seen = new Set();
-        Model.findAllSortedByReq(req.query, req.params)
-          .then((items) => {
-            items.forEach((elem) => {
-              seen.add(keyFor(elem));
-              pushToEventStream(elem, 'ADDED');
-            });
-          })
-          .catch(() => {});
+        if (resumeFrom === null) {
+          Model.findAllSortedByReq(req.query, req.params)
+            .then((items) => {
+              items.forEach((elem) => {
+                seen.add(keyFor(elem));
+                pushToEventStream(elem, 'ADDED');
+              });
+            })
+            .catch(() => {});
+        }
 
         let bus = busFor(Model.kind);
         let onCreated = (obj) => {
           let k = keyFor(obj);
           if (seen.has(k)) return;
+          if (!isNewerThanResume(obj)) return;
           seen.add(k);
           pushToEventStream(obj, 'ADDED');
         };
         let onUpdated = (obj) => {
           let k = keyFor(obj);
+          if (!isNewerThanResume(obj)) return;
           if (!seen.has(k)) seen.add(k);
           pushToEventStream(obj, 'MODIFIED');
         };
@@ -356,8 +404,13 @@ module.exports = {
       }
       if (Object.keys(req.body).length > 0) {
         Model.findOne(query)
-        .then((item) => item ? item.update(req.body, query) : Promise.resolve())
         .then((item) => {
+          if (!item) return undefined;
+          if (conflictsOnResourceVersion(Model, req, res, item)) return null;
+          return item.update(req.body, query);
+        })
+        .then((item) => {
+          if (item === null) return undefined;
           if (item) {
             res.status(200);
             res.data = (item.toJSON ? item.toJSON() : item);
@@ -399,6 +452,7 @@ module.exports = {
         return Model.findOne(query)
           .then((item) => {
             if (!item) return sendNotFound(Model, req, res);
+            if (conflictsOnResourceVersion(Model, req, res, item)) return undefined;
             let doc = item.toJSON ? item.toJSON() : item;
             let flat = applyJsonPatch(req.body, doc);
             return item.patch(flat, query).then((updated) => {
@@ -422,8 +476,13 @@ module.exports = {
       }
       if (Object.keys(update || {}).length > 0) {
         Model.findOne(query)
-        .then((item) => item ? item.patch(update, query) : Promise.resolve())
         .then((item) => {
+          if (!item) return undefined;
+          if (conflictsOnResourceVersion(Model, req, res, item)) return null;
+          return item.patch(update, query);
+        })
+        .then((item) => {
+          if (item === null) return undefined;
           if (item) {
             res.status(200);
             res.data = asApiObject(Model, item);

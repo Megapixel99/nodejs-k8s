@@ -12,7 +12,7 @@ router.get(`${route}`, validSchema(apiAppsV1OpenApiV3), general.find(DaemonSet),
 
 router.post(route, validSchema(apiAppsV1OpenApiV3), general.save(DaemonSet), general.sendObj(DaemonSet));
 
-router.put(route, validSchema(apiAppsV1OpenApiV3), general.update(DaemonSet), general.sendObj(DaemonSet));
+router.put([`${route}/:name`, route], validSchema(apiAppsV1OpenApiV3), general.update(DaemonSet), general.sendObj(DaemonSet));
 
 router.put(`${route}/:name/status`, validSchema(apiAppsV1OpenApiV3), general.patch(DaemonSet), general.sendObj(DaemonSet));
 

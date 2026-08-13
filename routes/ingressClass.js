@@ -13,7 +13,7 @@ router.get([`/apis/${IngressClass.apiVersion}/ingressclasses`, ...routes], valid
 
 router.post(routes, validSchema(apiNetworkingK8sIoV1OpenApiV3), general.save(IngressClass), general.sendObj(IngressClass));
 
-router.put(routes, validSchema(apiNetworkingK8sIoV1OpenApiV3), general.update(IngressClass), general.sendObj(IngressClass));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiNetworkingK8sIoV1OpenApiV3), general.update(IngressClass), general.sendObj(IngressClass));
 
 router.patch(routes.map((e) => `${e}/:name`), validSchema(apiNetworkingK8sIoV1OpenApiV3), general.patch(IngressClass), general.sendObj(IngressClass));
 

@@ -12,7 +12,7 @@ router.get([`/apis/${ReplicaSet.apiVersion}/replicasets`, route], validSchema(ap
 
 router.post(route, validSchema(apiV1OpenApiV3), general.save(ReplicaSet), general.sendObj(ReplicaSet));
 
-router.put(route, validSchema(apiV1OpenApiV3), general.update(ReplicaSet), general.sendObj(ReplicaSet));
+router.put([`${route}/:name`, route], validSchema(apiV1OpenApiV3), general.update(ReplicaSet), general.sendObj(ReplicaSet));
 
 router.put(`${route}/:name/status`, validSchema(apiV1OpenApiV3), general.patch(ReplicaSet), general.sendObj(ReplicaSet));
 

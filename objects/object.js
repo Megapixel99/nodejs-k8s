@@ -1,6 +1,7 @@
 const { DateTime } = require('luxon');
 const EventEmitter = require('events');
 const Status = require('./status.js');
+const { ResourceVersion } = require('../database/models.js');
 const { busFor, keyFor } = require('./bus.js');
 
 // Parse a label or field selector into [key, op, value] triples. Splitting the
@@ -110,7 +111,7 @@ class K8Object {
     return this.Model.findOne(q.params, q.projection, q.options)
       .then((obj) => {
         if (obj) {
-          return new this(obj).setResourceVersion();
+          return new this(obj);
         }
       });
   }
@@ -120,7 +121,7 @@ class K8Object {
     return this.Model.find(q.params, q.projection, q.options)
       .then((arr) => {
         if (arr) {
-          return Promise.all(arr.map((obj) => new this(obj).setResourceVersion()));
+          return arr.map((obj) => new this(obj));
         }
       });
   }
@@ -129,7 +130,7 @@ class K8Object {
     return this.Model.findOne(params, projection, options)
       .then((obj) => {
         if (obj) {
-          return new this(obj).setResourceVersion();
+          return new this(obj);
         }
       });
   }
@@ -138,7 +139,7 @@ class K8Object {
     return this.Model.find(params, projection, options)
       .then((arr) => {
         if (arr) {
-          return Promise.all(arr.map((obj) => new this(obj).setResourceVersion()));
+          return arr.map((obj) => new this(obj));
         }
       });
   }
@@ -163,6 +164,8 @@ class K8Object {
         throw this.alreadyExistsStatus(this.kind, config.metadata.name);
       }
       config.metadata.creationTimestamp = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
+      return this.nextResourceVersion().then((resourceVersion) => {
+      config.metadata.resourceVersion = resourceVersion;
       // Our Mongoose schemas are fragments; strict casting / validation
       // rejects valid Kubernetes specs (SeccompProfile, LimitRangeItem, …).
       // Fall back to a direct collection insert if Mongoose can't handle it.
@@ -185,6 +188,7 @@ class K8Object {
           }
           reject(err);
         });
+      });
       });
     })
     .then((obj) => {
@@ -240,7 +244,11 @@ class K8Object {
     let Model = this.Model;
     let kind = this.kind;
     let emitter = this.eventEmitter;
-    return Model.findOneAndReplace(searchQ, replacement, { new: true, ...options })
+    return K8Object.nextResourceVersion()
+      .then((resourceVersion) => {
+        replacement.metadata.resourceVersion = resourceVersion;
+        return Model.findOneAndReplace(searchQ, replacement, { new: true, ...options });
+      })
       .catch(async (err) => {
         if (err?.name === 'CastError' || err?.name === 'ValidationError') {
           await Model.collection.replaceOne(searchQ, replacement);
@@ -265,14 +273,22 @@ class K8Object {
     let kind = this.kind;
     let emitter = this.eventEmitter;
     let self = this;
-    return this.Model.findOneAndUpdate(
-      searchQ,
-      updateObj,
-      {
-        new: true,
-        ...options,
-      }
-    )
+    return K8Object.nextResourceVersion()
+      .then((resourceVersion) => {
+        // The body arrives either flattened into $set/$unset or as a plain
+        // replacement; either way the stored object gets the new version.
+        updateObj = updateObj && (updateObj.$set || updateObj.$unset)
+          ? { ...updateObj, $set: { ...updateObj.$set, 'metadata.resourceVersion': resourceVersion } }
+          : { ...updateObj, metadata: { ...(updateObj?.metadata || {}), resourceVersion } };
+        return this.Model.findOneAndUpdate(
+          searchQ,
+          updateObj,
+          {
+            new: true,
+            ...options,
+          }
+        );
+      })
     .catch(async (err) => {
       // Mongoose cast failures on complex subdocs are common with our
       // hand-rolled schemas; fall back to a raw Mongo update that bypasses
@@ -307,7 +323,10 @@ class K8Object {
       metadata: {
         continue: queryOptions?.limit < data.length ? "true" : undefined,
         remainingItemCount: queryOptions.limit && queryOptions.limit < data.length ? data.length - queryOptions.limit : 0,
-        resourceVersion: `${await this.hash(`${data.length}${JSON.stringify(data[0])}`)}`
+        // The cluster version this list was read at, not a hash of its
+        // contents: a client lists, then watches from this version, and
+        // expects to receive exactly what happened after the read.
+        resourceVersion: await this.currentResourceVersion()
       },
       items: data.map((i) => i.toJSON())
     }
@@ -327,10 +346,30 @@ class K8Object {
     return this.metadata;
   }
 
+  // Allocate the next cluster-wide version. This used to be a hash of the
+  // object's own JSON, recomputed on every read: two unrelated objects could
+  // not be ordered against each other, a client couldn't tell newer from
+  // older, and there was nothing for a watch to resume from.
+  static nextResourceVersion() {
+    return ResourceVersion.findOneAndUpdate(
+      { _id: 'global' },
+      { $inc: { value: 1 } },
+      { new: true, upsert: true },
+    ).then((doc) => `${doc.value}`);
+  }
+
+  // The version as of now, without consuming one. This is what a list reports:
+  // "these are the contents at version N", so a watch started at N doesn't
+  // replay what the list already returned.
+  static currentResourceVersion() {
+    return ResourceVersion.findOne({ _id: 'global' })
+      .then((doc) => `${doc?.value ?? 0}`);
+  }
+
   async setResourceVersion() {
     this.metadata = {
       ...this.metadata,
-      resourceVersion: `${await K8Object.hash(JSON.stringify(this))}`
+      resourceVersion: await K8Object.nextResourceVersion(),
     }
     return this;
   }
@@ -347,9 +386,10 @@ class K8Object {
     if (reqQuery.node) {
       params['metadata.node'] = reqQuery.node;
     }
-    if (reqQuery.resourceVersionMatch) {
-      params['metadata.resourceVersion'] = reqQuery.resourceVersionMatch;
-    }
+    // `resourceVersion` / `resourceVersionMatch` on a list are consistency
+    // hints about *when* to read, not filters on the objects returned. This
+    // used to match them against metadata.resourceVersion, so any client
+    // passing one got an empty list back.
     if (reqQuery.fieldSelector) {
       for (const [path, op, value] of parseSelector(reqQuery.fieldSelector)) {
         if (op === '!=') {
