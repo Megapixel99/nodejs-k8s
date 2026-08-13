@@ -154,7 +154,7 @@ class Endpoints extends K8Object {
               (s.ports || []).flatMap((p) =>
                 (s.notReadyAddresses || []).concat(s.addresses || []).map((a) => `${a.ip}:${p.port}`)
               )
-            ).join(',') || '<None>'),
+            ).join(',') || '<none>'),
           ],
           object: {
             "kind": "PartialObjectMetadata",

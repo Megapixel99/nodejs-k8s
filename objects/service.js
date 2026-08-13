@@ -218,11 +218,11 @@ class Service extends K8Object {
           "cells": [
             e.metadata.name,
             e.spec.type,
-            (e.spec.clusterIP || e.spec.clusterIPs?.join() || '<None>'),
-            (e.spec.externalIPs?.join() || '<None>'),
-            e.spec?.ports?.length > 0 ? e.spec.ports.map((e) => `${e.port}/${e.protocol}`).join() : '<None>',
+            (e.spec.clusterIP || e.spec.clusterIPs?.join() || '<none>'),
+            (e.spec.externalIPs?.join() || '<none>'),
+            e.spec?.ports?.length > 0 ? e.spec.ports.map((e) => `${e.port}/${e.protocol}`).join() : '<none>',
             age(e.metadata.creationTimestamp),
-            e.spec?.selector && Object.keys(e.spec.selector).length > 0 ? Object.entries(e.spec.selector).map((e) => `${e[0]}=${e[1]}`).join() : '<None>',
+            e.spec?.selector && Object.keys(e.spec.selector).length > 0 ? Object.entries(e.spec.selector).map((e) => `${e[0]}=${e[1]}`).join() : '<none>',
           ],
           object: {
             "kind": "PartialObjectMetadata",

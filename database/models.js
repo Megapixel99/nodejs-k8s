@@ -1426,8 +1426,11 @@ const serviceSchema = Schema({
         },
       }
     },
+    // Kubernetes defaults an unset service type to ClusterIP; without it
+    // `kubectl expose` produced a service whose TYPE column was blank.
     type: {
-      type: String
+      type: String,
+      default: 'ClusterIP',
     },
   },
   status: {

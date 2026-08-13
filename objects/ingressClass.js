@@ -63,6 +63,10 @@ class IngressClass extends K8Object {
         "metadata": {
           "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
+        // These were the Service columns, copied wholesale: `kubectl get
+        // ingressclasses` printed TYPE / CLUSTER-IP / EXTERNAL-IP / PORT(S)
+        // against an object that has none of those fields. An IngressClass
+        // shows its controller and parameters.
         "columnDefinitions": [
           {
             "name": "Name",
@@ -72,31 +76,17 @@ class IngressClass extends K8Object {
             "priority": 0
           },
           {
-            "name": "Type",
+            "name": "Controller",
             "type": "string",
-            "format": "name",
-            "description": "Type of service.",
+            "format": "",
+            "description": "Controller refers to the name of the controller that should handle this class.",
             "priority": 0
           },
           {
-            "name": "Cluster-ip",
+            "name": "Parameters",
             "type": "string",
             "format": "",
-            "description": "IP within the cluster.",
-            "priority": 0
-          },
-          {
-            "name": "External-ip",
-            "type": "string",
-            "format": "",
-            "description": "IP outside the cluster.",
-            "priority": 0
-          },
-          {
-            "name": "Port(s)",
-            "type": "string",
-            "format": "",
-            "description": "Port(s) exposed by the service, for the pod(s).",
+            "description": "Parameters is a link to a custom resource containing additional configuration for the controller.",
             "priority": 0
           },
           {
@@ -105,24 +95,14 @@ class IngressClass extends K8Object {
             "format": "",
             "description": "CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.\n\nPopulated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
             "priority": 0
-          },
-          {
-            "name": "Selector",
-            "type": "string",
-            "format": "",
-            "description": "Which pod(s) are fronted by the service.",
-            "priority": 1
           }
         ],
         "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
-            e.spec.type,
-            (e.spec.clusterIP || e.spec.clusterIPs?.join() || '<None>'),
-            (e.spec.externalIPs?.join() || '<None>'),
-            e.spec?.ports?.length > 0 ? e.spec.ports.map((e) => `${e.port}/${e.protocol}`).join() : '<None>',
+            e.spec?.controller || '<none>',
+            e.spec?.parameters?.name ? `${e.spec.parameters.kind || 'Resource'}/${e.spec.parameters.name}` : '<none>',
             age(e.metadata.creationTimestamp),
-            e.spec?.selector && Object.keys(e.spec.selector).length > 0 ? Object.entries(e.spec.selector).map((e) => `${e[0]}=${e[1]}`).join() : '<None>',
           ],
           object: {
             "kind": "PartialObjectMetadata",
