@@ -324,8 +324,14 @@ module.exports = {
         if (!req.body.metadata?.namespace) {
           req.body.metadata.namespace = (req.params.namespace || "default");
         }
-        if (req.params.name) {
-          query['metadata.name'] = req.params.name;
+        // A collection POST has no :name param, so this query used to be just
+        // the namespace — and `create` treats a match as AlreadyExists. The
+        // second object of any kind in a namespace 409'd against the first.
+        // Uniqueness is per name + namespace. Objects created with
+        // generateName have no name yet and are always new.
+        let name = req.params.name || req.body.metadata?.name;
+        if (name) {
+          query['metadata.name'] = name;
         }
       }
       return Model.create(req.body, query)

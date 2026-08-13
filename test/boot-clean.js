@@ -90,7 +90,11 @@ async function run() {
     if (listRes.status >= 500) fails.push(`GET ${label}: ${listRes.status} ${JSON.stringify(listRes.data).slice(0, 200)}`);
     const tableRes = await hit('GET', r.path, null);
     // Table view via accept header (can't do via axios default headers easily here; test via query param alternative is not standard — skip table in this pass)
-    const delRes = await hit('DELETE', r.path, null);
+    // Delete only what this fixture created. This used to delete the whole
+    // collection, which on the /api/v1/namespaces fixture wiped every
+    // namespace in the cluster — default and kube-system included — and they
+    // are only created at boot, so the server stayed that way.
+    const delRes = await hit('DELETE', `${r.path}/${r.body.metadata.name}`, null);
     if (delRes.status >= 500) fails.push(`DELETE ${label}: ${delRes.status} ${JSON.stringify(delRes.data).slice(0, 200)}`);
   }
 

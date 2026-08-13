@@ -4,10 +4,7 @@ const { Node: Model } = require('../database/models.js');
 const Namespace = require('./namespace.js');
 const Deployment = require('./deployment.js');
 const Service = require('./service.js');
-const {
-  duration,
-  isContainerRunning,
-} = require('../functions.js');
+const { duration, isContainerRunning, age } = require('../functions.js');
 
 class Node extends K8Object {
   constructor(config) {
@@ -125,7 +122,7 @@ class Node extends K8Object {
           e.metadata?.name,
           (e.status?.conditions?.find((c) => c.type === 'Ready')?.status === 'True') ? 'Ready' : 'NotReady',
           '<none>',
-          duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
+          age(e.metadata.creationTimestamp),
           e.status?.nodeInfo?.kubeletVersion || 'v1.29.0',
         ],
         object: {

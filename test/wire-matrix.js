@@ -106,6 +106,17 @@ function checkTable(label, res) {
       continue;
     }
 
+    // A second object of the same kind in the same namespace. The uniqueness
+    // check used to ignore the name, so this 409'd against the first one.
+    let second = `${name}-2`;
+    let secondBody = { ...resource.body, metadata: { ...resource.body.metadata, name: second } };
+    let post2 = await req('POST', resource.path, { body: secondBody });
+    if (post2.status >= 400) {
+      fails.push(`POST ${resource.path} (second object "${second}"): ${post2.status}`);
+    } else {
+      await req('DELETE', `${resource.path}/${second}`);
+    }
+
     for (const [label, accept] of Object.entries(ACCEPT)) {
       if (CREATE_ONLY.has(kind)) {
         continue;

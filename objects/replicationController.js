@@ -2,10 +2,7 @@ const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const Pod = require('./pod.js');
 const { ReplicationController: Model } = require('../database/models.js');
-const {
-  duration,
-  isContainerRunning,
-} = require('../functions.js');
+const { duration, isContainerRunning, age } = require('../functions.js');
 
 class ReplicationController extends K8Object {
   constructor(config) {
@@ -126,7 +123,7 @@ class ReplicationController extends K8Object {
         "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
-            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
+            age(e.metadata.creationTimestamp),
           ],
           object: {
             "kind": "PartialObjectMetadata",

@@ -8,6 +8,7 @@ const {
   getContainerIP,
   getAllContainersWithName,
   duration,
+  age,
 }  = require('../functions.js');
 
 class Deployment extends K8Object {
@@ -168,7 +169,7 @@ class Deployment extends K8Object {
             `${e.status.availableReplicas}/${e.spec.replicas}`,
             e.status.updatedReplicas,
             e.status.availableReplicas,
-            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
+            age(e.metadata.creationTimestamp),
             e.spec.template.spec.containers.map((e) => e.name).join(', '),
             e.spec.template.spec.containers.map((e) => e.image).join(', '),
             Object.values(e.spec.selector.matchLabels).join(', '),

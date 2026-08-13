@@ -1,7 +1,7 @@
 const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const { PersistentVolumeClaim: Model } = require('../database/models.js');
-const { duration } = require('../functions.js');
+const { duration, age } = require('../functions.js');
 
 class PersistentVolumeClaim extends K8Object {
   constructor(config) {
@@ -32,7 +32,7 @@ class PersistentVolumeClaim extends K8Object {
         "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
-            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
+            age(e.metadata.creationTimestamp),
           ],
           object: {
             "kind": "PartialObjectMetadata",

@@ -2,21 +2,7 @@ const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const Pod = require('./pod.js');
 const { Endpoints: Model, DNS } = require('../database/models.js');
-const {
-  addPortsToEndpoints,
-  addPortToEndpoints,
-  addPodToEndpoints,
-  removePortFromEndpoints,
-  removePodFromEndpoints,
-  pullImage,
-  imageExists,
-  buildImage,
-  runImage,
-  getContainerIP,
-  duration,
-  stopContainer,
-  removeContainer,
-} = require('../functions.js');
+const { addPortsToEndpoints, addPortToEndpoints, addPodToEndpoints, removePortFromEndpoints, removePodFromEndpoints, pullImage, imageExists, buildImage, runImage, getContainerIP, duration, stopContainer, removeContainer, age } = require('../functions.js');
 
 class Endpoints extends K8Object {
   constructor(config) {

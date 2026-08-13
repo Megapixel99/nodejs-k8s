@@ -43,7 +43,9 @@ let countEntries = (value) => {
 
 let duration = (timeDiff, loop = true) => {
   let y = 365 * 24 * 60 * 60 * 1000;
-  let d = 24 * 60 * 60 * 10000;
+  // 10000, not 1000: a day was worth ten, so anything under ten days old was
+  // reported in hours and "1d" meant a week and a half.
+  let d = 24 * 60 * 60 * 1000;
   let h = 60 * 60 * 1000;
   let m = 60 * 1000;
   let s = 1000;
@@ -67,6 +69,18 @@ let duration = (timeDiff, loop = true) => {
     return `${Math.floor(timeDiff / s)}s`;
   }
   return '0s';
+};
+
+// The AGE cell of a Table. Every caller used to compute this by subtracting
+// two ISO *strings*, which is NaN, and duration(NaN) falls through every
+// branch and returns '0s' — so AGE read 0s for every object of every kind
+// regardless of how old it was.
+let age = (creationTimestamp) => {
+  let created = Date.parse(creationTimestamp);
+  if (Number.isNaN(created)) {
+    return '<unknown>';
+  }
+  return duration(Math.max(0, Date.now() - created));
 };
 
 let imageExists = (imageName, options) => dockerCommand(`inspect --type=image ${imageName.includes(':') ? imageName.split(':')[0] : imageName}`, { echo: false, ...options })
@@ -187,6 +201,7 @@ module.exports = {
   isBinary,
   imageExists,
   duration,
+  age,
   countEntries,
   getAllContainersWithName,
   randomBytes,

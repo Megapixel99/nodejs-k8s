@@ -4,7 +4,7 @@ const { rmSync } = require('fs');
 const path = require('path');
 const K8Object = require('./object.js');
 const { ConfigMap: Model } = require('../database/models.js');
-const { isText, isBinary, duration, countEntries } = require('../functions.js');
+const { isText, isBinary, duration, countEntries, age } = require('../functions.js');
 
 class ConfigMap extends K8Object {
   constructor(config) {
@@ -119,7 +119,7 @@ class ConfigMap extends K8Object {
             countEntries(e.data),
             countEntries(e.binaryData),
             e.immutable ?? false,
-            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
+            age(e.metadata.creationTimestamp),
           ],
           object: {
             "kind": "PartialObjectMetadata",

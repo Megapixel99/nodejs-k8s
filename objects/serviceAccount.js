@@ -3,7 +3,7 @@ const K8Object = require('./object.js');
 const Pod = require('./pod.js');
 const Service = require('./service.js');
 const { ServiceAccount: Model, DNS } = require('../database/models.js');
-const { duration } = require('../functions.js');
+const { duration, age } = require('../functions.js');
 
 class ServiceAccount extends K8Object {
   constructor(config) {
@@ -53,7 +53,7 @@ class ServiceAccount extends K8Object {
           "cells": [
             e.metadata.name,
             e.spec.secrets.length,
-            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
+            age(e.metadata.creationTimestamp),
           ],
           object: {
             "kind": "PartialObjectMetadata",

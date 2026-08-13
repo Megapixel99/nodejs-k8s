@@ -1,7 +1,7 @@
 const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const { Secret: Model } = require('../database/models.js');
-const { duration, countEntries } = require('../functions.js');
+const { duration, countEntries, age } = require('../functions.js');
 
 function convertData(data) {
   const base64RegExp = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
@@ -152,7 +152,7 @@ class Secret extends K8Object {
             e.metadata.name,
             e.type,
             countEntries(e.data),
-            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
+            age(e.metadata.creationTimestamp),
           ],
           object: {
             "kind": "PartialObjectMetadata",

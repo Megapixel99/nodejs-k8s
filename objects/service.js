@@ -3,19 +3,7 @@ const K8Object = require('./object.js');
 const Pod = require('./pod.js');
 const Endpoints = require('./endpoints.js');
 const { Service: Model, DNS } = require('../database/models.js');
-const {
-  addPortsToService,
-  addPortToService,
-  addPodToService,
-  removePortFromService,
-  removePodFromService,
-  pullImage,
-  imageExists,
-  buildImage,
-  runImage,
-  getContainerIP,
-  duration,
-} = require('../functions.js');
+const { addPortsToService, addPortToService, addPodToService, removePortFromService, removePodFromService, pullImage, imageExists, buildImage, runImage, getContainerIP, duration, age } = require('../functions.js');
 
 class Service extends K8Object {
   constructor(config) {
@@ -233,7 +221,7 @@ class Service extends K8Object {
             (e.spec.clusterIP || e.spec.clusterIPs?.join() || '<None>'),
             (e.spec.externalIPs?.join() || '<None>'),
             e.spec?.ports?.length > 0 ? e.spec.ports.map((e) => `${e.port}/${e.protocol}`).join() : '<None>',
-            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
+            age(e.metadata.creationTimestamp),
             e.spec?.selector && Object.keys(e.spec.selector).length > 0 ? Object.entries(e.spec.selector).map((e) => `${e[0]}=${e[1]}`).join() : '<None>',
           ],
           object: {

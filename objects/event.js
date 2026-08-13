@@ -1,10 +1,7 @@
 const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const { Event: Model } = require('../database/models.js');
-const {
-  duration,
-  randomBytes
-} = require('../functions.js');
+const { duration, randomBytes, age } = require('../functions.js');
 
 // These are served on /api/v1, so the response has to carry the core/v1 field
 // names. Storage and the internal emitters speak events.k8s.io/v1, so fill the
@@ -100,7 +97,7 @@ class Event extends K8Object {
         "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
-            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
+            age(e.metadata.creationTimestamp),
           ],
           object: {
             "kind": "PartialObjectMetadata",

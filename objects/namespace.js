@@ -48,7 +48,7 @@ const TokenRequest = require('./tokenRequest.js');
 const TokenReview = require('./tokenReview.js');
 const ValidatingWebhookConfiguration = require('./validatingWebhookConfiguration.js');
 const VolumeAttachment = require('./volumeAttachment.js');
-const { duration } = require('../functions.js');
+const { duration, age } = require('../functions.js');
 
 const objects = {
   CertificateSigningRequest,
@@ -204,7 +204,7 @@ class Namespace extends K8Object {
         "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
-            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
+            age(e.metadata.creationTimestamp),
           ],
           object: {
             "kind": "PartialObjectMetadata",

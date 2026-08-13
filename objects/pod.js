@@ -4,19 +4,7 @@ const EventEmitter = require('./emitter.js');
 const Secret = require('./secret.js');
 const ConfigMap = require('./configMap.js');
 const { Pod: Model } = require('../database/models.js');
-const {
-  runImage,
-  duration,
-  stopContainer,
-  getContainerIP,
-  removeContainer,
-  randomBytes,
-  isContainerRunning,
-  containerHasStarted,
-  getContainerLogs,
-  waitContainer,
-  execInContainer,
-} = require('../functions.js');
+const { runImage, duration, stopContainer, getContainerIP, removeContainer, randomBytes, isContainerRunning, containerHasStarted, getContainerLogs, waitContainer, execInContainer, age } = require('../functions.js');
 const http = require('http');
 const net = require('net');
 
@@ -171,7 +159,7 @@ class Pod extends K8Object {
           `${e.status?.phase === "Running" ? 1 : 0}/1`,
           e.status?.phase,
           (e.status?.containerStatuses?.[0]?.restartCount || 0),
-          duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
+          age(e.metadata.creationTimestamp),
           (e.status?.podIP || '<None>'),
           (e.metadata.generateName || '<None>'),
           (e.status?.nominatedNodeName || '<None>'),
