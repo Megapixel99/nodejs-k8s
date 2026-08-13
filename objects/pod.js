@@ -156,14 +156,16 @@ class Pod extends K8Object {
       "rows": pods.map((e) => ({
         "cells": [
           e.metadata.name,
-          `${e.status?.phase === "Running" ? 1 : 0}/1`,
+          `${(e.status?.containerStatuses || []).filter((c) => c.ready).length}/${(e.spec?.containers || []).length || 1}`,
           e.status?.phase,
           (e.status?.containerStatuses?.[0]?.restartCount || 0),
           age(e.metadata.creationTimestamp),
-          (e.status?.podIP || '<None>'),
-          (e.metadata.generateName || '<None>'),
-          (e.status?.nominatedNodeName || '<None>'),
-          (e.spec?.readinessGates?.[0]?.conditionType || '<None>'),
+          (e.status?.podIP || '<none>'),
+          // This printed metadata.generateName — the container-name prefix —
+          // in the NODE column of `kubectl get pods -o wide`.
+          (e.spec?.nodeName || '<none>'),
+          (e.status?.nominatedNodeName || '<none>'),
+          (e.spec?.readinessGates?.[0]?.conditionType || '<none>'),
         ],
         object: {
           "kind": "PartialObjectMetadata",
@@ -444,6 +446,13 @@ class Pod extends K8Object {
                       "imageID": "",
                       "image": containerSpec.image,
                       "lastState": {},
+                      // Without an explicit running state the only state on
+                      // the object is whatever the schema defaults produce.
+                      "state": {
+                        running: {
+                          startedAt: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+                        },
+                      },
                       "containerID": podName
                     }],
                   },

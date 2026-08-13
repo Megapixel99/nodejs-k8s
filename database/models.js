@@ -497,6 +497,10 @@ const rbd = {
   user: String,
 };
 
+// exitCode and signal used to default to 0, which made mongoose materialise a
+// `terminated` state for every container status it stored — so `kubectl
+// describe pod` reported State: Terminated (exit 0) for a container that was
+// still running. A terminated state means something only once it is written.
 const containerStatus = {
   allocatedResources: {
     type: Map,
@@ -511,17 +515,11 @@ const containerStatus = {
     },
     terminated: {
       containerID: String,
-      exitCode: {
-        type: Number,
-        default: 0
-      },
+      exitCode: Number,
       finishedAt: String,
       message: String,
       reason: String,
-      signal: {
-        type: Number,
-        default: 0
-      },
+      signal: Number,
       startedAt: String,
     },
     waiting: {
@@ -555,17 +553,11 @@ const containerStatus = {
     },
     terminated: {
       containerID: String,
-      exitCode: {
-        type: Number,
-        default: 0
-      },
+      exitCode: Number,
       finishedAt: String,
       message: String,
       reason: String,
-      signal: {
-        type: Number,
-        default: 0
-      },
+      signal: Number,
       startedAt: String,
     },
     waiting: {
