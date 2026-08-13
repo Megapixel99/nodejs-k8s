@@ -192,6 +192,42 @@ function conflictsOnResourceVersion(Model, req, res, item) {
   return true;
 }
 
+// ConfigMap and Secret honour `immutable: true` — once set, everything but
+// metadata is frozen, and the flag itself can't be cleared. Nothing enforced
+// it on the patch path, so an immutable ConfigMap accepted data changes and
+// answered 200.
+function rejectsImmutableChange(Model, req, res, item) {
+  let stored = item?.toJSON ? item.toJSON() : item;
+  if (stored?.immutable !== true) {
+    return false;
+  }
+  let body = req.body;
+  let touched = [];
+  if (Array.isArray(body)) {
+    // RFC 6902: any op outside /metadata changes the frozen part.
+    touched = body
+      .map((op) => `${op?.path || ''}`)
+      .filter((path) => path && !path.startsWith('/metadata'));
+  } else if (body && typeof body === 'object') {
+    touched = Object.keys(body).filter((key) => !['metadata', 'apiVersion', 'kind'].includes(key));
+    if (body.immutable === true) {
+      touched = touched.filter((key) => key !== 'immutable');
+    }
+  }
+  if (!touched.length) {
+    return false;
+  }
+  let name = req.params?.name || stored?.metadata?.name;
+  negotiate(req, res.status(422), Model.unprocessableContentStatus(
+    Model.kind,
+    name,
+    undefined,
+    `${Model.kind} "${name}" is invalid: ${touched[0].replace(/^\//, '')}: Forbidden: field is immutable when \`immutable\` is set`,
+    'Invalid',
+  ), 'Status');
+  return true;
+}
+
 // `patch` resolves the raw mongo document, whose toJSON carries `_id`/`__v` and
 // skips whatever the model derives on construction. Re-wrap it so a patched
 // object looks like the same object fetched any other way.
@@ -488,6 +524,7 @@ module.exports = {
         .then((item) => {
           if (!item) return undefined;
           if (conflictsOnResourceVersion(Model, req, res, item)) return null;
+          if (rejectsImmutableChange(Model, req, res, item)) return null;
           return item.update(req.body, query);
         })
         .then((item) => {
@@ -534,6 +571,7 @@ module.exports = {
           .then((item) => {
             if (!item) return sendNotFound(Model, req, res);
             if (conflictsOnResourceVersion(Model, req, res, item)) return undefined;
+            if (rejectsImmutableChange(Model, req, res, item)) return undefined;
             let doc = item.toJSON ? item.toJSON() : item;
             let flat = applyJsonPatch(req.body, doc);
             return item.patch(flat, query).then((updated) => {
@@ -560,6 +598,7 @@ module.exports = {
         .then((item) => {
           if (!item) return undefined;
           if (conflictsOnResourceVersion(Model, req, res, item)) return null;
+          if (rejectsImmutableChange(Model, req, res, item)) return null;
           return item.patch(update, query);
         })
         .then((item) => {

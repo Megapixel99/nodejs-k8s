@@ -496,7 +496,33 @@ class Pod extends K8Object {
         .then((exitCodes) => {
           let anyNonZero = exitCodes.some((c) => c !== 0);
           let phase = anyNonZero ? 'Failed' : 'Succeeded';
-          return this.patch({ $set: { 'status.phase': phase } });
+          let finishedAt = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
+          // The phase moved but the container statuses kept saying running, so
+          // `kubectl describe` on a finished pod reported a running container.
+          let containerStatuses = this.spec.containers.map((c, i) => ({
+            name: c.name,
+            image: c.image,
+            imageID: '',
+            containerID: `${this.metadata.generateName}-${c.name}`,
+            restartCount: 0,
+            started: false,
+            ready: false,
+            lastState: {},
+            state: {
+              terminated: {
+                exitCode: exitCodes[i] ?? 0,
+                reason: (exitCodes[i] ?? 0) === 0 ? 'Completed' : 'Error',
+                finishedAt,
+                containerID: `${this.metadata.generateName}-${c.name}`,
+              },
+            },
+          }));
+          return this.patch({
+            $set: {
+              'status.phase': phase,
+              'status.containerStatuses': containerStatuses,
+            },
+          });
         })
         .catch((err) => console.warn(`[pod ${this.metadata.name}] exit watcher error:`, err?.message || err));
       return this;
