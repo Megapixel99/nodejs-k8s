@@ -8,6 +8,27 @@ const { runImage, duration, stopContainer, getContainerIP, removeContainer, rand
 const http = require('http');
 const net = require('net');
 
+// What kubectl's own pod printer puts in STATUS: the phase is only the
+// fallback. A finished pod shows the container's termination reason
+// ("Completed"), not "Succeeded", and one being deleted shows "Terminating".
+function podStatusText(pod) {
+  if (pod?.metadata?.deletionTimestamp) {
+    return 'Terminating';
+  }
+  for (const status of pod?.status?.containerStatuses || []) {
+    if (status?.state?.waiting?.reason) {
+      return status.state.waiting.reason;
+    }
+    if (status?.state?.terminated?.reason) {
+      return status.state.terminated.reason;
+    }
+    if (status?.state?.terminated?.exitCode) {
+      return `ExitCode:${status.state.terminated.exitCode}`;
+    }
+  }
+  return pod?.status?.reason || pod?.status?.phase || 'Unknown';
+}
+
 class Pod extends K8Object {
   constructor(config) {
     super(config);
@@ -157,7 +178,7 @@ class Pod extends K8Object {
         "cells": [
           e.metadata.name,
           `${(e.status?.containerStatuses || []).filter((c) => c.ready).length}/${(e.spec?.containers || []).length || 1}`,
-          e.status?.phase,
+          podStatusText(e),
           (e.status?.containerStatuses?.[0]?.restartCount || 0),
           age(e.metadata.creationTimestamp),
           (e.status?.podIP || '<none>'),
