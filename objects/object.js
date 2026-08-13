@@ -75,6 +75,20 @@ function decodeContinue(token) {
   }
 }
 
+// Kinds a client legitimately posts without a name: they are answers to a
+// question ("may I do this?"), not objects anyone will look up later.
+const NAMELESS_KINDS = new Set([
+  'Binding',
+  'Eviction',
+  'LocalSubjectAccessReview',
+  'SelfSubjectAccessReview',
+  'SelfSubjectReview',
+  'SelfSubjectRulesReview',
+  'SubjectAccessReview',
+  'TokenRequest',
+  'TokenReview',
+]);
+
 // The suffix Kubernetes appends to a generateName: five characters from an
 // alphabet that avoids vowels and lookalikes.
 function randomSuffix() {
@@ -186,7 +200,17 @@ class K8Object {
   // anyone builds a uniqueness query, because a query with an undefined name
   // drops that clause and matches an unrelated object instead.
   static applyGenerateName(metadata) {
-    if (metadata && !metadata.name && metadata.generateName) {
+    if (!metadata) {
+      return metadata;
+    }
+    // The review kinds are request/response objects in Kubernetes, not stored
+    // resources, so clients send them with no name at all — `kubectl auth
+    // can-i` posts a SelfSubjectAccessReview with empty metadata. We do
+    // persist them, so give them a name rather than rejecting the request.
+    if (!metadata.name && !metadata.generateName && NAMELESS_KINDS.has(this.kind)) {
+      metadata.generateName = `${`${this.kind}`.toLowerCase()}-`;
+    }
+    if (!metadata.name && metadata.generateName) {
       metadata.name = `${metadata.generateName}${randomSuffix()}`;
     }
     return metadata;

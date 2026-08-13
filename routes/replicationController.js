@@ -22,4 +22,9 @@ router.delete(`${route}/:name`, validSchema(apiV1OpenApiV3), general.deleteOne(R
 
 router.delete(route, validSchema(apiV1OpenApiV3), general.delete(ReplicationController), general.sendObj(ReplicationController));
 
+// `kubectl scale` reads and writes the scale subresource, not the object.
+router.get(`${route}/:name/scale`, general.getScale(ReplicationController));
+router.put(`${route}/:name/scale`, general.setScale(ReplicationController));
+router.patch(`${route}/:name/scale`, general.setScale(ReplicationController));
+
 module.exports = router;

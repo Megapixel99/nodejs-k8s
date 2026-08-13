@@ -209,8 +209,76 @@ function asApiObject(Model, doc) {
   }
 }
 
+// The scale subresource. `kubectl scale` reads and writes this, not the parent
+// object, so without it the command fails with a 404 no matter how well the
+// controller handles spec.replicas.
+function toScale(item) {
+  let obj = item?.toJSON ? item.toJSON() : item;
+  let selector = obj?.spec?.selector?.matchLabels || obj?.spec?.selector || {};
+  return {
+    kind: 'Scale',
+    apiVersion: 'autoscaling/v1',
+    metadata: {
+      name: obj?.metadata?.name,
+      namespace: obj?.metadata?.namespace,
+      uid: obj?.metadata?.uid,
+      resourceVersion: obj?.metadata?.resourceVersion,
+      creationTimestamp: obj?.metadata?.creationTimestamp,
+    },
+    spec: { replicas: obj?.spec?.replicas ?? 0 },
+    status: {
+      replicas: obj?.status?.replicas ?? obj?.spec?.replicas ?? 0,
+      selector: Object.entries(selector).map(([k, v]) => `${k}=${v}`).join(','),
+    },
+  };
+}
+
 module.exports = {
   notFound: sendNotFound,
+  getScale(Model) {
+    return (req, res, next) => {
+      let query = { 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace };
+      Model.findOne(query)
+        .then((item) => {
+          if (!item) {
+            return sendNotFound(Model, req, res);
+          }
+          return negotiate(req, res.status(200), toScale(item), 'Scale');
+        })
+        .catch(next);
+    };
+  },
+  setScale(Model) {
+    return (req, res, next) => {
+      try {
+        req.body = convertFromProtoBuff(req);
+      } catch (e) {
+        return next(e);
+      }
+      let replicas = req.body?.spec?.replicas;
+      if (replicas === undefined || replicas === null) {
+        return next(new Status({
+          status: 'Failure',
+          reason: 'BadRequest',
+          code: 400,
+          message: 'Scale body must set spec.replicas',
+        }));
+      }
+      let query = { 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace };
+      Model.findOne(query)
+        .then((item) => {
+          if (!item) {
+            return sendNotFound(Model, req, res);
+          }
+          if (conflictsOnResourceVersion(Model, req, res, item)) {
+            return undefined;
+          }
+          return item.patch({ $set: { 'spec.replicas': Number(replicas) } }, query)
+            .then((updated) => negotiate(req, res.status(200), toScale(asApiObject(Model, updated)), 'Scale'));
+        })
+        .catch(next);
+    };
+  },
   find(Model) {
     return (req, res, next) => {
       Model.findAllSortedByReq(req.query, req.params)
@@ -546,10 +614,15 @@ module.exports = {
       let q = Model.genFindQuery(req.query || {}, req.params || {}).params || {};
       return Model.find(q)
       .then((items) => Promise.all(items.map((item) => item.delete())))
-      .then((items) => {
+      .then((items) => (items || []).filter(Boolean))
+      // A bare array isn't a Kubernetes response object — it has no kind, so a
+      // client can't tell what came back and the protobuf encoder had nothing
+      // to route on. Answer with the same List envelope a GET would produce.
+      .then((items) => Model.list({}, items.map((item) => new Model(item))))
+      .then((list) => {
         if (res.writableEnded === false && sendRes) {
           res.status(200);
-          res.data = items || {};
+          res.data = list;
           return next();
         }
         return next();
