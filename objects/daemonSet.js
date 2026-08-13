@@ -20,12 +20,12 @@ class DaemonSet extends K8Object {
   static kind = 'DaemonSet';
   static Model = Model;
 
-  static async table (queryOptions = {}) {
+  static async table (items = []) {
     return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${daemonSets.length}${JSON.stringify(daemonSets[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
         "columnDefinitions": [
           {
@@ -43,7 +43,7 @@ class DaemonSet extends K8Object {
             "priority": 0
           },
         ],
-        "rows": daemonSets.map((e) => ({
+        "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
             duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
@@ -58,8 +58,13 @@ class DaemonSet extends K8Object {
   }
 
   async setConfig(config) {
-    await super.setResourceVersion();
-    this.data = config.data;
+        await super.setResourceVersion();
+    let _src = (config && typeof config.toObject === 'function') ? config.toObject() : (config || {});
+    for (const key of Object.keys(_src)) {
+      if (key === 'apiVersion' || key === 'kind' || key === 'metadata') continue;
+      if (key === '_id' || key === '__v') continue;
+      this[key] = _src[key];
+    }
     return this;
   }
 }

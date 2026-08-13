@@ -4,7 +4,8 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/apis/${CSIDriver.apiVersion}/:namespace/csidrivers`];
+// CSIDrivers are cluster-scoped; keep the namespaced path working too.
+const routes = [`/apis/storage.k8s.io/v1/csidrivers`, `/apis/${CSIDriver.apiVersion}/:namespace/csidrivers`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(CSIDriver), general.format(CSIDriver), general.sendObj(CSIDriver));
 

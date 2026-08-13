@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/api/${PriorityClass.apiVersion}/:namespace/priorityclasses`];
+const routes = [`/apis/scheduling.k8s.io/v1/priorityclasses`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(PriorityClass), general.format(PriorityClass), general.sendObj(PriorityClass));
 

@@ -22,10 +22,14 @@ class IngressClass extends K8Object {
   static create(config) {
     return super.create(config)
     .then(async (ingressClass) => {
+      // `req` was never in scope here, so every create threw a ReferenceError
+      // and 500'd. The rules walk is an Ingress shape — an IngressClass spec
+      // only carries `controller` — so read it off the config and no-op when
+      // it isn't there rather than assuming it always is.
       await Promise.all(
-        req.body.spec.rules.map((rule) => {
-          return rule.http.paths.map((path) => {
-            return Service.findOne({ 'metadata.name': path.backend.serviceName })
+        (config?.spec?.rules ?? []).map((rule) => {
+          return (rule.http?.paths ?? []).map((path) => {
+            return Service.findOne({ 'metadata.name': path.backend?.serviceName })
               .then((service) => {
                 let arr = []
                 if (service?.externalIPs?.length > 0) {
@@ -45,17 +49,19 @@ class IngressClass extends K8Object {
           })
           .flat()
           .filter((e) => e);
-        }));
-      return ingressClass.toJSON();
+        }).flat());
+      // Every other model's create resolves the object, not its JSON; the
+      // middleware calls toJSON itself.
+      return ingressClass;
     })
   }
 
-  static async table (queryOptions = {}) {
+  static async table (items = []) {
     return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${ingressClasses.length}${JSON.stringify(ingressClasses[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
         "columnDefinitions": [
           {
@@ -108,7 +114,7 @@ class IngressClass extends K8Object {
             "priority": 1
           }
         ],
-        "rows": pods.map((e) => ({
+        "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
             e.spec.type,

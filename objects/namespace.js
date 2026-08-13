@@ -153,12 +153,22 @@ class Namespace extends K8Object {
   }
 
   async delete () {
-    return Promise.all(Object.keys(Models).map((m) => Models[m].find({ 'metadata.namespace': this.metadata.name })))
-    .then((resources) => {
-      return Promise.all([
-        ...resources.flat().map((resource) => new objects[resource.kind](resource).delete()),
-        super.delete({ 'metadata.name': this.metadata.name }),
-      ]);
+    return Promise.all(Object.keys(Models).map((m) => Models[m].find({ 'metadata.namespace': this.metadata.name }).catch(() => [])))
+    .then(async (resources) => {
+      let deletions = [];
+      for (const resource of resources.flat()) {
+        let ctor = objects[resource.kind];
+        if (ctor) {
+          deletions.push(new ctor(resource).delete().catch(() => {}));
+        } else {
+          // Fallback: model-level delete when we don't have a class for this kind.
+          let modelKey = Object.keys(Models).find((k) => k.toLowerCase() === (resource.kind || '').toLowerCase());
+          if (modelKey) {
+            deletions.push(Models[modelKey].deleteOne({ 'metadata.uid': resource.metadata?.uid }).catch(() => {}));
+          }
+        }
+      }
+      return Promise.all([...deletions, super.delete({ 'metadata.name': this.metadata.name })]);
     })
     .then((promises) => {
       let namespace = promises.at(-1);
@@ -168,12 +178,12 @@ class Namespace extends K8Object {
     });
   }
 
-  static async table (queryOptions = {}) {
+  static async table (items = []) {
     return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${namespaces.length}${JSON.stringify(namespaces[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
         "columnDefinitions": [
           {
@@ -191,7 +201,7 @@ class Namespace extends K8Object {
             "priority": 0
           },
         ],
-        "rows": namespaces.map((e) => ({
+        "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
             duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),

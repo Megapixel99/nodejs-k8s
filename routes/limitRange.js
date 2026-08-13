@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/api/${LimitRange.apiVersion}/:namespace/limitranges`];
+const routes = [`/api/v1/namespaces/:namespace/limitranges`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.findOne(LimitRange), general.format(LimitRange), general.sendObj(LimitRange));
 

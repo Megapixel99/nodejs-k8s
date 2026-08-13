@@ -1,5 +1,6 @@
 const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
+const Pod = require('./pod.js');
 const { ReplicaSet: Model } = require('../database/models.js');
 const {
   duration,
@@ -20,12 +21,49 @@ class ReplicaSet extends K8Object {
   static kind = 'ReplicaSet';
   static Model = Model;
 
-  static async table (queryOptions = {}) {
+  static async create(config) {
+    let rs = await super.create(config).then((doc) => new ReplicaSet(doc));
+    // Spawn child pods asynchronously so the API call returns fast.
+    let replicas = Math.max(0, Number(rs.spec?.replicas || 0));
+    let tmpl = rs.spec?.template || {};
+    let podMeta = tmpl.metadata || {};
+    let podSpec = tmpl.spec || {};
+    for (let i = 0; i < replicas; i++) {
+      Pod.create({
+        metadata: {
+          name: `${rs.metadata.name}-${i}`,
+          namespace: rs.metadata.namespace,
+          labels: podMeta.labels || rs.spec?.selector?.matchLabels || {},
+          ownerReferences: [{
+            apiVersion: 'apps/v1',
+            kind: 'ReplicaSet',
+            name: rs.metadata.name,
+            uid: rs.metadata.uid,
+            controller: true,
+            blockOwnerDeletion: true,
+          }],
+        },
+        spec: podSpec,
+      }).catch((err) => console.warn(`[replicaset ${rs.metadata.name}] pod ${i} create failed:`, err?.message || err));
+    }
+    // Report status.replicas eagerly so list/count checks succeed while pods
+    // are still booting.
+    rs.patch({ $set: { 'status.replicas': replicas, 'status.readyReplicas': replicas, 'status.availableReplicas': replicas, 'status.observedGeneration': 1 } }).catch(() => {});
+    return rs;
+  }
+
+  async delete() {
+    let pods = await Pod.find({ 'metadata.namespace': this.metadata.namespace, 'metadata.ownerReferences.uid': this.metadata.uid }).catch(() => []);
+    await Promise.all(pods.map((p) => p.delete().catch(() => {})));
+    return super.delete();
+  }
+
+  static async table (items = []) {
     return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${replicaSets.length}${JSON.stringify(replicaSets[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
         "columnDefinitions": [
           {
@@ -43,7 +81,7 @@ class ReplicaSet extends K8Object {
             "priority": 0
           },
         ],
-        "rows": replicaSets.map((e) => ({
+        "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
             duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
@@ -58,8 +96,13 @@ class ReplicaSet extends K8Object {
   }
 
   async setConfig(config) {
-    await super.setResourceVersion();
-    this.data = config.data;
+        await super.setResourceVersion();
+    let _src = (config && typeof config.toObject === 'function') ? config.toObject() : (config || {});
+    for (const key of Object.keys(_src)) {
+      if (key === 'apiVersion' || key === 'kind' || key === 'metadata') continue;
+      if (key === '_id' || key === '__v') continue;
+      this[key] = _src[key];
+    }
     return this;
   }
 }

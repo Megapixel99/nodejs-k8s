@@ -4,15 +4,25 @@ const {
   removeContainer,
   getContainerIP,
   runImage,
+  randomBytes
 } = require('../functions.js');
 
+const { rmSync } = require('fs');
 const nodeSpec = require('./templates/node.json');
 const { DateTime } = require('luxon');
 const axios = require('axios');
 const { spawn } = require('child_process');
+const path = require('path');
 
 (async () => {
-  let nodeName = 'worker-node-1';
+  let nodeName = `worker-node-${randomBytes(2).toString('hex')}`;
+
+  rmSync(path.resolve(`${__dirname}/../volumes`), { recursive: true, force: true })
+
+  await new Promise((resolve, reject) => {
+    spawn('kubectl', ['config', 'use-context', '/localhost:8080/admin'])
+    .on('close', resolve);
+  });
 
   await new Promise((resolve, reject) => {
     spawn('docker', ['kill', nodeName])
@@ -88,7 +98,7 @@ const { spawn } = require('child_process');
     await axios.delete(`http://localhost:8080/all`)
   } catch (e) { }
   await axios.post('http://localhost:8080/api/v1/nodes', nodeSpec);
-  let test = spawn('kubetest2', ['noop', '--kubeconfig=./test-config', '--v', '10', '--test=ginkgo', '--', '--focus-regex=\\\[Conformance\\\]'])
+  let test = spawn('kubetest2', ['noop', '--kubeconfig=./test-config', '--v', '10', '--test=ginkgo', '--', '--focus-regex=Variable Expansion allow almost all printable ASCII characters as environment variable names' ])
 
   test.stdout.on('data', (data) => console.log(`[${DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "")}] [test] ${data}`));
 

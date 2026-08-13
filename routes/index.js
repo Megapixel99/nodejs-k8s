@@ -1,6 +1,7 @@
 module.exports = {
   all: require('./all.js'),
   api: require('./api.js'),
+  discovery: require('./discovery.js'),
   apiService: require('./apiService.js'),
   binding: require('./binding.js'),
   certificateSigningRequest: require('./certificateSigningRequest.js'),

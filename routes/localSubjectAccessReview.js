@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/api/${LocalSubjectAccessReview.apiVersion}/:namespace/localsubjectaccessreviews`];
+const routes = [`/apis/authorization.k8s.io/v1/namespaces/:namespace/localsubjectaccessreviews`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(LocalSubjectAccessReview), general.format(LocalSubjectAccessReview), general.sendObj(LocalSubjectAccessReview));
 

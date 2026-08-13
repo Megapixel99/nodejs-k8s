@@ -1,7 +1,45 @@
 const { dockerCommand } = require('docker-cli-js');
 const { randomBytes } = require("crypto");
+const { spawn } = require("child_process");
 const portfinder = require('portfinder');
+const path = require('path');
 const { isText, isBinary } = require('istextorbinary');
+const { addSlashes } = require('slashes');
+
+const VOLUMES_ROOT = path.resolve(__dirname, 'volumes');
+
+// spawn-based docker runner that sidesteps shell interpretation entirely.
+// Required because conformance tests set env var names with $, `, !, (, ), etc.
+function dockerSpawn(args) {
+  return new Promise((resolve, reject) => {
+    let stdout = '';
+    let stderr = '';
+    let p = spawn('docker', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    p.stdout.on('data', (d) => { stdout += d.toString(); });
+    p.stderr.on('data', (d) => { stderr += d.toString(); });
+    p.on('error', reject);
+    p.on('close', (code) => {
+      if (code === 0) resolve({ raw: stdout, stderr, exitCode: 0 });
+      else reject(Object.assign(new Error(`docker ${args.join(' ')} exited ${code}: ${stderr}`), { stdout, stderr, exitCode: code }));
+    });
+  });
+}
+
+const addSlashesToString = (str) => addSlashes(str).replaceAll('`', '\\`');
+
+// Count the entries of a field that is a Map in the schema but a plain object
+// once it has been through toJSON. `Object.keys` on a mongoose Map counts the
+// document internals instead of the entries, and `.length` on either is
+// undefined — both render as a wrong number in a Table cell without erroring.
+let countEntries = (value) => {
+  if (!value) {
+    return 0;
+  }
+  if (value instanceof Map) {
+    return value.size;
+  }
+  return Object.keys(value).length;
+};
 
 let duration = (timeDiff, loop = true) => {
   let y = 365 * 24 * 60 * 60 * 1000;
@@ -39,37 +77,79 @@ let buildImage = (imageName, dockerfile = 'Dockerfile', options) => {
 let pullImage = (imageName) => dockerCommand(`pull ${imageName}`, { echo: false });
 let dockerExec = (containerName, command) => dockerCommand(`exec -t ${containerName} ${command}`, { echo: false });
 let runImage = async (imageName, containerName, options) => {
-  let cmd = `run `;
-
-  if (Array.isArray(options?.ports) && options?.ports.length > 0) {
-    cmd += (await Promise.all(options.ports.map(async (e) => {
-      return `-p ${e} `;
-    }))).join('');
+  let flags = ['run'];
+  if (Array.isArray(options?.ports)) {
+    for (const p of options.ports) flags.push('-p', String(p));
   }
-  if (Array.isArray(options?.expose) && options?.expose.length > 0) {
-    cmd += (await Promise.all(options.expose.map(async (e) => {
-      return `--expose ${e} `;
-    }))).join('');
+  if (Array.isArray(options?.expose)) {
+    for (const p of options.expose) flags.push('--expose', String(p));
   }
-  if (Array.isArray(options?.env) && options?.env.length > 0) {
-    cmd += options.env.map((e) => `-e ${e.name}='${e.value}' `).join('');
+  if (Array.isArray(options?.env)) {
+    for (const e of options.env) {
+      flags.push('-e', `${e.name}=${e.value == null ? '' : e.value}`);
+    }
   }
-  cmd += `--name ${containerName} -itd ${imageName}`;
-  return dockerCommand(cmd, { echo: false });
+  if (Array.isArray(options?.volumeMounts)) {
+    for (const v of options.volumeMounts) {
+      let hostPath = path.join(VOLUMES_ROOT, v.sourceDir, v.file);
+      let containerPath = `${v.mountPath.replace(/\/$/, '')}/${v.file}`;
+      flags.push('-v', `${hostPath}:${containerPath}`);
+    }
+  }
+  // Kubernetes container.command overrides ENTRYPOINT (docker --entrypoint
+  // accepts only one token; remaining tokens become CMD args alongside k8s
+  // container.args).
+  let cmdAfterImage = [];
+  let cmd = Array.isArray(options?.command) ? options.command : [];
+  let cmdArgs = Array.isArray(options?.args) ? options.args : [];
+  if (cmd.length > 0) {
+    flags.push('--entrypoint', cmd[0]);
+    cmdAfterImage = [...cmd.slice(1), ...cmdArgs];
+  } else if (cmdArgs.length > 0) {
+    cmdAfterImage = cmdArgs;
+  }
+  flags.push('--name', containerName, '-d', imageName, ...cmdAfterImage);
+  console.log('docker', 'run', '--name', containerName, imageName, '...');
+  return dockerSpawn(flags);
 };
 
-const isContainerRunning = (containerName) => dockerCommand(`inspect -f '{{.State.Running}}' "${containerName}"`, { echo: false });
+const isContainerRunning = (containerName) => dockerSpawn(['inspect', '-f', '{{.State.Running}}', containerName])
+  .then((res) => ({ object: String(res.raw || '').trim() === 'true' }))
+  .catch(() => ({ object: false }));
 
-const stopContainer = (containerName) => dockerCommand(`stop ${containerName}`, { echo: false });
+// True once the container has actually started executing, regardless of whether
+// it's still running or has already exited. Needed because short-lived commands
+// (e.g., `sh -c env`) finish before our status-polling loop wakes up.
+const containerHasStarted = (containerName) => dockerSpawn(['inspect', '-f', '{{.State.Status}}', containerName])
+  .then((res) => {
+    let state = String(res.raw || '').trim();
+    return state === 'running' || state === 'exited' || state === 'dead' || state === 'paused';
+  })
+  .catch(() => false);
 
-const getContainerLogs = (containerName) => dockerCommand(`logs ${containerName}`, { echo: false });
+const waitContainer = (containerName) => dockerSpawn(['wait', containerName])
+  .then((res) => Number(String(res.raw || '').trim()) || 0)
+  .catch(() => 1);
 
-const killContainer = (containerName) => dockerCommand(`kill ${containerName}`, { echo: false });
+const execInContainer = (containerName, cmdOrArgs) => {
+  let args = ['exec', containerName];
+  if (Array.isArray(cmdOrArgs)) args.push(...cmdOrArgs);
+  else args.push('sh', '-c', String(cmdOrArgs));
+  return dockerSpawn(args)
+    .then((res) => ({ code: 0, raw: res.raw }))
+    .catch((err) => ({ code: err.exitCode || 1, raw: err.stderr || '' }));
+};
 
-const removeContainer = (containerName) => dockerCommand(`rm ${containerName}`, { echo: false });
+const stopContainer = (containerName) => dockerSpawn(['stop', containerName]);
 
-const getContainerIP = (containerName) => dockerCommand(`inspect ${containerName}`, { echo: false })
-  .then((data) => JSON.parse(data.raw)[0]?.NetworkSettings.Networks.bridge.IPAddress)
+const getContainerLogs = (containerName) => dockerSpawn(['logs', containerName]);
+
+const killContainer = (containerName) => dockerSpawn(['kill', containerName]);
+
+const removeContainer = (containerName) => dockerSpawn(['rm', '-f', containerName]);
+
+const getContainerIP = (containerName) => dockerSpawn(['inspect', containerName])
+  .then((data) => JSON.parse(data.raw)[0]?.NetworkSettings.Networks.bridge.IPAddress);
 
 const getAllContainersWithName = (containerName, imageName) => dockerCommand(`ps -q -f name=${containerName} -f ancestor=${imageName}`, { echo: false });
 
@@ -107,6 +187,7 @@ module.exports = {
   isBinary,
   imageExists,
   duration,
+  countEntries,
   getAllContainersWithName,
   randomBytes,
   addPortsToEndpoint,
@@ -122,4 +203,7 @@ module.exports = {
   killContainer,
   removeContainer,
   getContainerLogs,
+  waitContainer,
+  execInContainer,
+  containerHasStarted,
 };

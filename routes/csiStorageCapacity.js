@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/api/${CSIStorageCapacity.apiVersion}/:namespace/csistoragecapacities`];
+const routes = [`/apis/storage.k8s.io/v1/namespaces/:namespace/csistoragecapacities`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(CSIStorageCapacity), general.format(CSIStorageCapacity), general.sendObj(CSIStorageCapacity));
 

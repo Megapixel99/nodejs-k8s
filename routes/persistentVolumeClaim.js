@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/api/${PersistentVolumeClaim.apiVersion}/:namespace/persistentvolumeclaims`];
+const routes = [`/api/${PersistentVolumeClaim.apiVersion}/namespaces/:namespace/persistentvolumeclaims`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(PersistentVolumeClaim), general.format(PersistentVolumeClaim), general.sendObj(PersistentVolumeClaim));
 

@@ -4,7 +4,8 @@ const { general, openapi } = require('../middleware');
 
 const { apiNetworkingK8sIoV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/apis/${IngressClass.apiVersion}/:namespace/ingressclasses`];
+// IngressClasses are cluster-scoped; keep the namespaced path working too.
+const routes = [`/apis/${IngressClass.apiVersion}/ingressclasses`, `/apis/${IngressClass.apiVersion}/:namespace/ingressclasses`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiNetworkingK8sIoV1OpenApiV3), general.findOne(IngressClass), general.format(IngressClass), general.sendObj(IngressClass));
 

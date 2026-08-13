@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/api/${ResourceQuota.apiVersion}/:namespace/resourcequotas`];
+const routes = [`/api/v1/namespaces/:namespace/resourcequotas`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.findOne(ResourceQuota), general.format(ResourceQuota), general.sendObj(ResourceQuota));
 

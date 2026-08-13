@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/api/${CronJob.apiVersion}/:namespace/cronjobs`];
+const routes = [`/apis/batch/v1/namespaces/:namespace/cronjobs`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(CronJob), general.format(CronJob), general.sendObj(CronJob));
 

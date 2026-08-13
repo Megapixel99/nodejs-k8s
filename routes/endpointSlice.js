@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/api/${EndpointSlice.apiVersion}/:namespace/endpointslices`];
+const routes = [`/apis/discovery.k8s.io/v1/namespaces/:namespace/endpointslices`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(EndpointSlice), general.format(EndpointSlice), general.sendObj(EndpointSlice));
 

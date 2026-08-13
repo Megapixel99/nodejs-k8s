@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/api/${CSINode.apiVersion}/:namespace/csinodes`];
+const routes = [`/apis/storage.k8s.io/v1/csinodes`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(CSINode), general.format(CSINode), general.sendObj(CSINode));
 

@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/api/${ValidatingWebhookConfiguration.apiVersion}/:namespace/validatingwebhookconfigurations`];
+const routes = [`/apis/admissionregistration.k8s.io/v1/validatingwebhookconfigurations`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(ValidatingWebhookConfiguration), general.format(ValidatingWebhookConfiguration), general.sendObj(ValidatingWebhookConfiguration));
 

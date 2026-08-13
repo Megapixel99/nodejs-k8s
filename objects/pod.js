@@ -12,8 +12,13 @@ const {
   removeContainer,
   randomBytes,
   isContainerRunning,
+  containerHasStarted,
   getContainerLogs,
+  waitContainer,
+  execInContainer,
 } = require('../functions.js');
+const http = require('http');
+const net = require('net');
 
 class Pod extends K8Object {
   constructor(config) {
@@ -57,16 +62,28 @@ class Pod extends K8Object {
     });
     return super.create(config)
     .then((pod) => new Pod(pod))
-    .then((newPod) => newPod.start())
-    .then((newPod) => newPod.toJSON());
+    .then((newPod) => {
+      // Kick off container startup in the background. A real kubelet would
+      // return the Pod object immediately and let the node start containers
+      // asynchronously; blocking here means POST /pods stalls past the test's
+      // RESTClient timeout.
+      newPod.start().catch((err) => {
+        console.warn(`[pod ${newPod.metadata.generateName}] start failed:`, err?.message || err);
+        newPod.patch({ $set: { 'status.phase': 'Failed', 'status.message': String(err?.message || err) } }).catch(() => {});
+      });
+      return newPod;
+    });
   }
 
   events() {
-    return new EventEmitter(this);
+    if (!this._emitter) {
+      this._emitter = new EventEmitter(this);
+    }
+    return this._emitter;
   }
 
-  async logs() {
-    return (await getContainerLogs(this.metadata.generateName)).raw;
+  async logs(container) {
+    return (await getContainerLogs(`${this.metadata.generateName}-${container}`)).raw;
   }
 
   async setConfig(config) {
@@ -151,14 +168,14 @@ class Pod extends K8Object {
       "rows": pods.map((e) => ({
         "cells": [
           e.metadata.name,
-          `${e.status.phase === "Running" ? 1 : 0}/1`,
-          e.status.phase,
-          (e.status.containerStatuses.restartCount || 0),
+          `${e.status?.phase === "Running" ? 1 : 0}/1`,
+          e.status?.phase,
+          (e.status?.containerStatuses?.[0]?.restartCount || 0),
           duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
-          (e.status.podIP || '<None>'),
+          (e.status?.podIP || '<None>'),
           (e.metadata.generateName || '<None>'),
-          (e.status.nominatedNodeName || '<None>'),
-          (e.spec.readinessGates.conditionType || '<None>'),
+          (e.status?.nominatedNodeName || '<None>'),
+          (e.spec?.readinessGates?.[0]?.conditionType || '<None>'),
         ],
         object: {
           "kind": "PartialObjectMetadata",
@@ -175,6 +192,10 @@ class Pod extends K8Object {
   }
 
   stop() {
+    if (Array.isArray(this._probeIntervals)) {
+      this._probeIntervals.forEach((i) => clearInterval(i));
+      this._probeIntervals = [];
+    }
     return Promise.all(this.spec.containers.map((e) => {
       return stopContainer(`${this.metadata.generateName}-${e.name}`)
         .catch((err) => {
@@ -199,7 +220,7 @@ class Pod extends K8Object {
         if (secret) {
           return secret.mapVariables()
         }
-        throw K8Object.unprocessableContentStatus(this.kind, this.metadata.name, null, `Secret "${this.metadata.name}" is invalid: data: Forbidden: field is immutable when \`${diff}\` is set`, 'Invalid')
+        throw K8Object.unprocessableContentStatus(this.kind, this.metadata.name, null, `Secret "${secretName}" not found`, 'Invalid')
       });
   }
 
@@ -219,42 +240,139 @@ class Pod extends K8Object {
       });
   }
 
-  start() {
+  async runInitContainers() {
+    if (!Array.isArray(this.spec.initContainers) || this.spec.initContainers.length === 0) {
+      return;
+    }
+    for (const init of this.spec.initContainers) {
+      let name = `${this.metadata.generateName}-init-${init.name}`;
+      await runImage(init.image, name, { expose: (init.ports || []).map((p) => p.containerPort) });
+      let exitCode = await waitContainer(name).catch(() => 1);
+      if (exitCode !== 0) {
+        await this.patch({
+          $set: { 'status.phase': 'Failed', 'status.message': `init container ${init.name} exited ${exitCode}` },
+        });
+        throw new Error(`init container ${init.name} failed with ${exitCode}`);
+      }
+    }
+  }
+
+  scheduleProbes(containerSpec, containerName, podIP) {
+    let checks = [];
+    if (containerSpec.readinessProbe) checks.push(['readiness', containerSpec.readinessProbe]);
+    if (containerSpec.livenessProbe) checks.push(['liveness', containerSpec.livenessProbe]);
+    checks.forEach(([kind, probe]) => {
+      let period = (probe.periodSeconds || 10) * 1000;
+      let interval = setInterval(async () => {
+        let ok = await this.runProbe(probe, containerName, podIP).catch(() => false);
+        if (!ok && kind === 'liveness') {
+          await stopContainer(containerName).catch(() => {});
+          await runImage(containerSpec.image, containerName, {
+            expose: (containerSpec.ports || []).map((p) => p.containerPort),
+          }).catch(() => {});
+        }
+      }, period);
+      this._probeIntervals = this._probeIntervals || [];
+      this._probeIntervals.push(interval);
+    });
+  }
+
+  async runProbe(probe, containerName, podIP) {
+    if (probe.exec && probe.exec.command) {
+      let cmd = Array.isArray(probe.exec.command) ? probe.exec.command.join(' ') : probe.exec.command;
+      let res = await execInContainer(containerName, cmd);
+      return res.code === 0;
+    }
+    if (probe.httpGet) {
+      return new Promise((resolve) => {
+        let req = http.request({
+          host: podIP,
+          port: probe.httpGet.port || 80,
+          path: probe.httpGet.path || '/',
+          method: 'GET',
+          timeout: 2000,
+        }, (res) => {
+          resolve(res.statusCode >= 200 && res.statusCode < 400);
+        });
+        req.on('error', () => resolve(false));
+        req.on('timeout', () => { req.destroy(); resolve(false); });
+        req.end();
+      });
+    }
+    if (probe.tcpSocket) {
+      return new Promise((resolve) => {
+        let sock = net.createConnection({ host: podIP, port: probe.tcpSocket.port, timeout: 2000 });
+        sock.on('connect', () => { sock.end(); resolve(true); });
+        sock.on('error', () => resolve(false));
+        sock.on('timeout', () => { sock.destroy(); resolve(false); });
+      });
+    }
+    return true;
+  }
+
+  async start() {
+    await this.runInitContainers();
     let p = this.spec.containers.map(async (e) => {
       let options = {
-        expose: e.ports.map((a) => a.containerPort),
+        expose: (e.ports || []).map((a) => a.containerPort),
+        command: e.command,
+        args: e.args,
+      }
+      if (e.volumeMounts) {
+        options['volumeMounts'] = (await Promise.all(e.volumeMounts.map(async (m) => {
+          let v = (this.spec.volumes || []).find((a) => a.name === m.name);
+          if (!v) return [];
+          let cmSrc = v.configMap || v.volumeSource?.configMap;
+          if (cmSrc) {
+            let cmName = cmSrc.name || cmSrc.localObjectReference?.name;
+            let c = await ConfigMap.findOne({ 'metadata.name': cmName, 'metadata.namespace': this.metadata.namespace });
+            if (!c) return [];
+            let keys = c.mapVariables().map((v) => v.name);
+            let sourceDir = ConfigMap.volumeDirName(c);
+            return keys.map((key) => ({ ...m, file: key, sourceDir }));
+          }
+          return [];
+        }))).flat();
       }
       if (e.env || e.envFrom) {
         options['env'] = [];
         if (e.env) {
           options['env'].push(...e.env.filter((v) => v?.value));
-          if (e.env.find((v) => v?.valueFrom?.configMapKeyRef)) {
-            let configMaps = (await this.getEnvVarsFromConfigMaps(
-              e.env.map((v) => v.valueFrom.configMapKeyRef.name)
-            ));
-            e.env
-              .filter((v) => v.valueFrom?.configMapKeyRef)
-              .forEach((e) => {
-                let value = configMaps
-                  ?.find((v) => v.name === e.valueFrom.configMapKeyRef.name)
-                  ?.variables
-                  ?.find((v) => v.name === e.valueFrom.configMapKeyRef.key)
-                  ?.value
-                  if (value) {
-                    options['env'].push({
-                      name: e.name,
-                      value,
-                    });
-                  }
-              });
+          let cmRefs = e.env.filter((v) => v?.valueFrom?.configMapKeyRef);
+          if (cmRefs.length > 0) {
+            let configMaps = await this.getEnvVarsFromConfigMaps(
+              cmRefs.map((v) => v.valueFrom.configMapKeyRef.name)
+            );
+            cmRefs.forEach((entry) => {
+              let value = configMaps
+                ?.find((v) => v.name === entry.valueFrom.configMapKeyRef.name)
+                ?.variables
+                ?.find((v) => v.name === entry.valueFrom.configMapKeyRef.key)
+                ?.value;
+              if (value !== undefined) {
+                options['env'].push({ name: entry.name, value });
+              }
+            });
+          }
+          let secretRefs = e.env.filter((v) => v?.valueFrom?.secretKeyRef);
+          for (const entry of secretRefs) {
+            let secret = await Secret.findOne({
+              'metadata.name': entry.valueFrom.secretKeyRef.name,
+              'metadata.namespace': this.metadata.namespace,
+            });
+            let variables = secret?.mapVariables?.() || [];
+            let value = variables.find((v) => v.name === entry.valueFrom.secretKeyRef.key)?.value;
+            if (value !== undefined) {
+              options['env'].push({ name: entry.name, value });
+            }
           }
         }
         if (e.envFrom) {
-          await Promise.all(e.envFrom.map(async (a) => {
-            if (e.secretRef) {
+          let collected = await Promise.all(e.envFrom.map(async (a) => {
+            if (a.secretRef) {
               return this.getEnvVarsFromSecret(a.secretRef.name)
                 .catch((err) => {
-                  newPod.patch({
+                  this.patch({
                     $push: {
                       'status.conditions': [{
                         type: "ContainersReady",
@@ -265,29 +383,28 @@ class Pod extends K8Object {
                         "restartCount": 0,
                         "started": false,
                         "ready": false,
-                        "name": this.metadata.name,
+                        "name": e.name,
                         "imageID": "",
-                        "image": "",
+                        "image": e.image,
                         "lastState": {},
-                        "containerID": podName
+                        "containerID": ""
                       }],
                     },
                   })
                   throw err;
                 });
             }
+            if (a.configMapRef) {
+              let configMaps = await this.getEnvVarsFromConfigMaps([a.configMapRef.name]);
+              return configMaps.flatMap((c) => c.variables);
+            }
             return null;
-          }))
-          .then((variables) => variables.flat().filter((a) => a))
-          .then((variables) => options['env'].push(...variables));
+          }));
+          options['env'].push(...collected.flat().filter((v) => v));
         }
       }
-      if (this.spec.containers.length > 1) {
-        await runImage(e.image, `${this.metadata.generateName}-${e.name}`, options);
-        return `${this.metadata.generateName}-${e.name}`;
-      }
-      await runImage(e.image, this.metadata.generateName, options);
-      return this.metadata.generateName;
+      await runImage(e.image, `${this.metadata.generateName}-${e.name}`, options);
+      return `${this.metadata.generateName}-${e.name}`;
     });
     return Promise.all(p)
     .then(async (podNames) => {
@@ -309,14 +426,18 @@ class Pod extends K8Object {
       }))
     })
     .then(async (podsInfo) => {
-      return Promise.all(podsInfo.map((podInfo) => {
+      return Promise.all(podsInfo.map((podInfo, idx) => {
         let [podIP, podName] = podInfo;
+        let containerSpec = this.spec.containers[idx];
         return new Promise((resolve, reject) => {
+          let attempts = 0;
           let inter = setInterval(async () => {
             try {
-              if ((await isContainerRunning(podName)).object === true) {
+              attempts++;
+              if ((await containerHasStarted(podName)) || attempts > 30) {
                 clearInterval(inter);
                 this.events().emit('ContainersReady', this);
+                this.scheduleProbes(containerSpec, podName, podIP);
                 this.patch({
                   $push: {
                     'status.conditions': [{
@@ -331,9 +452,9 @@ class Pod extends K8Object {
                       "restartCount": 0,
                       "started": true,
                       "ready": true,
-                      "name": this.metadata.name,
+                      "name": containerSpec.name,
                       "imageID": "",
-                      "image": "",
+                      "image": containerSpec.image,
                       "lastState": {},
                       "containerID": podName
                     }],
@@ -370,6 +491,18 @@ class Pod extends K8Object {
           'status.phase': 'Running'
         }
       });
+    })
+    .then(() => {
+      // Background watcher: patch phase to Succeeded/Failed when containers exit.
+      let names = this.spec.containers.map((c) => `${this.metadata.generateName}-${c.name}`);
+      Promise.all(names.map((name) => waitContainer(name).catch(() => 1)))
+        .then((exitCodes) => {
+          let anyNonZero = exitCodes.some((c) => c !== 0);
+          let phase = anyNonZero ? 'Failed' : 'Succeeded';
+          return this.patch({ $set: { 'status.phase': phase } });
+        })
+        .catch((err) => console.warn(`[pod ${this.metadata.name}] exit watcher error:`, err?.message || err));
+      return this;
     });
   }
 

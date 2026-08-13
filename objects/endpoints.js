@@ -55,7 +55,7 @@ class Endpoints extends K8Object {
           if (dnsPod) {
             options.env.push({
               name: 'DNS_SERVER',
-              value: await getContainerIP(dnsPod.metadata.generateName),
+              value: await getContainerIP(`${dnsPod.metadata.generateName}-${dnsPod.spec.containers[0].name}`),
             })
           }
           return runImage('loadbalancer', `${newEndpoints.metadata.name}-${newEndpoints.metadata.namespace}-loadBalancer`, options)
@@ -115,7 +115,7 @@ class Endpoints extends K8Object {
           i
         )),
       });
-      this.addPod(p.status.podIP);
+      this.addPod(pod.status.podIP);
     });
     podEvents.on('Delete', (pod) => {
       this.patch(
@@ -126,7 +126,7 @@ class Endpoints extends K8Object {
           i
         )),
       });
-      this.removePod(p.status.podIP);
+      this.removePod(pod.status.podIP);
     });
   }
 
@@ -138,12 +138,12 @@ class Endpoints extends K8Object {
       });
   }
 
-  static async table (queryOptions = {}) {
+  static async table (items = []) {
     return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${endpointses.length}${JSON.stringify(endpointses[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
         "columnDefinitions": [
           {
@@ -161,10 +161,14 @@ class Endpoints extends K8Object {
             "priority": 0
           }
         ],
-        "rows": pods.map((e) => ({
+        "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
-            (this.getPods() || '<None>'),
+            ((e.subsets || []).flatMap((s) =>
+              (s.ports || []).flatMap((p) =>
+                (s.notReadyAddresses || []).concat(s.addresses || []).map((a) => `${a.ip}:${p.port}`)
+              )
+            ).join(',') || '<None>'),
           ],
           object: {
             "kind": "PartialObjectMetadata",

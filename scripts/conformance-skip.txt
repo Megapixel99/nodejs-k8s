@@ -1,0 +1,2 @@
+# One test-name-per-line (exactly matching ginkgo's `[sig-x] Foo [It] should bar [Conformance]` form — without the trailing tag list).
+# These are known-incompatible with our simulator architecture; the runner will mark them SKIP instead of trying to execute them.

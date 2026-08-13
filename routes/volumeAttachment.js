@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/api/${VolumeAttachment.apiVersion}/:namespace/volumeattachments`];
+const routes = [`/apis/storage.k8s.io/v1/volumeattachments`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(VolumeAttachment), general.format(VolumeAttachment), general.sendObj(VolumeAttachment));
 

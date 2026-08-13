@@ -1,4 +1,12 @@
 require('dotenv').config();
+
+process.on('unhandledRejection', (err) => {
+  console.error('[unhandledRejection]', err?.stack || err);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err?.stack || err);
+});
+
 const fs = require('fs');
 const express = require('express');
 const YAML = require('yaml');
@@ -62,11 +70,13 @@ const {
   validatingWebhookConfiguration,
   version,
   volumeAttachment,
+  discovery,
 } = require('./routes/index.js');
 const { killContainer, removeContainer } = require('./functions.js');
 const Status = require('./objects/status.js');
 const Object = require('./objects/object.js');
 const nodeCleanup = require('node-cleanup');
+const scheduler = require('./controllers/scheduler.js');
 
 let dbNameIndex = process.argv.indexOf('-dbName');
 
@@ -86,21 +96,35 @@ const protobufTypes = protobuf.loadSync([
   `${__dirname}/proto/rbac_authorization_v1_service.proto`,
 ])
 
-const ymlToJSON = (req, res, buf, encoding) => {
-  if (buf && Buffer.isBuffer(buf)) {
-    try {
-      req.body = YAML.parse(buf.toString());
-    } catch (e) {
-      req.body = buf.toString();
-    }
-  }
-}
+const isYaml = (req) => `${req.headers['content-type']}`.includes('yaml');
 
-app.use(express.json());
+app.use(express.json({ type: ['application/json', 'application/merge-patch+json', 'application/strategic-merge-patch+json'] }));
+// JSON Patch (RFC 6902) body is an array; still parse as JSON.
+app.use(express.json({ type: 'application/json-patch+json' }));
 app.use(express.raw({ type: 'application/vnd.kubernetes.protobuf' }));
 app.use(express.raw({ type: 'text/vnd.kubernetes.protobuf' }));
-app.use(express.raw({ verify: ymlToJSON, type: 'application/yaml' }));
-app.use(express.raw({ verify: ymlToJSON, type: 'text/yaml' }));
+// Covers application/yaml, text/yaml and application/apply-patch+yaml. These
+// used to run through express.raw with a `verify` hook that parsed the YAML —
+// but body-parser overwrites req.body with the raw Buffer after verify returns,
+// so every YAML body was silently discarded and the object saved empty.
+// apply-patch+yaml was worse: it was in the express.json list, so a YAML body
+// failed JSON.parse and the request 400'd.
+app.use(express.text({ type: isYaml }));
+app.use((req, res, next) => {
+  if (isYaml(req) && typeof req.body === 'string' && req.body.length) {
+    try {
+      req.body = YAML.parse(req.body);
+    } catch (e) {
+      return next(new Status({
+        status: 'Failure',
+        reason: 'BadRequest',
+        code: 400,
+        message: `invalid YAML body: ${e.message}`,
+      }));
+    }
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   req.protobufTypes = protobufTypes;
@@ -112,10 +136,10 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
     let send = res.send;
     res.send = c => {
-        // console.log(`Code: ${res.statusCode}`);
-        // console.log("Body: ", c);
+        console.log(`Response Code: ${res.statusCode}`);
+        console.log("Response Body: ", c);
         res.send = send;
-        // console.log('------------------');
+        console.log('------------------');
         return res.send(c);
     }
     next();
@@ -180,6 +204,10 @@ app.use(tokenReview);
 app.use(validatingWebhookConfiguration);
 app.use(volumeAttachment);
 
+// Last: /apis/{group}/{version} is a two-segment pattern that would otherwise
+// shadow two-segment resource paths such as /apis/v1/componentstatuses.
+app.use(discovery);
+
 app.get('/', (req, res, next) => {
   let routes = app._router.stack.map((middleware) => {
     if (middleware.route) {
@@ -189,7 +217,7 @@ app.get('/', (req, res, next) => {
     }
   });
   res.json({
-    paths: routes.flat(Math.Infinity).filter((e) => e).map((e) => e.path).flat(Math.Infinity)
+    paths: routes.flat(Infinity).filter((e) => e).map((e) => e.path).flat(Infinity)
   });
 });
 
@@ -207,6 +235,21 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   if (err instanceof Status) {
     res.status(err.code).send(err);
+  } else if (err && err.name === 'ValidationError') {
+    res.status(422).send(Object.unprocessableContentStatus(undefined, undefined, undefined, err.message, 'Invalid'));
+  } else if (err && err.type === 'entity.parse.failed') {
+    res.status(400).send(Object.unprocessableContentStatus(undefined, undefined, undefined, err.message, 'BadRequest'));
+  } else if (err && Array.isArray(err.validationErrors)) {
+    // A request that doesn't match the OpenAPI schema is the client's problem,
+    // not ours; this used to fall through to a 500.
+    res.status(400).send(new Status({
+      status: 'Failure',
+      reason: 'BadRequest',
+      code: 400,
+      message: err.validationErrors
+        .map((e) => `${e.instancePath || 'request'} ${e.message}`)
+        .join('; '),
+    }));
   } else {
     console.error(err.stack);
     console.log(err);
@@ -217,6 +260,8 @@ app.use((err, req, res, next) => {
 
 app.listen(8080);
 app.listen(6443);
+
+scheduler.start();
 
 nodeCleanup(async (exitCode, signal) => {
   if (signal) {

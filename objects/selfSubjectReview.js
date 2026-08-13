@@ -5,8 +5,13 @@ const { duration } = require('../functions.js');
 
 class SelfSubjectReview extends K8Object {
   constructor(config) {
-    super(config);
-    this.rules = config.rules;
+        super(config);
+    let _src = (config && typeof config.toObject === 'function') ? config.toObject() : (config || {});
+    for (const key of Object.keys(_src)) {
+      if (key === 'apiVersion' || key === 'kind' || key === 'metadata') continue;
+      if (key === '_id' || key === '__v') continue;
+      this[key] = _src[key];
+    }
     this.apiVersion = SelfSubjectReview.apiVersion;
     this.kind = SelfSubjectReview.kind;
     this.Model = SelfSubjectReview.Model;
@@ -16,18 +21,23 @@ class SelfSubjectReview extends K8Object {
   static kind = 'SelfSubjectReview';
   static Model = Model;
 
-  static async table (queryOptions = {}) {
+
+  static create(config) {
+    config = { ...config, status: { userInfo: { username: 'system:admin', groups: ['system:masters'] }, ...(config.status || {}) } };
+    return super.create(config);
+  }
+  static async table (items = []) {
     return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${selfSubjectReviews.length}${JSON.stringify(selfSubjectReviews[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
-        "columnDefinitions": [],
-        "rows": selfSubjectReviews.map((e) => ({
+        "columnDefinitions": super.nameAndAgeColumns(),
+        "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
-            duration(DateTime.now().toUTC().toISO().replace(/.d{0,3}/, "") - e.metadata.creationTimestamp),
+            duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
           ],
           object: {
             "kind": "PartialObjectMetadata",
@@ -39,8 +49,13 @@ class SelfSubjectReview extends K8Object {
   }
 
   async setConfig(config) {
-    await super.setResourceVersion();
-    this.rules = config.rules;
+        await super.setResourceVersion();
+    let _src = (config && typeof config.toObject === 'function') ? config.toObject() : (config || {});
+    for (const key of Object.keys(_src)) {
+      if (key === 'apiVersion' || key === 'kind' || key === 'metadata') continue;
+      if (key === '_id' || key === '__v') continue;
+      this[key] = _src[key];
+    }
     return this;
   }
 }

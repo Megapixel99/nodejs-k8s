@@ -1,7 +1,7 @@
 #! /bin/bash
 
 export $(grep -v '^#' ./.env | xargs)
-
+mkdir -p ./volumes
 # docker rm -f loadbalancer
 docker image rm -f loadbalancer
 docker build -t loadbalancer -f loadBalancer/Dockerfile .

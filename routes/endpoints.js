@@ -4,7 +4,8 @@ const { general, openapi } = require('../middleware');
 
 const { apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/apis/${Endpoints.apiVersion}/namespaces/:namespace/endpoints`];
+// Endpoints is a core resource; it was only reachable under the group path.
+const routes = [`/api/v1/namespaces/:namespace/endpoints`, `/apis/${Endpoints.apiVersion}/namespaces/:namespace/endpoints`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.findOne(Endpoints), general.format(Endpoints), general.sendObj(Endpoints));
 

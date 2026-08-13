@@ -26,7 +26,8 @@ module.exports = {
   validSchema: (schema) => {
     return (req, res, next) => {
       let paths = [req.route.path]
-        .flat()
+        .flat(Infinity)
+        .filter((p) => typeof p === 'string')
         .map((p) => {
           return p
            .split('/')
@@ -46,6 +47,13 @@ module.exports = {
       }
       req.operationId = schema.document.paths?.[path]?.[req.method.toLowerCase()].requestBody?.content?.['*/*']?.schema?.['$ref']?.split('.')?.at(-1);
       res.operationId = schema.document.paths?.[path]?.[req.method.toLowerCase()].responses?.['200']?.content?.[type?.trim()]?.schema?.['$ref']?.split('.')?.at(-1);
+      // An RFC 6902 patch body is an array of ops, but every request schema
+      // here declares body as an object, so the validator failed it — and a
+      // validation failure surfaces as a 500. The ops are validated by the
+      // patch middleware that applies them.
+      if (`${req.headers['content-type']}`.includes('json-patch+json')) {
+        return next();
+      }
       return openapi.validPath(schema.document.paths[path])(req, res, next);
     };
   }

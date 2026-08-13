@@ -33,33 +33,27 @@ class Service extends K8Object {
 
   static findOne(params) {
     return Model.findOne(params)
-      .then((service) => {
-        if (service) {
-          Endpoints.findOne(params)
-          .then((endpoints) => {
-            return new Service({
-              ...service,
-              endpoints,
-            }).setResourceVersion();
-          })
-        }
+      .then(async (service) => {
+        if (!service) return undefined;
+        let endpoints = await Endpoints.findOne(params).catch(() => undefined);
+        let s = new Service({ ...service.toObject?.() || service, endpoints });
+        await s.setResourceVersion();
+        return s;
       });
   }
 
   static find(params) {
     return Model.find(params)
-      .then((services) => {
-        if (services) {
-          return Endpoints.find(params)
-          .then((endpoints) => {
-            return Promise.all(services.map((service) => {
-              service.endpoints = endpoints.filter((e) => e.metadata.name === service.metadata.name);
-              let s = new Service(service);
-              s.setResourceVersion();
-              return s;
-            }));
-          })
-        }
+      .then(async (services) => {
+        if (!services) return [];
+        let endpoints = await Endpoints.find(params).catch(() => []);
+        return Promise.all(services.map(async (service) => {
+          let raw = service.toObject?.() || service;
+          raw.endpoints = (endpoints || []).filter((e) => e.metadata.name === raw.metadata.name);
+          let s = new Service(raw);
+          await s.setResourceVersion();
+          return s;
+        }));
       });
   }
 
@@ -103,6 +97,20 @@ class Service extends K8Object {
   }
 
   static create(config) {
+    // Assign a stable pseudo-ClusterIP so conformance tests that read
+    // .spec.clusterIP don't need the real load-balancer container to boot.
+    if (!config.spec) config.spec = {};
+    if (!config.spec.clusterIP && config.spec.type !== 'ExternalName') {
+      // Simple synthesis: hash the name+ns into the 10.0.0.0/16 range.
+      let h = require('crypto').createHash('sha1').update(`${config.metadata?.namespace}/${config.metadata?.name}`).digest();
+      config.spec.clusterIP = `10.0.${h[0]}.${h[1] || 1}`;
+      config.spec.clusterIPs = [config.spec.clusterIP];
+    }
+    return super.create(config, { 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
+      .then((svc) => new Service(svc));
+  }
+
+  static createWithLoadBalancer(config) {
     return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
     .then((existingService) => {
       if (existingService) {
@@ -160,12 +168,12 @@ class Service extends K8Object {
     });
   }
 
-  static async table (queryOptions = {}) {
+  static async table (items = []) {
     return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${services.length}${JSON.stringify(services[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
         "columnDefinitions": [
           {
@@ -218,7 +226,7 @@ class Service extends K8Object {
             "priority": 1
           }
         ],
-        "rows": services.map((e) => ({
+        "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
             e.spec.type,

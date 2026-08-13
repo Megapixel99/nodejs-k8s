@@ -4,7 +4,7 @@ const { general, openapi } = require('../middleware');
 
 const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-const routes = [`/api/${SubjectAccessReview.apiVersion}/:namespace/subjectaccessreviews`];
+const routes = [`/apis/authorization.k8s.io/v1/subjectaccessreviews`];
 
 router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(SubjectAccessReview), general.format(SubjectAccessReview), general.sendObj(SubjectAccessReview));
 

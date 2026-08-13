@@ -100,12 +100,12 @@ class ReplicationController extends K8Object {
     return Promise.all(arr);
   }
 
-  static async table (queryOptions = {}) {
+  static async table (items = []) {
     return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${replicationControllers.length}${JSON.stringify(replicationControllers[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
         "columnDefinitions": [
           {
@@ -123,7 +123,7 @@ class ReplicationController extends K8Object {
             "priority": 0
           },
         ],
-        "rows": replicationControllers.map((e) => ({
+        "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
             duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),

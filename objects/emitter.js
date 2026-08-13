@@ -18,7 +18,11 @@ class Emitter extends EventEmitter {
       resourceVersion: this.metadata.resourceVersion,
     };
     Event.create({
-      metadata: this.metadata,
+      metadata: {
+        name: this.metadata.name,
+        namespace: this.metadata.namespace,
+        resourceVersion: this.metadata.resourceVersion,
+      },
       deprecatedSource: {
         component: 'kubelet',
         host: '',

@@ -1,18 +1,34 @@
 const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const { Secret: Model } = require('../database/models.js');
-const { duration } = require('../functions.js');
+const { duration, countEntries } = require('../functions.js');
 
 function convertData(data) {
   const base64RegExp = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
-  const isBase64 = (str) => base64RegExp.test(str);
+  const isBase64 = (str) => typeof str === 'string' && base64RegExp.test(str);
   let obj = {};
-  Object.entries(data).forEach(([key, value]) => {
-    if (isBase64(value)) {
-      obj[key] = value;
+  Object.entries(data || {}).forEach(([key, value]) => {
+    if (value == null) return;
+    if (typeof value === 'string') {
+      obj[key] = isBase64(value) ? value : Buffer.from(value).toString('base64');
       return;
     }
-    obj[key] = Buffer.from(value).toString('base64');
+    if (Buffer.isBuffer(value) || value instanceof Uint8Array) {
+      obj[key] = Buffer.from(value).toString('base64');
+      return;
+    }
+    // Protobuf bytes sometimes decode as an Object keyed by index; coerce.
+    if (typeof value === 'object') {
+      let arr = Object.values(value).filter((n) => typeof n === 'number');
+      if (arr.length > 0) {
+        obj[key] = Buffer.from(arr).toString('base64');
+        return;
+      }
+      // Last resort: stringify.
+      obj[key] = Buffer.from(String(value)).toString('base64');
+      return;
+    }
+    obj[key] = Buffer.from(String(value)).toString('base64');
   });
   return obj;
 }
@@ -94,12 +110,12 @@ class Secret extends K8Object {
     });
   }
 
-  static async table (queryOptions = {}) {
+  static async table (items = []) {
     return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${secrets.length}${JSON.stringify(secrets[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
         "columnDefinitions": [
           {
@@ -131,11 +147,11 @@ class Secret extends K8Object {
             "priority": 0
           },
         ],
-        "rows": secrets.map((e) => ({
+        "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
             e.type,
-            e.data.length,
+            countEntries(e.data),
             duration(DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "") - e.metadata.creationTimestamp),
           ],
           object: {
@@ -151,6 +167,28 @@ class Secret extends K8Object {
     await super.setResourceVersion();
     this.data = config.data;
     return this;
+  }
+
+  patch(updateObj, searchQ, options = {}) {
+    if (updateObj && updateObj.data) {
+      updateObj = { ...updateObj, data: convertData(updateObj.data) };
+    }
+    if (updateObj && updateObj.$set && updateObj.$set.data) {
+      updateObj = { ...updateObj, $set: { ...updateObj.$set, data: convertData(updateObj.$set.data) } };
+    }
+    return super.patch(updateObj, searchQ, options);
+  }
+
+  mapVariables() {
+    const toEntries = (x) => {
+      if (!x) return [];
+      if (x instanceof Map) return [...x.entries()];
+      return Object.entries(x);
+    };
+    return toEntries(this.data).map(([name, value]) => ({
+      name,
+      value: Buffer.from(value, 'base64').toString('utf8'),
+    }));
   }
 }
 

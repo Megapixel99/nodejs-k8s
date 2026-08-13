@@ -822,6 +822,9 @@ const volumeSchema = Schema({
       },
       path: String,
     }],
+    localObjectReference: {
+      name: String,
+    },
     name: String,
     optional: Boolean,
   },
@@ -1099,7 +1102,10 @@ const pod = {
       topologyKey: String,
       whenUnsatisfiable: String,
     }],
-    volumes: [volumeSchema],
+    volumes: [{
+      name: String,
+      volumeSource: volumeSchema
+    }],
   },
   status: {
     conditions: [{
@@ -1112,7 +1118,7 @@ const pod = {
     initContainerStatuses: [containerStatus],
     message: String,
     nominatedNodeName: String,
-    phase: { type: String, default: 'Not Running' },
+    phase: { type: String, default: 'Pending' },
     podIP: {
       type: String,
       default: null
@@ -1362,7 +1368,7 @@ const serviceSchema = Schema({
     },
     externalName: String,
     externalTrafficPolicy: String,
-    healthCheckNodePort: String,
+    healthCheckNodePort: Number,
     internalTrafficPolicy: {
       type: String,
       default: "Cluster"
@@ -1861,6 +1867,21 @@ const eventSchema = Schema({
     type: String,
     enum: ['Normal', 'Warning']
   },
+  // core/v1 spellings of the same event. Events are served on /api/v1, whose
+  // schema (and .proto) uses these names, not the events.k8s.io/v1 ones above.
+  // Without them mongoose strips the values on save and the core/v1 fields
+  // encode as empty.
+  involvedObject: objectReferenceSchema,
+  message: String,
+  source: {
+    component: String,
+    host: String,
+  },
+  firstTimestamp: String,
+  lastTimestamp: String,
+  eventTime: String,
+  count: Number,
+  reportingComponent: String,
 })
 
 const replicaSetSchema = Schema({
@@ -2571,29 +2592,10 @@ const limitRangeSchema = Schema({
   },
   metadata,
   spec: {
-    limits: [{
-      default: {
-        type: Map,
-        of: String,
-      },
-      defaultRequest: {
-        type: Map,
-        of: String,
-      },
-      max: {
-        type: Map,
-        of: String,
-      },
-      maxLimitRequestRatio: {
-        type: Map,
-        of: String,
-      },
-      min: {
-        type: Map,
-        of: String,
-      },
-      type: String,
-    }],
+    // Use Mixed because the inner `type: String` field collides with
+    // Mongoose's type-declaration keyword, collapsing the whole subdocument
+    // to String. Mixed lets us store the array of LimitRangeItems as-is.
+    limits: { type: [Schema.Types.Mixed], default: [] },
   },
 });
 

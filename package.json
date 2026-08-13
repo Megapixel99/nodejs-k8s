@@ -4,8 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "setup": "./scripts/setup.sh",
+    "start": "./scripts/start.sh",
+    "start:legacy": "./start.sh",
     "test": "node ./test/test.js",
-    "start": "./start.sh"
+    "test:smoke": "node ./test/boot-clean.js",
+    "test:proto": "node ./test/proto-roundtrip.js",
+    "test:wire": "node ./test/wire-matrix.js"
   },
   "author": "",
   "license": "ISC",
@@ -22,6 +27,7 @@
     "portfinder": "^1.0.32",
     "protobufjs": "^7.3.0",
     "selfsigned": "^2.4.1",
+    "slashes": "^3.0.12",
     "uuid": "^9.0.1",
     "yaml": "^2.4.2"
   }

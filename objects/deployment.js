@@ -97,12 +97,12 @@ class Deployment extends K8Object {
     });
   }
 
-  static async table (queryOptions = {}) {
+  static async table (items = []) {
     return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${deployments.length}${JSON.stringify(deployments[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
         "columnDefinitions": [
           {
@@ -162,7 +162,7 @@ class Deployment extends K8Object {
             "priority": 1
           }
         ],
-        "rows": deployments.map((e) => ({
+        "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
             `${e.status.availableReplicas}/${e.spec.replicas}`,
