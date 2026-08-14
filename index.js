@@ -77,6 +77,7 @@ const Status = require('./objects/status.js');
 const Object = require('./objects/object.js');
 const nodeCleanup = require('node-cleanup');
 const scheduler = require('./controllers/scheduler.js');
+const nodes = require('./controllers/nodes.js');
 
 let dbNameIndex = process.argv.indexOf('-dbName');
 
@@ -261,7 +262,11 @@ app.use((err, req, res, next) => {
 app.listen(8080);
 app.listen(6443);
 
-scheduler.start();
+// Bring up the simulated fleet before the scheduler starts looking for
+// somewhere to put things.
+nodes.ensure()
+  .catch((err) => console.warn('[nodes]', err?.message || err))
+  .finally(() => scheduler.start());
 
 nodeCleanup(async (exitCode, signal) => {
   if (signal) {

@@ -82,6 +82,41 @@ let duration = (timeDiff) => {
   return remainder === 0 ? `${years}y` : `${years}y${remainder}d`;
 };
 
+// Kubernetes resource quantities: "100m", "1.5", "512Mi", "2Gi", "1e3".
+// Returns a plain number — cores for CPU, bytes for memory — so the scheduler
+// can add them up. Suffixless values are taken as-is. Anything unparseable
+// returns NaN rather than a silent 0, because a request that reads as zero
+// fits on every node and is exactly the sort of wrong answer that looks fine.
+const QUANTITY_SUFFIXES = {
+  n: 1e-9, u: 1e-6, m: 1e-3,
+  '': 1, k: 1e3, M: 1e6, G: 1e9, T: 1e12, P: 1e15, E: 1e18,
+  Ki: 1024, Mi: 1024 ** 2, Gi: 1024 ** 3, Ti: 1024 ** 4, Pi: 1024 ** 5, Ei: 1024 ** 6,
+};
+
+let parseQuantity = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return NaN;
+  }
+  if (typeof value === 'number') {
+    return value;
+  }
+  // Protobuf decodes a Quantity as {string: "100m"}.
+  if (typeof value === 'object') {
+    return parseQuantity(value.string ?? value.Value ?? '');
+  }
+  let text = `${value}`.trim();
+  let match = /^([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)\s*([a-zA-Z]{0,2})$/.exec(text);
+  if (!match) {
+    return NaN;
+  }
+  let [, digits, suffix] = match;
+  let multiplier = QUANTITY_SUFFIXES[suffix];
+  if (multiplier === undefined) {
+    return NaN;
+  }
+  return Number(digits) * multiplier;
+};
+
 // The AGE cell of a Table. Every caller used to compute this by subtracting
 // two ISO *strings*, which is NaN, and duration(NaN) falls through every
 // branch and returns '0s' — so AGE read 0s for every object of every kind
@@ -214,6 +249,7 @@ module.exports = {
   duration,
   age,
   countEntries,
+  parseQuantity,
   getAllContainersWithName,
   randomBytes,
   addPortsToEndpoint,
