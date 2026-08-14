@@ -308,8 +308,16 @@ class K8Object {
     // client waiting for the object to disappear on its own terms saw it
     // vanish first. A delete now only stamps deletionTimestamp; the object
     // goes when the last finalizer is cleared (see `finalizeIfReleased`).
+    // Note the guard is the finalizers alone. Testing `&& !deletionTimestamp`
+    // meant the *second* delete fell through and removed the object with its
+    // finalizer still set — and kubectl retries deletes while it waits for the
+    // object to disappear, so the finalizer bought nothing.
     let hasFinalizers = (this.metadata?.finalizers || []).length > 0;
-    if (hasFinalizers && !this.metadata?.deletionTimestamp) {
+    if (hasFinalizers && this.metadata?.deletionTimestamp) {
+      // Already marked; a repeat delete changes nothing.
+      return this.Model.findOne(searchQ);
+    }
+    if (hasFinalizers) {
       return K8Object.nextResourceVersion()
         .then((resourceVersion) => this.Model.findOneAndUpdate(
           searchQ,

@@ -250,6 +250,35 @@ async function watchLeaksOtherNamespace(resource) {
       }
     }
 
+    // A finalizer must hold the object across repeated deletes. The guard used
+    // to be "has finalizers AND no deletionTimestamp", so the second delete
+    // removed the object with its finalizer still set.
+    if (!CREATE_ONLY.has(kind)) {
+      let held = `${name}-held`;
+      let withFinalizer = {
+        ...resource.body,
+        metadata: { ...resource.body.metadata, name: held, finalizers: ['wire.test/hold'] },
+      };
+      let created = await req('POST', resource.path, { body: withFinalizer });
+      if (created.status < 400) {
+        await req('DELETE', `${resource.path}/${held}`);
+        await req('DELETE', `${resource.path}/${held}`);
+        let survived = await req('GET', `${resource.path}/${held}`);
+        if (survived.status !== 200) {
+          fails.push(`DELETE ${resource.path}/${held} twice: finalizer did not hold the object`);
+        }
+        await req('PATCH', `${resource.path}/${held}`, {
+          body: { metadata: { finalizers: null } },
+          contentType: 'application/merge-patch+json',
+        });
+        let released = await req('GET', `${resource.path}/${held}`);
+        if (released.status !== 404) {
+          fails.push(`PATCH ${resource.path}/${held}: clearing the finalizer did not complete the delete`);
+          await req('DELETE', `${resource.path}/${held}`);
+        }
+      }
+    }
+
     // A dry run must not touch anything. This was ignored entirely: kubectl
     // printed "(server dry run)" and the object was created or deleted.
     let dryName = `${name}-dry`;

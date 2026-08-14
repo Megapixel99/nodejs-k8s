@@ -4,6 +4,23 @@ const Pod = require('./pod.js');
 const { ReplicationController: Model } = require('../database/models.js');
 const { duration, isContainerRunning, age, randomBytes } = require('../functions.js');
 
+// Which pods belong to this controller. Selecting on the name prefix
+// `^<controller>-` also matched the pods of any controller whose name extends
+// this one's: deleting a ReplicationController named `app` took the pods of
+// `app-1`, which belongs to a Deployment. Ownership is recorded on the pod, so
+// ask that; the anchored name pattern stays as a fallback for pods written
+// before the owner reference existed.
+function ownedPods(rc) {
+  let escaped = `${rc.metadata.name}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return {
+    'metadata.namespace': rc.metadata.namespace,
+    $or: [
+      { 'metadata.ownerReferences.uid': rc.metadata.uid },
+      { 'metadata.name': { $regex: `^${escaped}-[0-9a-f]{6}$` } },
+    ],
+  };
+}
+
 class ReplicationController extends K8Object {
   constructor(config) {
     super(config);
@@ -28,19 +45,10 @@ class ReplicationController extends K8Object {
     if (numPods) {
       opts.limit = numPods;
     }
-    // Replicas are named `<controller>-<suffix>`, so matching the template's
-    // single name found nothing once each pod got its own name.
     // find(filter, projection, options) — `opts` was landing in the projection
     // slot, so the sort/limit were read as fields to select and the pods came
     // back without metadata. Nothing matched, and the containers stayed up.
-    return Pod.find(
-      {
-        'metadata.name': { $regex: `^${this.metadata.name}-` },
-        'metadata.namespace': this.metadata.namespace,
-      },
-      {},
-      opts,
-    )
+    return Pod.find(ownedPods(this), {}, opts)
     .then((pods) => {
       return Promise.all(pods.map(async (pod) => {
         await pod.delete();
@@ -92,6 +100,14 @@ class ReplicationController extends K8Object {
       // controller has to hand each replica a distinct name itself.
       template.metadata.name = `${this.metadata.name}-${randomBytes(3).toString('hex')}`;
       template.metadata.namespace = template.metadata.namespace || this.metadata.namespace;
+      template.metadata.ownerReferences = [{
+        apiVersion: ReplicationController.apiVersion,
+        kind: ReplicationController.kind,
+        name: this.metadata.name,
+        uid: this.metadata.uid,
+        controller: true,
+        blockOwnerDeletion: true,
+      }];
       return template;
     };
     // `.fill(promise)` puts the *same* already-started promise in every slot,
