@@ -13,9 +13,12 @@
 // pods that exist right now. Incremental endpoint bookkeeping is where real
 // clusters grow their subtlest bugs, and there is nothing to gain from it at
 // this scale.
+const { createHash } = require('crypto');
 const Service = require('../objects/service.js');
 const Pod = require('../objects/pod.js');
+const Node = require('../objects/node.js');
 const Endpoints = require('../objects/endpoints.js');
+const EndpointSlice = require('../objects/endpointSlice.js');
 const { busFor } = require('../objects/bus.js');
 
 // Mongoose hands these back as Maps unless toObject is asked to flatten them,
@@ -114,6 +117,134 @@ function plainSubsets(subsets) {
   }));
 }
 
+// ---- EndpointSlices -------------------------------------------------------
+//
+// The same information as Endpoints, in the shape everything written since
+// 1.21 actually reads. Kubernetes added slices because a Service with
+// thousands of backends is one enormous Endpoints object that every watcher
+// re-receives in full on every pod change; the slice API shards that, and
+// carries per-endpoint detail Endpoints has nowhere to put -- serving and
+// terminating as distinct from ready, and the zone an address is in, which is
+// what topology-aware routing decides on.
+//
+// One slice per service here. Sharding exists for scale this simulator will
+// never see, and a controller reading slices cannot tell the difference: it is
+// told to expect one or many either way.
+
+// Real slices are named `<service>-<5 random chars>`. Random would mean a new
+// slice on every restart and orphans left behind, so the suffix is derived
+// from the service instead: same service, same slice, forever.
+function sliceName(service) {
+  let digest = createHash('sha1')
+    .update(`${service.metadata.namespace}/${service.metadata.name}`)
+    .digest('hex');
+  return `${service.metadata.name}-${digest.slice(0, 5)}`;
+}
+
+function endpointsFor(service, pods, zones) {
+  let selector = plain(service.spec?.selector);
+  let selected = pods.filter((pod) => matches(pod, selector) && pod.status?.podIP);
+  return selected.map((pod) => {
+    let ready = isReady(pod);
+    return {
+      addresses: [pod.status.podIP],
+      conditions: {
+        ready,
+        // `serving` is ready-without-regard-to-termination, and `terminating`
+        // says the pod is going away. A client draining connections needs both
+        // to distinguish "not ready yet" from "ready but leaving".
+        serving: ready,
+        terminating: Boolean(pod.metadata?.deletionTimestamp),
+      },
+      nodeName: pod.spec?.nodeName || undefined,
+      zone: zones.get(pod.spec?.nodeName) || undefined,
+      targetRef: {
+        kind: 'Pod',
+        namespace: pod.metadata.namespace,
+        name: pod.metadata.name,
+        uid: pod.metadata.uid,
+      },
+    };
+  });
+}
+
+function slicePortsFor(service, pods) {
+  let selector = plain(service.spec?.selector);
+  let sample = pods.find((pod) => matches(pod, selector) && pod.status?.podIP);
+  return (service.spec?.ports || []).map((port) => ({
+    name: port.name || undefined,
+    port: resolvePort(port, sample),
+    protocol: port.protocol || 'TCP',
+    appProtocol: port.appProtocol || undefined,
+  }));
+}
+
+function sameSlice(existing, endpoints, ports) {
+  let strip = (list) => (list || []).map((e) => ({
+    addresses: e.addresses,
+    conditions: { ready: !!e.conditions?.ready, serving: !!e.conditions?.serving, terminating: !!e.conditions?.terminating },
+    nodeName: e.nodeName,
+    zone: e.zone,
+    name: e.targetRef?.name,
+  }));
+  let stripPorts = (list) => (list || []).map((p) => ({ name: p.name, port: p.port, protocol: p.protocol }));
+  return JSON.stringify(strip(existing.endpoints)) === JSON.stringify(strip(endpoints))
+    && JSON.stringify(stripPorts(existing.ports)) === JSON.stringify(stripPorts(ports));
+}
+
+async function reconcileSlice(service, pods, zones) {
+  let name = sliceName(service);
+  let namespace = service.metadata.namespace;
+  let endpoints = endpointsFor(service, pods, zones);
+  let ports = slicePortsFor(service, pods);
+  let existing = await EndpointSlice.findOne({
+    'metadata.name': name,
+    'metadata.namespace': namespace,
+  }).catch(() => undefined);
+
+  if (!existing) {
+    return EndpointSlice.create({
+      apiVersion: 'discovery.k8s.io/v1',
+      kind: 'EndpointSlice',
+      metadata: {
+        name,
+        namespace,
+        // The label is how a client finds the slices for a service: there is
+        // no field selector for it, and the name is not meant to be guessed.
+        labels: {
+          'kubernetes.io/service-name': service.metadata.name,
+          'endpointslice.kubernetes.io/managed-by': 'endpointslice-controller.k8s.io',
+        },
+        ownerReferences: [{
+          apiVersion: 'v1',
+          kind: 'Service',
+          name: service.metadata.name,
+          uid: service.metadata.uid,
+          controller: true,
+          blockOwnerDeletion: true,
+        }],
+      },
+      addressType: 'IPv4',
+      endpoints,
+      ports,
+    });
+  }
+  if (sameSlice(existing, endpoints, ports)) {
+    return existing;
+  }
+  return new EndpointSlice(existing).patch({ $set: { endpoints, ports } });
+}
+
+// Which zone each node is in, for the slice's per-endpoint `zone`. Read once
+// per pass rather than once per endpoint.
+async function nodeZones() {
+  let nodes = await Node.find({}).catch(() => []);
+  return new Map(nodes.map((node) => {
+    let labels = plain(node.metadata?.labels);
+    return [node.metadata?.name, labels['topology.kubernetes.io/zone']];
+  }));
+}
+
 async function reconcileService(service) {
   if (!service?.metadata?.name) {
     return undefined;
@@ -127,6 +258,13 @@ async function reconcileService(service) {
   let namespace = service.metadata.namespace;
   let pods = await Pod.find({ 'metadata.namespace': namespace });
   let subsets = subsetsFor(service, pods);
+  // Both shapes describe the same backends, and both are kept: `kubectl get
+  // endpoints` and older controllers read one, everything written since 1.21
+  // reads the other, and a simulator that offered only one would send half its
+  // users looking for a bug in their own code.
+  await reconcileSlice(service, pods, await nodeZones()).catch((err) => {
+    console.warn('[endpointslices]', err?.message || err);
+  });
   let existing = await Endpoints.findOne({
     'metadata.name': service.metadata.name,
     'metadata.namespace': namespace,

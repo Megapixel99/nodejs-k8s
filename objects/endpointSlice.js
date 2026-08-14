@@ -28,10 +28,49 @@ class EndpointSlice extends K8Object {
         "metadata": {
           "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
-        "columnDefinitions": super.nameAndAgeColumns(),
+        // `kubectl get endpointslices` prints NAME/ADDRESSTYPE/PORTS/ENDPOINTS
+        // /AGE. Name and age alone made every slice look identical in a list.
+        "columnDefinitions": [
+          {
+            "name": "Name",
+            "type": "string",
+            "format": "name",
+            "description": "Name must be unique within a namespace.",
+            "priority": 0
+          },
+          {
+            "name": "AddressType",
+            "type": "string",
+            "description": "addressType specifies the type of address carried by this EndpointSlice.",
+            "priority": 0
+          },
+          {
+            "name": "Ports",
+            "type": "string",
+            "description": "ports specifies the list of network ports exposed by each endpoint in this slice.",
+            "priority": 0
+          },
+          {
+            "name": "Endpoints",
+            "type": "string",
+            "description": "endpoints is a list of unique endpoints in this slice.",
+            "priority": 0
+          },
+          {
+            "name": "Age",
+            "type": "string",
+            "description": "CreationTimestamp is a timestamp representing the server time when this object was created.",
+            "priority": 0
+          }
+        ],
         "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
+            e.addressType || '<unset>',
+            ((e.ports || []).map((p) => p.port).join(',') || '<unset>'),
+            // kubectl lists the addresses themselves, and prints "<unset>"
+            // rather than an empty cell when a slice has no endpoints.
+            ((e.endpoints || []).flatMap((endpoint) => endpoint.addresses || []).join(',') || '<unset>'),
             age(e.metadata.creationTimestamp),
           ],
           object: {

@@ -2,6 +2,7 @@ const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
 const Pod = require('./pod.js');
 const Endpoints = require('./endpoints.js');
+const EndpointSlice = require('./endpointSlice.js');
 const { Service: Model, DNS } = require('../database/models.js');
 const { addPortsToService, addPortToService, addPodToService, removePortFromService, removePodFromService, pullImage, imageExists, buildImage, runImage, getContainerIP, duration, age } = require('../functions.js');
 
@@ -73,12 +74,33 @@ class Service extends K8Object {
     }];
   }
 
+  // Endpoints and EndpointSlices describe this service's backends; leaving
+  // either behind points a client at pods for a service that no longer
+  // exists, and nothing would ever clean them up.
   delete() {
-    return Endpoints.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-    .then((endpoint) => {
+    return Promise.all([
+      Endpoints.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
+        .catch(() => undefined),
+      // The label key has dots in it, and a dotted path in a query means
+      // "nested field" to Mongo -- it would look for labels.kubernetes.io
+      // .service-name and match nothing. Fetch the namespace and filter here.
+      EndpointSlice.find({ 'metadata.namespace': this.metadata.namespace })
+        .then((slices) => (slices || []).filter((slice) => {
+          let labels = slice.metadata?.labels;
+          let value = labels instanceof Map
+            ? labels.get('kubernetes.io/service-name')
+            : labels?.['kubernetes.io/service-name'];
+          return value === this.metadata.name;
+        }))
+        .catch(() => []),
+    ])
+    .then(([endpoint, slices]) => {
       let arr = [ super.delete() ]
       if (endpoint) {
         arr.push(endpoint.delete())
+      }
+      for (const slice of slices || []) {
+        arr.push(new EndpointSlice(slice).delete().catch(() => undefined));
       }
       return Promise.all(arr);
     });

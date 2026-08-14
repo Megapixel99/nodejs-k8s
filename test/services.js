@@ -166,6 +166,63 @@ const podSpec = (name, labels) => ({
       && !notReadyOf(withPending).includes(`${app}-pending`),
     { ready: addressesOf(withPending), notReady: notReadyOf(withPending) });
 
+  // EndpointSlices carry the same backends in the shape everything written
+  // since 1.21 reads. A controller that asks for slices and finds none
+  // concludes the service has no backends -- it does not fall back to
+  // Endpoints -- so "we have Endpoints" is not an answer.
+  let slices = await req('GET', `/apis/discovery.k8s.io/v1/namespaces/default/endpointslices?labelSelector=${
+    encodeURIComponent(`kubernetes.io/service-name=${app}`)}`);
+  let slice = slices.body?.items?.[0];
+  check('a service with a selector gets an EndpointSlice', Boolean(slice), slices.body?.items?.length);
+  check('the slice is found by the service-name label',
+    slice?.metadata?.labels?.['kubernetes.io/service-name'] === app, slice?.metadata?.labels);
+  check('the slice says who manages it',
+    Boolean(slice?.metadata?.labels?.['endpointslice.kubernetes.io/managed-by']), slice?.metadata?.labels);
+  check('the slice is owned by its service',
+    slice?.metadata?.ownerReferences?.[0]?.kind === 'Service'
+      && slice?.metadata?.ownerReferences?.[0]?.name === app,
+    slice?.metadata?.ownerReferences);
+  check('the slice declares its address type', slice?.addressType === 'IPv4', slice?.addressType);
+
+  let sliceEndpoints = slice?.endpoints || [];
+  check('the slice lists the surviving backend',
+    sliceEndpoints.map((e) => e.targetRef?.name).join() === `${app}-a`,
+    sliceEndpoints.map((e) => e.targetRef?.name));
+  check('each slice endpoint carries an address',
+    sliceEndpoints.every((e) => /^\d+\.\d+\.\d+\.\d+$/.test(`${e.addresses?.[0]}`)),
+    sliceEndpoints.map((e) => e.addresses));
+  // targetRef is an ObjectReference here, not the {ip, nodeName} shape
+  // Endpoints uses; storing it under the wrong schema dropped every field.
+  check('each slice endpoint points back at its pod',
+    sliceEndpoints.every((e) => e.targetRef?.kind === 'Pod' && e.targetRef?.uid && e.targetRef?.namespace),
+    sliceEndpoints.map((e) => e.targetRef));
+  check('slice conditions distinguish ready, serving and terminating',
+    sliceEndpoints.every((e) => e.conditions?.ready === true && e.conditions?.serving === true && e.conditions?.terminating === false),
+    sliceEndpoints.map((e) => e.conditions));
+  check('each slice endpoint names its node and zone',
+    sliceEndpoints.every((e) => `${e.nodeName}`.startsWith('sim-node-') && `${e.zone}`.length > 0),
+    sliceEndpoints.map((e) => [e.nodeName, e.zone]));
+  check('slice ports are resolved the same way endpoints are',
+    (slice?.ports || []).every((p) => p.port === 8080 && p.protocol === 'TCP' && p.name === 'http'),
+    slice?.ports);
+
+  // The slice name has to be stable: a fresh random suffix on every pass would
+  // leave a trail of orphaned slices, each claiming to describe the service.
+  await settle(6000);
+  let sliceAgain = await req('GET', `/apis/discovery.k8s.io/v1/namespaces/default/endpointslices?labelSelector=${
+    encodeURIComponent(`kubernetes.io/service-name=${app}`)}`);
+  check('reconciling does not create a second slice', sliceAgain.body?.items?.length === 1, sliceAgain.body?.items?.length);
+  check('the slice keeps its name',
+    sliceAgain.body?.items?.[0]?.metadata?.name === slice?.metadata?.name,
+    [slice?.metadata?.name, sliceAgain.body?.items?.[0]?.metadata?.name]);
+
+  let sliceTable = await fetch(`${base}/apis/discovery.k8s.io/v1/namespaces/default/endpointslices`, {
+    headers: { Accept: 'application/json;as=Table;v=v1;g=meta.k8s.io' },
+  }).then((r) => r.json());
+  let sliceColumns = (sliceTable.columnDefinitions || []).map((c) => c.name);
+  check('the endpointslice table has the columns kubectl prints',
+    sliceColumns.join() === ['Name', 'AddressType', 'Ports', 'Endpoints', 'Age'].join(), sliceColumns);
+
   // A Service with no selector is somebody else's to fill in -- that is the
   // documented way to point a Service at addresses you manage yourself.
   let manual = `svc-manual-${suffix}`;
@@ -208,6 +265,11 @@ const podSpec = (name, labels) => ({
   await settle(2000);
   let orphaned = await req('GET', `${ns}/endpoints/${app}`);
   check('deleting a service removes its endpoints', orphaned.status === 404, orphaned.status);
+  let orphanedSlices = await req('GET', `/apis/discovery.k8s.io/v1/namespaces/default/endpointslices?labelSelector=${
+    encodeURIComponent(`kubernetes.io/service-name=${app}`)}`);
+  check('deleting a service removes its endpointslices',
+    (orphanedSlices.body?.items || []).length === 0,
+    (orphanedSlices.body?.items || []).map((s) => s.metadata?.name));
 
   for (const name of created.pods) {
     await req('DELETE', `${ns}/pods/${name}`);

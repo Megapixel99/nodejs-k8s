@@ -2383,7 +2383,7 @@ const endpointSliceSchema = Schema({
   addressType: String,
   apiVersion: {
     type: String,
-    default: 'v1',
+    default: 'discovery.k8s.io/v1',
   },
   endpoints: [{
     addresses: [String],
@@ -2400,7 +2400,17 @@ const endpointSliceSchema = Schema({
     },
     hostname: String,
     nodeName: String,
-    targetRef: ref,
+    // An ObjectReference, not an Endpoints address: `ref` is {ip, nodeName,
+    // targetRef}, so pointing this at it meant a targetRef written as
+    // {kind, namespace, name, uid} matched nothing in the schema and was
+    // dropped -- the slice would list an address with no way to tell which
+    // pod it belonged to.
+    targetRef: {
+      kind: String,
+      namespace: String,
+      name: String,
+      uid: String,
+    },
     zone: String,
   }],
   kind: {
