@@ -29,9 +29,21 @@ function withCoreV1Fields(config, target) {
   target.firstTimestamp = from(config.firstTimestamp, config.deprecatedFirstTimestamp);
   target.lastTimestamp = from(config.lastTimestamp, config.deprecatedLastTimestamp);
   target.eventTime = from(config.eventTime, target.metadata?.creationTimestamp);
-  target.count = from(config.count, config.deprecatedCount);
+  // An event that happened once has a count of 1. Leaving it at the schema's
+  // zero made kubectl print "(x0 over 8s)" beside every event -- it only
+  // renders the repeat clause when the count says the thing happened more than
+  // once, and zero is not a number of times anything happened.
+  target.count = from(config.count, config.deprecatedCount) || 1;
   target.reportingComponent = from(config.reportingComponent, config.reportingController);
   return target;
+}
+
+function seriesOrNothing(series) {
+  let value = series && typeof series.toObject === 'function' ? series.toObject() : series;
+  if (!value || !Number(value.count) || Number(value.count) < 2) {
+    return undefined;
+  }
+  return value;
 }
 
 class Event extends K8Object {
@@ -48,7 +60,11 @@ class Event extends K8Object {
     this.related = config.related;
     this.reportingController = config.reportingController;
     this.reportingInstance = config.reportingInstance;
-    this.series = config.series;
+    // A `series` says "this event has happened repeatedly, most recently at
+    // T". An empty one says that too, badly: kubectl prefers series over count
+    // when the field is present, so every single-occurrence event rendered as
+    // "(x0 over 8s)". Only a real series gets reported as one.
+    this.series = seriesOrNothing(config.series);
     this.type = config.type;
     withCoreV1Fields(config, this);
     this.apiVersion = Event.apiVersion;
@@ -159,7 +175,11 @@ class Event extends K8Object {
     this.related = config.related;
     this.reportingController = config.reportingController;
     this.reportingInstance = config.reportingInstance;
-    this.series = config.series;
+    // A `series` says "this event has happened repeatedly, most recently at
+    // T". An empty one says that too, badly: kubectl prefers series over count
+    // when the field is present, so every single-occurrence event rendered as
+    // "(x0 over 8s)". Only a real series gets reported as one.
+    this.series = seriesOrNothing(config.series);
     this.type = config.type;
     withCoreV1Fields(config, this);
     return this;

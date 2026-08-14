@@ -8,7 +8,9 @@ const ns = 'default';
 
 const resources = [
   { path: `/apis/apiregistration.k8s.io/v1/apiservices`, body: { apiVersion: 'apiregistration.k8s.io/v1', kind: 'APIService', metadata: { name: 'smoke-apiservice' }, spec: { service: null, groupPriorityMinimum: 100, versionPriority: 10 } } },
-  { path: `/api/v1/namespaces/${ns}/bindings`, body: { apiVersion: 'v1', kind: 'Binding', metadata: { name: 'smoke-bind', namespace: ns }, target: { kind: 'Pod', name: 'x' } } },
+  // Binding isn't here because it isn't stored: POSTing one binds a pod that
+  // has to already exist, so it can't be exercised by "create one of each and
+  // see what comes back". test/scheduling.js binds a real pod instead.
   { path: `/apis/v1/componentstatuses`, body: { apiVersion: 'v1', kind: 'ComponentStatus', metadata: { name: 'smoke-cs' } } },
   { path: `/apis/coordination.k8s.io/v1/leases`, body: { apiVersion: 'coordination.k8s.io/v1', kind: 'Lease', metadata: { name: 'smoke-lease', namespace: ns }, spec: { holderIdentity: 'x' } } },
   { path: `/apis/node.k8s.io/v1/runtimeclasses`, body: { apiVersion: 'node.k8s.io/v1', kind: 'RuntimeClass', metadata: { name: 'smoke-rc' }, handler: 'runc' } },

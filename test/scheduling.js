@@ -226,6 +226,71 @@ async function eventsFor(name) {
   let used = new Set(spread.map((p) => p?.spec?.nodeName).filter(Boolean));
   check('six pods land on more than one node', used.size > 1, [...used]);
 
+  // 9. The binding endpoint, which is how somebody else's scheduler places a
+  //    pod. A pod naming a scheduler we aren't stays untouched until that
+  //    scheduler binds it -- if the built-in one grabbed it anyway, an
+  //    out-of-tree scheduler could never be tested against this at all.
+  let mineName = `sc-custom-${suffix}`;
+  created.push(mineName);
+  await req('POST', `${ns}/pods`, podSpec(mineName, { schedulerName: 'my-scheduler' }));
+  await settle(1500);
+  let unclaimed = (await req('GET', `${ns}/pods/${mineName}`)).body;
+  check('a pod claimed by another scheduler is left alone', !unclaimed?.spec?.nodeName, unclaimed?.spec?.nodeName);
+
+  let bindTo = simNodes[1].metadata.name;
+  let bound = await req('POST', `${ns}/bindings`, {
+    apiVersion: 'v1',
+    kind: 'Binding',
+    metadata: { name: mineName, namespace: 'default' },
+    target: { apiVersion: 'v1', kind: 'Node', name: bindTo },
+  });
+  check('a binding is accepted', bound.status === 201, bound.status);
+  let afterBinding = await waitForPlacement(mineName);
+  // The whole point: the binding has to be a write, not an acknowledgement.
+  check('a binding actually places the pod', afterBinding?.spec?.nodeName === bindTo, afterBinding?.spec?.nodeName);
+  check('a binding sets PodScheduled', conditionOf(afterBinding, 'PodScheduled')?.status === 'True', conditionOf(afterBinding, 'PodScheduled'));
+  let bindingEvents = await eventsFor(mineName);
+  check('a binding emits Scheduled', bindingEvents.some((e) => e.reason === 'Scheduled'), bindingEvents.map((e) => e.reason));
+
+  // Bindings are not stored objects; a second one for the same pod fails
+  // because the pod is assigned, not because a binding by that name exists.
+  let rebind = await req('POST', `${ns}/bindings`, {
+    apiVersion: 'v1',
+    kind: 'Binding',
+    metadata: { name: mineName, namespace: 'default' },
+    target: { apiVersion: 'v1', kind: 'Node', name: simNodes[2].metadata.name },
+  });
+  check('binding an assigned pod conflicts', rebind.status === 409, rebind.status);
+  check('the conflict says the pod is already assigned',
+    `${rebind.body?.message}`.includes('already assigned'), rebind.body?.message);
+
+  let ghost = await req('POST', `${ns}/bindings`, {
+    apiVersion: 'v1',
+    kind: 'Binding',
+    metadata: { name: `sc-ghost-${suffix}`, namespace: 'default' },
+    target: { apiVersion: 'v1', kind: 'Node', name: bindTo },
+  });
+  check('binding a pod that does not exist is a 404', ghost.status === 404, ghost.status);
+
+  let subresource = `sc-subresource-${suffix}`;
+  created.push(subresource);
+  await req('POST', `${ns}/pods`, podSpec(subresource, { schedulerName: 'my-scheduler' }));
+  await settle(500);
+  let viaSubresource = await req('POST', `${ns}/pods/${subresource}/binding`, {
+    apiVersion: 'v1',
+    kind: 'Binding',
+    metadata: { name: subresource, namespace: 'default' },
+    target: { apiVersion: 'v1', kind: 'Node', name: bindTo },
+  });
+  check('the pods/binding subresource works too', viaSubresource.status === 201, viaSubresource.status);
+  let boundBySubresource = await waitForPlacement(subresource);
+  check('the subresource places the pod as well', boundBySubresource?.spec?.nodeName === bindTo, boundBySubresource?.spec?.nodeName);
+
+  let noTarget = await req('POST', `${ns}/bindings`, {
+    apiVersion: 'v1', kind: 'Binding', metadata: { name: mineName, namespace: 'default' },
+  });
+  check('a binding with no target is rejected', noTarget.status === 422, noTarget.status);
+
   for (const name of created) {
     await req('DELETE', `${ns}/pods/${name}`);
   }

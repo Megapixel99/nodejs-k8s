@@ -18,7 +18,7 @@ const protobufTypes = protobuf.loadSync([
 ]);
 
 // Create-only in real Kubernetes too, so there is nothing to GET by name.
-const CREATE_ONLY = new Set(['Binding', 'SelfSubjectReview']);
+const CREATE_ONLY = new Set(['SelfSubjectReview']);
 
 const ACCEPT = {
   json: 'application/json',

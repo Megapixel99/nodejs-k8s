@@ -304,24 +304,37 @@ async function schedulePod(pod) {
     .map((node) => ({ node, score: scoreNode(node, pod, usage) }))
     .sort((a, b) => (b.score - a.score) || a.node.metadata.name.localeCompare(b.node.metadata.name))[0].node;
 
-  // Bind. Kubernetes writes this through the pods/binding subresource; the
-  // effect a client sees is the same.
+  return bindPod(pod, best.metadata.name);
+}
+
+// What a binding *is*: assign the node, record that the pod is scheduled, say
+// so in an event. This is deliberately the only path -- the built-in scheduler
+// and a POST to pods/binding from somebody else's scheduler both come through
+// here, because a custom scheduler's placement should be indistinguishable
+// from ours, and testing one should tell you about the other.
+//
+// The update is conditional on the pod still being unbound: two schedulers
+// racing is the case this has to get right, and "read then write" would let
+// both of them win.
+async function bindPod(pod, nodeName) {
   let updated = await Pod.Model.findOneAndUpdate(
-    { 'metadata.uid': pod.metadata.uid, $or: [{ 'spec.nodeName': { $exists: false } }, { 'spec.nodeName': null }, { 'spec.nodeName': '' }] },
-    { $set: { 'spec.nodeName': best.metadata.name } },
+    {
+      'metadata.uid': pod.metadata.uid,
+      $or: [{ 'spec.nodeName': { $exists: false } }, { 'spec.nodeName': null }, { 'spec.nodeName': '' }],
+    },
+    { $set: { 'spec.nodeName': nodeName } },
     { new: true },
   );
   if (!updated) {
-    // Something bound it first — nothing to announce.
     return undefined;
   }
   await setScheduledCondition(pod, { status: 'True' });
   await recordEvent(pod, {
     type: 'Normal',
     reason: 'Scheduled',
-    message: `Successfully assigned ${pod.metadata.namespace}/${pod.metadata.name} to ${best.metadata.name}`,
+    message: `Successfully assigned ${pod.metadata.namespace}/${pod.metadata.name} to ${nodeName}`,
   });
-  return best.metadata.name;
+  return nodeName;
 }
 
 function start() {
@@ -347,6 +360,7 @@ function start() {
 module.exports = {
   start,
   schedulePod,
+  bindPod,
   // Exported for tests and for anyone wanting to reason about a placement
   // without waiting for the loop.
   filterNodes,
