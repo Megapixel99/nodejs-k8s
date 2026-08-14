@@ -139,11 +139,19 @@ class Endpoints extends K8Object {
             "description": "Name must be unique within a namespace. Is required when creating resources, although some resources may allow a client to request the generation of an appropriate name automatically. Name is primarily intended for creation idempotence and configuration definition. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
             "priority": 0
           },
+          // kubectl prints whatever the server calls this column, and the
+          // real one is "Endpoints" -- `kubectl get endpoints` here read
+          // NAME/SUBSETS, which is not a header anyone has seen before.
           {
-            "name": "Subsets",
+            "name": "Endpoints",
             "type": "string",
-            "format": "name",
-            "description": "The set of all endpoints is the union of all subsets. Addresses are placed into subsets according to the IPs they share. A single address with multiple ports, some of which are ready and some of which are not (because they come from different containers) will result in the address being displayed in different subsets for the different ports. No address will appear in both Addresses and NotReadyAddresses in the same subset. Sets of addresses and ports that comprise a service",
+            "description": "List of addresses and ports that comprise a service.",
+            "priority": 0
+          },
+          {
+            "name": "Age",
+            "type": "string",
+            "description": "CreationTimestamp is a timestamp representing the server time when this object was created.",
             "priority": 0
           }
         ],
@@ -155,6 +163,7 @@ class Endpoints extends K8Object {
                 (s.notReadyAddresses || []).concat(s.addresses || []).map((a) => `${a.ip}:${p.port}`)
               )
             ).join(',') || '<none>'),
+            age(e.metadata.creationTimestamp),
           ],
           object: {
             "kind": "PartialObjectMetadata",

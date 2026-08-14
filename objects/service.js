@@ -220,7 +220,9 @@ class Service extends K8Object {
             e.spec.type,
             (e.spec.clusterIP || e.spec.clusterIPs?.join() || '<none>'),
             (e.spec.externalIPs?.join() || '<none>'),
-            e.spec?.ports?.length > 0 ? e.spec.ports.map((e) => `${e.port}/${e.protocol}`).join() : '<none>',
+            // protocol defaults to TCP and clients may leave it out, so the
+            // PORT(S) column read "80/undefined" for most services.
+            e.spec?.ports?.length > 0 ? e.spec.ports.map((e) => `${e.port}/${e.protocol || 'TCP'}`).join() : '<none>',
             age(e.metadata.creationTimestamp),
             e.spec?.selector && Object.keys(e.spec.selector).length > 0 ? Object.entries(e.spec.selector).map((e) => `${e[0]}=${e[1]}`).join() : '<none>',
           ],

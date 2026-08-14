@@ -313,14 +313,8 @@ const container = {
     claims: [{
       name: String,
     }],
-    limits: {
-      type: Map,
-      of: String
-    },
-    requests: {
-      type: Map,
-      of: String
-    },
+    limits: Schema.Types.Mixed,
+    requests: Schema.Types.Mixed,
   },
   resizePolicy: [{
     resourceName: String,
@@ -509,10 +503,7 @@ const rbd = {
 // describe pod` reported State: Terminated (exit 0) for a container that was
 // still running. A terminated state means something only once it is written.
 const containerStatus = {
-  allocatedResources: {
-    type: Map,
-    of: String,
-  },
+  allocatedResources: Schema.Types.Mixed,
   containerID: String,
   image: String,
   imageID: String,
@@ -540,14 +531,8 @@ const containerStatus = {
     claims: [{
       name: String,
     }],
-    limits: {
-      type: Map,
-      of: String,
-    },
-    requests: {
-      type: Map,
-      of: String,
-    },
+    limits: Schema.Types.Mixed,
+    requests: Schema.Types.Mixed,
   },
   restartCount: {
     type: Number,
@@ -628,10 +613,7 @@ const volumeInfo = {
       name: String,
     },
     readOnly: Boolean,
-    volumeAttributes: {
-      type: Map,
-      of: String,
-    },
+    volumeAttributes: Schema.Types.Mixed,
   },
   fc: {
     fsType: String,
@@ -646,10 +628,7 @@ const volumeInfo = {
   flexVolume: {
     driver: String,
     fsType: String,
-    options: {
-      type: Map,
-      of: String,
-    },
+    options: Schema.Types.Mixed,
     readOnly: Boolean,
     secretRef: {
       name: String,
@@ -783,14 +762,8 @@ const persistentVolumeClaimSchema = Schema({
       claims: [{
         name: String,
       }],
-      limits: {
-        type: Map,
-        of: String,
-      },
-      requests: {
-        type: Map,
-        of: String,
-      },
+      limits: Schema.Types.Mixed,
+      requests: Schema.Types.Mixed,
     },
     selector: labelSelector,
     storageClassName: String,
@@ -799,14 +772,8 @@ const persistentVolumeClaimSchema = Schema({
   },
   status: {
     accessModes: [String],
-    allocatedResources: {
-      type: Map,
-      of: String,
-    },
-    capacity: {
-      type: Map,
-      of: String,
-    },
+    allocatedResources: Schema.Types.Mixed,
+    capacity: Schema.Types.Mixed,
     conditions: [{
       ...statusConditions,
       lastProbeTime: {
@@ -1004,10 +971,7 @@ const pod = {
     os: {
       name: String,
     },
-    overhead: {
-      type: Map,
-      of: String,
-    },
+    overhead: Schema.Types.Mixed,
     preemptionPolicy: String,
     priority: {
       type: Number,
@@ -1431,10 +1395,7 @@ const serviceSchema = Schema({
       targetPort: Schema.Types.Mixed,
     }],
     publishNotReadyAddresses: Boolean,
-    selector: {
-      type: Map,
-      of: String
-    },
+    selector: Schema.Types.Mixed,
     sessionAffinity: {
       type: String,
       default: "None"
@@ -1703,10 +1664,7 @@ const certificateSigningRequestSchema = Schema({
       type: Number,
       default: 0
     },
-    extra: {
-      type: Map,
-      of: String
-    },
+    extra: Schema.Types.Mixed,
     groups: [String],
     request: String,
     signerName: String,
@@ -1769,14 +1727,8 @@ const nodeSchema = Schema({
         type: String
       },
     }],
-    allocatable: {
-      type: Map,
-      of: String,
-    },
-    capacity: {
-      type: Map,
-      of: String,
-    },
+    allocatable: Schema.Types.Mixed,
+    capacity: Schema.Types.Mixed,
     conditions: [{
       ...statusConditions,
       lastHeartbeatTime: {
@@ -2054,10 +2006,7 @@ const replicationControllerSchema = Schema({
       type: Number,
       default: 0
     },
-    selector: {
-      type: Map,
-      of: String
-    },
+    selector: Schema.Types.Mixed,
     template: pod,
   },
   status: {
@@ -2443,10 +2392,7 @@ const endpointSliceSchema = Schema({
       serving: Boolean,
       terminating: Boolean,
     },
-    deprecatedTopology: {
-      type: Map,
-      of: String,
-    },
+    deprecatedTopology: Schema.Types.Mixed,
     hints: {
       forZones: [{
         name: String,
@@ -2792,10 +2738,7 @@ const persistentVolumeSchema = Schema({
       ...volumeInfo.azureFile,
       secretNamespace: String,
     },
-    capacity: {
-      type: Map,
-      of: String,
-    },
+    capacity: Schema.Types.Mixed,
     cephfs: {
       ...volumeInfo.cephfs,
       secretRef: {
@@ -2906,10 +2849,7 @@ const podDisruptionBudgetSchema = Schema({
       type: Number,
       default: 0
     },
-    disruptedPods: {
-      type: Map,
-      of: String,
-    },
+    disruptedPods: Schema.Types.Mixed,
     disruptionsAllowed: {
       type: Number,
       default: 0
@@ -2955,10 +2895,7 @@ const resourceQuotaSchema = Schema({
   },
   metadata,
   spec: {
-    hard: {
-      type: Map,
-      of: String,
-    },
+    hard: Schema.Types.Mixed,
     scopeSelector: {
       matchExpressions: [{
         operator: String,
@@ -2969,14 +2906,8 @@ const resourceQuotaSchema = Schema({
     scopes: [String],
   },
   status: {
-    hard: {
-      type: Map,
-      of: String,
-    },
-    used: {
-      type: Map,
-      of: String,
-    },
+    hard: Schema.Types.Mixed,
+    used: Schema.Types.Mixed,
   },
 });
 
@@ -2992,16 +2923,10 @@ const runtimeClassSchema = Schema({
   handler: String,
   metadata,
   overhead: {
-    podFixed: {
-      type: Map,
-      of: String,
-    },
+    podFixed: Schema.Types.Mixed,
   },
   scheduling: {
-    nodeSelector: {
-      type: Map,
-      of: String,
-    },
+    nodeSelector: Schema.Types.Mixed,
     tolerations: [{
       effect: String,
       key: String,
@@ -3060,10 +2985,7 @@ const selfSubjectReviewSchema = Schema({
   metadata,
   status: {
     userInfo: {
-      extra: [{
-        type: Map,
-        of: [String],
-      }],
+      extra: [Schema.Types.Mixed],
       groups: [String],
       uid: {
         type: String,
@@ -3224,10 +3146,7 @@ const storageClassSchema = Schema({
     }],
   }],
   mountOptions: [String],
-  parameters: {
-    type: Map,
-    of: String,
-  },
+  parameters: Schema.Types.Mixed,
   provisioner: String,
   reclaimPolicy: String,
   volumeBindingMode: String,
@@ -3420,10 +3339,7 @@ const volumeAttachmentSchema = Schema({
       },
     },
     attached: Boolean,
-    attachmentMetadata: {
-      type: Map,
-      of: String,
-    },
+    attachmentMetadata: Schema.Types.Mixed,
     detachError: {
       message: String,
       time: {

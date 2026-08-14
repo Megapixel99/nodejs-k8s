@@ -78,6 +78,7 @@ const Object = require('./objects/object.js');
 const nodeCleanup = require('node-cleanup');
 const scheduler = require('./controllers/scheduler.js');
 const nodes = require('./controllers/nodes.js');
+const endpointsController = require('./controllers/endpoints.js');
 const store = require('./store/index.js');
 
 let dbNameIndex = process.argv.indexOf('-dbName');
@@ -280,7 +281,10 @@ store.start()
   // somewhere to put things.
   .then(() => nodes.ensure())
   .catch((err) => console.warn('[nodes]', err?.message || err))
-  .finally(() => scheduler.start());
+  .finally(() => {
+    scheduler.start();
+    endpointsController.start();
+  });
 
 nodeCleanup(async (exitCode, signal) => {
   if (signal) {
