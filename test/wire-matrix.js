@@ -145,7 +145,31 @@ async function watchLeaksOtherNamespace(resource) {
   return foreign;
 }
 
+// Real Kubernetes answers with a bare media type. Express appends
+// "; charset=utf-8", and at least one conformance runner (sonobuoy) compares
+// the header exactly and rejects the response -- a body that is entirely
+// correct, refused on a header nobody thinks to look at.
+async function checkContentTypeHeaders() {
+  for (const [path, accept, expected] of [
+    ['/api', 'application/json', 'application/json'],
+    ['/api/v1', 'application/json', 'application/json'],
+    ['/apis', 'application/json', 'application/json'],
+    ['/version', 'application/json', 'application/json'],
+    ['/api/v1/namespaces/default/pods', 'application/json', 'application/json'],
+    ['/api/v1/namespaces/default/pods', ACCEPT.proto, 'application/vnd.kubernetes.protobuf'],
+    ['/api/v1/namespaces/default/pods', ACCEPT.yaml, 'application/yaml'],
+  ]) {
+    let res = await fetch(`${base}${path}`, { headers: { Accept: accept } });
+    let contentType = res.headers.get('content-type') || '';
+    if (contentType !== expected) {
+      fails.push(`CONTENT-TYPE ${path} (${accept}): got "${contentType}", want exactly "${expected}"`);
+    }
+  }
+}
+
 (async () => {
+  await checkContentTypeHeaders();
+
   for (const resource of resources) {
     let kind = resource.body.kind;
     let name = resource.body.metadata.name;

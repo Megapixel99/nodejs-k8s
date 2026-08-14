@@ -137,9 +137,25 @@ app.use((req, res, next) => {
 // to see what a client actually sent.
 const debugBodies = `${process.env.DEBUG_BODIES ?? ''}` === '1';
 
+// Express appends "; charset=utf-8" to every JSON response. A real API server
+// sends bare "application/json", and at least one conformance runner
+// (sonobuoy) compares the header exactly and rejects the response -- which is
+// the kind of incompatibility that has nothing to do with the body being
+// right. Issue #1 hit this. The charset is stripped from the Kubernetes media
+// types only; anything else keeps whatever it set.
+const KUBE_MEDIA_TYPE = /^(application\/json|application\/yaml|text\/plain|application\/vnd\.kubernetes\.protobuf)/;
+
 app.use((req, res, next) => {
   req.protobufTypes = protobufTypes;
   let started = Date.now();
+  let writeHead = res.writeHead;
+  res.writeHead = function (...args) {
+    let contentType = res.getHeader('Content-Type');
+    if (typeof contentType === 'string' && KUBE_MEDIA_TYPE.test(contentType) && contentType.includes('charset=')) {
+      res.setHeader('Content-Type', contentType.replace(/\s*;\s*charset=[^;]*/i, ''));
+    }
+    return writeHead.apply(this, args);
+  };
   if (debugBodies) {
     console.log(req.method, req.url, req.headers, req.body);
   }
