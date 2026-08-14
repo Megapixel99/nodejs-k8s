@@ -429,9 +429,20 @@ class K8Object {
         // metadata subdocument with just the resourceVersion. The object kept
         // its data and lost its name, namespace and uid.
         let usesOperators = updateObj && Object.keys(updateObj).some((key) => key.startsWith('$'));
-        updateObj = usesOperators
-          ? { ...updateObj, $set: { ...updateObj.$set, 'metadata.resourceVersion': resourceVersion } }
-          : { ...updateObj, metadata: { ...(updateObj?.metadata || {}), resourceVersion } };
+        if (usesOperators) {
+          updateObj = { ...updateObj, $set: { ...updateObj.$set, 'metadata.resourceVersion': resourceVersion } };
+        } else if (updateObj && 'metadata' in updateObj) {
+          // The caller is replacing metadata anyway; add the version to theirs.
+          updateObj = { $set: { ...updateObj, metadata: { ...updateObj.metadata, resourceVersion } } };
+        } else {
+          // A plain update with no metadata of its own: reach the version by
+          // dot-path. Attaching a bare `metadata` object here instead made
+          // mongo replace the whole subdocument, so an update that only meant
+          // to change `spec` silently dropped name, namespace and uid — and a
+          // dot-path alongside a whole-object `metadata` set would conflict,
+          // which is why the two cases are separate.
+          updateObj = { $set: { ...updateObj, 'metadata.resourceVersion': resourceVersion } };
+        }
         return this.Model.findOneAndUpdate(
           searchQ,
           updateObj,

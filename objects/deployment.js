@@ -11,6 +11,20 @@ const {
   age,
 }  = require('../functions.js');
 
+// The ReplicationControllers a deployment owns are named
+// `<deployment>-<generation>`. Matching on the bare prefix `^<name>` also
+// matched every other deployment's controllers whose name starts with this
+// one's: deployment `web` counted (and, on delete, removed) `web-cache-1`.
+// Anchoring on the generation suffix — and escaping the name, which is
+// interpolated straight into a regex — keeps a deployment to its own.
+function ownedControllers(deployment) {
+  let escaped = `${deployment.metadata.name}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return {
+    'metadata.name': { $regex: `^${escaped}-\\d+$` },
+    'metadata.namespace': deployment.metadata.namespace,
+  };
+}
+
 class Deployment extends K8Object {
   constructor(config) {
     super(config);
@@ -31,7 +45,7 @@ class Deployment extends K8Object {
       let newDeployment = new Deployment(deployment);
         if (newDeployment.spec.paused !== true) {
           return ReplicationController.find(
-            { 'metadata.name': { $regex: `^${newDeployment.metadata.name}` } , 'metadata.namespace': newDeployment.metadata.namespace },
+            ownedControllers(newDeployment),
             { sort: { 'created_at': 1 } }
           )
           .then((rcs) => ReplicationController.create({
@@ -58,7 +72,7 @@ class Deployment extends K8Object {
     return Promise.all([
       super.patch(updateObj, searchQ),
       ReplicationController.find(
-        { 'metadata.name': { $regex: `^${this.metadata.name}` } , 'metadata.namespace': this.metadata.namespace },
+        ownedControllers(this),
         { sort: { 'created_at': 1 } }
       )
     ])
@@ -90,7 +104,7 @@ class Deployment extends K8Object {
   }
 
   delete() {
-    return ReplicationController.find({ 'metadata.name': { $regex: `^${this.metadata.name}` } , 'metadata.namespace': this.metadata.namespace })
+    return ReplicationController.find(ownedControllers(this))
     .then((rcs) => {
       return Promise.all([
         ...rcs.map((rc) => rc.delete()),
@@ -207,10 +221,7 @@ class Deployment extends K8Object {
     if (!rc) {
       // This re-declared `rc` with `let`, so the lookup's result was thrown
       // away and the outer rc stayed undefined.
-      rc = (await ReplicationController.findAllSorted({
-        'metadata.name': { $regex: `^${this.metadata.name}` },
-        'metadata.namespace': this.metadata.namespace,
-      }))[0];
+      rc = (await ReplicationController.findAllSorted(ownedControllers(this)))[0];
     }
     if (!rc) {
       return undefined;

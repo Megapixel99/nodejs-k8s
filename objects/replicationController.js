@@ -19,20 +19,26 @@ class ReplicationController extends K8Object {
   static Model = Model;
 
   deletePods(numPods) {
-    if (this.status.replicas < 1) {
-      return Promise.resolve();
-    }
+    // This used to bail out when the in-memory status said there were no
+    // replicas. That counter is whatever was loaded when the controller was
+    // fetched, so deleting a deployment skipped the pod cleanup and left the
+    // containers running — the query below is the real answer to "which pods
+    // are mine".
     let opts = { sort: { 'created_at': 1 } };
     if (numPods) {
       opts.limit = numPods;
     }
     // Replicas are named `<controller>-<suffix>`, so matching the template's
     // single name found nothing once each pod got its own name.
+    // find(filter, projection, options) — `opts` was landing in the projection
+    // slot, so the sort/limit were read as fields to select and the pods came
+    // back without metadata. Nothing matched, and the containers stayed up.
     return Pod.find(
       {
         'metadata.name': { $regex: `^${this.metadata.name}-` },
         'metadata.namespace': this.metadata.namespace,
       },
+      {},
       opts,
     )
     .then((pods) => {

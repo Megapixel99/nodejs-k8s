@@ -88,8 +88,15 @@ const mine = (list, name) => (list.body?.items || []).filter((i) => `${i.metadat
   check('scale subresource accepts a write', scale.status === 200, scale.status);
   check('scale reports the new count', scale.body?.spec?.replicas === 1, scale.body?.spec);
 
+  // Deleting the deployment must take its pods with it. The cleanup used to
+  // bail out on a stale in-memory replica count, and the pod lookup passed its
+  // options into find()'s projection slot, so the pods (and their containers)
+  // were left running.
   await req('DELETE', `${deployments}/${name}`);
-  for (const pod of ours) {
+  await new Promise((resolve) => setTimeout(resolve, 4000));
+  let leftovers = mine(await req('GET', pods), name);
+  check('deleting the deployment deletes its pods', leftovers.length === 0, leftovers.map((p) => p.metadata.name));
+  for (const pod of leftovers) {
     await req('DELETE', `${pods}/${pod.metadata.name}`);
   }
 
