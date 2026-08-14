@@ -6,3 +6,6 @@ _rundir
 
 # Raft log, snapshots and term state for the local store.
 .store/
+
+# Written by scripts/setup.sh.
+kubeconfig

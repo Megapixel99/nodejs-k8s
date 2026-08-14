@@ -129,23 +129,30 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use((req, res, next) => {
-  req.protobufTypes = protobufTypes;
-  console.log(req.method);
-  console.log(req.headers, req.body, req.url);
-  next();
-})
+// One line per request: method, path, status, duration. Dumping every request
+// header and every response body was fine when the server answered a handful
+// of requests by hand, but a single `kubectl get pods` writes a whole PodList
+// to the log, and a test run buries the one line that mattered under tens of
+// thousands. Set DEBUG_BODIES=1 to get the old behaviour back when you need
+// to see what a client actually sent.
+const debugBodies = `${process.env.DEBUG_BODIES ?? ''}` === '1';
 
 app.use((req, res, next) => {
-    let send = res.send;
-    res.send = c => {
-        console.log(`Response Code: ${res.statusCode}`);
-        console.log("Response Body: ", c);
-        res.send = send;
-        console.log('------------------');
-        return res.send(c);
+  req.protobufTypes = protobufTypes;
+  let started = Date.now();
+  if (debugBodies) {
+    console.log(req.method, req.url, req.headers, req.body);
+  }
+  let send = res.send;
+  res.send = (body) => {
+    res.send = send;
+    console.log(`${req.method} ${req.url} ${res.statusCode} ${Date.now() - started}ms`);
+    if (debugBodies) {
+      console.log('response:', body);
     }
-    next();
+    return res.send(body);
+  };
+  next();
 });
 
 app.use(all);

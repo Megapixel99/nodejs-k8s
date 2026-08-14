@@ -324,4 +324,4 @@ function start() {
   tick();
 }
 
-module.exports = { start, reconcileService, reconcileNamespace, subsetsFor };
+module.exports = { start, reconcileService };

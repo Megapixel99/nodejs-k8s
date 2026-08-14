@@ -33,6 +33,13 @@ kubectl apply -f examples/hello-world
 kubectl get pods -A
 ```
 
+`npm run setup` writes `./kubeconfig`; it isn't checked in, since it is
+generated.
+
+The server logs one line per request — method, path, status, duration. When you
+need to see what a client actually sent, `DEBUG_BODIES=1 npm start` adds the
+headers and both bodies.
+
 To stop everything:
 
 ```bash

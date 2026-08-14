@@ -378,7 +378,6 @@ class Raft {
       // Truncate only where the logs actually diverge: a heartbeat that
       // repeats entries the follower already has must not drop and re-add
       // them, because entries after them may already be committed.
-      let firstNew = entries[0].index;
       let divergesAt = null;
       for (const entry of entries) {
         let existing = this.entryAt(entry.index);
@@ -396,8 +395,6 @@ class Raft {
         this.log.push(...entries.filter((e) => e.index >= divergesAt));
         this.wal.rewrite(this.log);
       }
-      this.leaderId = leaderId;
-      void firstNew;
     }
 
     if (leaderCommit > this.commitIndex) {

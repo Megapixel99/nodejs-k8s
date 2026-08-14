@@ -515,4 +515,4 @@ function sortKvs(kvs, order, target) {
   return order === 'DESCEND' ? sorted.reverse() : sorted;
 }
 
-module.exports = { Store, StoreError, toBuffer, fromCommand };
+module.exports = { Store, StoreError, toBuffer };

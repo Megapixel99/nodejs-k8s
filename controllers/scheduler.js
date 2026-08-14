@@ -357,15 +357,4 @@ function start() {
   tick();
 }
 
-module.exports = {
-  start,
-  schedulePod,
-  bindPod,
-  // Exported for tests and for anyone wanting to reason about a placement
-  // without waiting for the loop.
-  filterNodes,
-  scoreNode,
-  podRequests,
-  usageByNode,
-  SCHEDULER_NAME,
-};
+module.exports = { start, schedulePod, bindPod };
