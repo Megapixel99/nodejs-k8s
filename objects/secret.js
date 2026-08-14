@@ -194,10 +194,29 @@ class Secret extends K8Object {
     if (updateObj && updateObj.stringData) {
       updateObj = foldStringData(updateObj);
     }
-    if (updateObj && updateObj.$set?.stringData) {
-      let folded = foldStringData({ data: updateObj.$set.data, stringData: updateObj.$set.stringData });
-      updateObj = { ...updateObj, $set: { ...updateObj.$set, data: folded.data } };
-      delete updateObj.$set.stringData;
+    // A merge patch arrives flattened to dot-paths, so the keys look like
+    // `stringData.TOKEN` rather than a `stringData` object. Matching only the
+    // whole-object form meant `kubectl patch --patch '{"stringData":…}'` stored
+    // the plaintext under stringData and never produced any `data`.
+    if (updateObj?.$set) {
+      let $set = { ...updateObj.$set };
+      let changed = false;
+      for (const [key, value] of Object.entries(updateObj.$set)) {
+        if (key === 'stringData' && value && typeof value === 'object') {
+          Object.entries(value).forEach(([k, v]) => {
+            $set[`data.${k}`] = Buffer.from(`${v}`).toString('base64');
+          });
+          delete $set[key];
+          changed = true;
+        } else if (key.startsWith('stringData.')) {
+          $set[`data.${key.slice('stringData.'.length)}`] = Buffer.from(`${value}`).toString('base64');
+          delete $set[key];
+          changed = true;
+        }
+      }
+      if (changed) {
+        updateObj = { ...updateObj, $set };
+      }
     }
     if (updateObj && updateObj.data) {
       updateObj = { ...updateObj, data: convertData(updateObj.data) };

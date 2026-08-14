@@ -1115,8 +1115,19 @@ const pod = {
     // `volumeSource` stays declared so anything already written that way still
     // reads back.
     volumes: [{
-      ...volumeSchema.obj,
       name: String,
+      // Declared as Mixed rather than by spreading volumeSchema: those
+      // sub-schemas carry defaults, so every volume came back carrying ten
+      // empty source objects (awsElasticBlockStore, cephfs, fc, …) the client
+      // never set. Mixed stores exactly what was sent and leaves the rest
+      // absent, which is what `kubectl get -o yaml` should show.
+      configMap: Schema.Types.Mixed,
+      secret: Schema.Types.Mixed,
+      emptyDir: Schema.Types.Mixed,
+      hostPath: Schema.Types.Mixed,
+      persistentVolumeClaim: Schema.Types.Mixed,
+      projected: Schema.Types.Mixed,
+      downwardAPI: Schema.Types.Mixed,
       volumeSource: volumeSchema,
     }],
   },

@@ -103,9 +103,25 @@ const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   check('logs are readable without naming the container', envLogs.trim().length > 0, envLogs.trim().length);
 
   let volPod = await req('GET', `${ns}/pods/${pods[1]}`);
-  check('the volume source survives the round trip', volPod.body?.spec?.volumes?.[0]?.configMap?.name === cm, volPod.body?.spec?.volumes?.[0]);
+  let volume = volPod.body?.spec?.volumes?.[0] || {};
+  check('the volume source survives the round trip', volume.configMap?.name === cm, volume);
+  // Declaring the sources by spreading the volume schema made every volume
+  // carry ten empty source objects the client never set.
+  check('the volume carries only the source that was set',
+    Object.keys(volume).sort().join(',') === 'configMap,name', Object.keys(volume));
   let volLogs = await logsOf(pods[1]);
   check('a ConfigMap volume is mounted into the container', volLogs.includes('hello-from-cm'), volLogs.trim().slice(0, 60));
+
+  // A merge patch arrives flattened to dot-paths, so `stringData.X` has to be
+  // folded too — matching only the whole-object form left the plaintext stored.
+  await req('PATCH', `${ns}/secrets/${secret}`, undefined);
+  let patched = await fetch(`${base}${ns}/secrets/${secret}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/merge-patch+json' },
+    body: JSON.stringify({ stringData: { EXTRA: 'added' } }),
+  }).then((r) => r.json());
+  check('a patched stringData is converted too', patched?.data?.EXTRA === Buffer.from('added').toString('base64'), patched?.data);
+  check('a patched stringData is not stored', patched?.stringData === undefined, patched?.stringData);
 
   for (const pod of pods) {
     await req('DELETE', `${ns}/pods/${pod}`);
