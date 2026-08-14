@@ -97,7 +97,18 @@ class StoreNode {
   async execute(cmd, { retries = 20 } = {}) {
     for (let attempt = 0; attempt <= retries; attempt++) {
       if (this.isLeader) {
-        return this.raft.propose(cmd);
+        try {
+          return await this.raft.propose(cmd);
+        } catch (e) {
+          // Losing leadership mid-write leaves the outcome genuinely unknown:
+          // the entry may yet commit under the new leader. Retrying is what
+          // an etcd client does with the same ambiguity, and the honest
+          // failure mode -- a compare-and-swap that finds the world already
+          // changed -- is a conflict the caller can act on.
+          if (e.code !== 'NOT_LEADER') {
+            throw e;
+          }
+        }
       }
       let leader = this.peers.find((p) => p.id === this.raft.leaderId);
       if (leader) {

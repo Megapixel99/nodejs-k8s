@@ -220,6 +220,11 @@ async function single(name, options = {}) {
   // Code 11 is the one clients switch on: it is what tells a stale watcher to
   // start over with a fresh list instead of retrying forever.
   check('the refusal carries the compacted code', compacted.code === 11, compacted.code);
+  // Compaction removes what came *before* the point, not the point itself:
+  // refusing a read at the compact revision would make the boundary a
+  // different number than the one the client was told about.
+  let atBoundary = await node.range('/registry/pods/default/a', { revision: compactAt }).catch((e) => e);
+  check('a read at the compact point itself still works', !(atBoundary instanceof Error), `${atBoundary}`);
   let stillThere = await node.range('/registry/pods/default/a');
   check('compaction keeps the live value', text(stillThere.kvs[0]) === 'compare-and-swapped', stillThere.kvs[0] && text(stillThere.kvs[0]));
   let staleWatch = (() => {

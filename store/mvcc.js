@@ -88,8 +88,9 @@ class Store {
     }
     // A read at a revision that no longer has history is an error, not an
     // approximation. Returning the nearest surviving revision instead is how
-    // a client silently misses writes.
-    if (revision && revision <= this.compactRevision && revision < this.revision) {
+    // a client silently misses writes. Reading *at* the compact point is
+    // still valid, though -- compaction drops what came before it, not it.
+    if (revision && revision < this.compactRevision) {
       throw new StoreError('etcdserver: mvcc: required revision has been compacted', 11);
     }
     if (revision > this.revision) {
@@ -133,6 +134,14 @@ class Store {
       lease: ignoreLease && previous ? previous.lease : lease,
       deleted: false,
     };
+    // A put against a lease that doesn't exist is rejected in etcd -- the key
+    // would otherwise outlive the lease it claims to be attached to. Check
+    // before touching anything: a rejection that had already detached the old
+    // lease or appended the new entry would leave the store half-written, and
+    // the caller's rollback can't see into the lease bookkeeping.
+    if (entry.lease && !this.leases.has(entry.lease)) {
+      throw new StoreError('etcdserver: requested lease not found', 15);
+    }
     if (!this.keys.has(key)) {
       this.keys.set(key, []);
     }
@@ -141,14 +150,7 @@ class Store {
       this.leases.get(previous.lease)?.keys.delete(key);
     }
     if (entry.lease) {
-      // A put against a lease that doesn't exist is rejected in etcd; the key
-      // would otherwise outlive the lease it claims to be attached to.
-      let lease = this.leases.get(entry.lease);
-      if (!lease) {
-        this.keys.get(key).pop();
-        throw new StoreError('etcdserver: requested lease not found', 15);
-      }
-      lease.keys.add(key);
+      this.leases.get(entry.lease).keys.add(key);
     }
     let event = {
       rev,
@@ -384,7 +386,7 @@ class Store {
   // installed in the same tick, which is what lets a client that reconnects
   // with an old resourceVersion be brought up to date without missing writes.
   watch(key, { rangeEnd = '', startRevision = 0, prevKv = false } = {}) {
-    if (startRevision && startRevision <= this.compactRevision) {
+    if (startRevision && startRevision < this.compactRevision) {
       throw new StoreError('etcdserver: mvcc: required revision has been compacted', 11);
     }
     let id = this.nextWatchId++;

@@ -137,6 +137,18 @@ class Raft {
   becomeFollower(term) {
     let changed = this.role !== FOLLOWER;
     this.role = FOLLOWER;
+    // Anything this node proposed and hasn't committed is now somebody else's
+    // to decide. It may still commit under the new leader, but this node can
+    // no longer say so -- and a caller left waiting on a promise that will
+    // never settle is a hung API request, which is worse than a retry.
+    if (changed) {
+      for (const [index, waiter] of this.pending) {
+        let error = new Error('etcdserver: leader changed, retry the request');
+        error.code = 'NOT_LEADER';
+        waiter.reject(error);
+        this.pending.delete(index);
+      }
+    }
     if (term > this.currentTerm) {
       this.currentTerm = term;
       this.votedFor = null;
