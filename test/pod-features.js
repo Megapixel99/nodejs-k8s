@@ -123,7 +123,39 @@ const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   check('a patched stringData is converted too', patched?.data?.EXTRA === Buffer.from('added').toString('base64'), patched?.data);
   check('a patched stringData is not stored', patched?.stringData === undefined, patched?.stringData);
 
-  for (const pod of pods) {
+  // Readiness probes: the result used to be computed and discarded, and the
+  // exec command was joined into a shell string that re-parsed its own
+  // quoting, so `['sh','-c','exit 1']` ran as a no-op and passed.
+  let failing = `pf-notready-${suffix}`;
+  let passing = `pf-ready-${suffix}`;
+  let probe = (name, code) => ({
+    apiVersion: 'v1', kind: 'Pod',
+    metadata: { name, namespace: 'default' },
+    spec: {
+      containers: [{
+        name: 'c', image: 'busybox', command: ['sh', '-c', 'sleep 40'],
+        readinessProbe: { exec: { command: ['sh', '-c', `exit ${code}`] }, periodSeconds: 1, failureThreshold: 1 },
+      }],
+    },
+  });
+  await req('POST', `${ns}/pods`, probe(failing, 1));
+  await req('POST', `${ns}/pods`, probe(passing, 0));
+  await settle(11000);
+
+  let notReady = await req('GET', `${ns}/pods/${failing}`);
+  check('a failing readiness probe leaves the container not ready',
+    notReady.body?.status?.containerStatuses?.[0]?.ready === false,
+    notReady.body?.status?.containerStatuses?.[0]);
+  check('a failing readiness probe leaves the pod not Ready',
+    (notReady.body?.status?.conditions || []).find((c) => c.type === 'Ready')?.status === 'False',
+    (notReady.body?.status?.conditions || []).map((c) => `${c.type}=${c.status}`));
+
+  let ready = await req('GET', `${ns}/pods/${passing}`);
+  check('a passing readiness probe keeps the container ready',
+    ready.body?.status?.containerStatuses?.[0]?.ready === true,
+    ready.body?.status?.containerStatuses?.[0]);
+
+  for (const pod of [...pods, failing, passing]) {
     await req('DELETE', `${ns}/pods/${pod}`);
   }
   await req('DELETE', `${ns}/configmaps/${cm}`);

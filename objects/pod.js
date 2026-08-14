@@ -29,6 +29,29 @@ function podStatusText(pod) {
   return pod?.status?.reason || pod?.status?.phase || 'Unknown';
 }
 
+// Probe timers live longer than the object that scheduled them: `delete()`
+// stops the pod through a *new* Pod instance, whose own `_probeIntervals` is
+// empty, so the original timers kept firing `docker exec` against a container
+// that no longer exists. Keyed by the pod's container-name prefix, which is
+// unique per pod, they can be cleared from anywhere.
+const probeTimers = new Map();
+
+function stopProbes(key) {
+  let timers = probeTimers.get(key);
+  if (!timers) {
+    return;
+  }
+  timers.forEach((timer) => clearInterval(timer));
+  probeTimers.delete(key);
+}
+
+// A probe only counts if it actually says how to check. Every container has a
+// defaulted `readinessProbe` object courtesy of the schema, so testing the
+// field itself schedules a timer for containers that have no probe at all.
+function isConfiguredProbe(probe) {
+  return Boolean(probe?.exec?.command?.length || probe?.httpGet?.port || probe?.tcpSocket?.port);
+}
+
 class Pod extends K8Object {
   constructor(config) {
     super(config);
@@ -203,10 +226,7 @@ class Pod extends K8Object {
   }
 
   stop() {
-    if (Array.isArray(this._probeIntervals)) {
-      this._probeIntervals.forEach((i) => clearInterval(i));
-      this._probeIntervals = [];
-    }
+    stopProbes(this.metadata.generateName);
     return Promise.all(this.spec.containers.map((e) => {
       return stopContainer(`${this.metadata.generateName}-${e.name}`)
         .catch((err) => {
@@ -270,28 +290,71 @@ class Pod extends K8Object {
 
   scheduleProbes(containerSpec, containerName, podIP) {
     let checks = [];
-    if (containerSpec.readinessProbe) checks.push(['readiness', containerSpec.readinessProbe]);
-    if (containerSpec.livenessProbe) checks.push(['liveness', containerSpec.livenessProbe]);
+    if (isConfiguredProbe(containerSpec.readinessProbe)) checks.push(['readiness', containerSpec.readinessProbe]);
+    if (isConfiguredProbe(containerSpec.livenessProbe)) checks.push(['liveness', containerSpec.livenessProbe]);
+    if (!checks.length) {
+      return;
+    }
+    let key = this.metadata.generateName;
     checks.forEach(([kind, probe]) => {
       let period = (probe.periodSeconds || 10) * 1000;
+      let failures = 0;
+      let threshold = probe.failureThreshold || 3;
       let interval = setInterval(async () => {
         let ok = await this.runProbe(probe, containerName, podIP).catch(() => false);
-        if (!ok && kind === 'liveness') {
+        if (kind === 'readiness') {
+          // The result used to be computed and thrown away, so a container
+          // whose readiness probe failed still reported ready: true and the
+          // pod still reported Ready — the one thing the probe exists to say.
+          failures = ok ? 0 : failures + 1;
+          let ready = ok || failures < threshold;
+          return this.setContainerReady(containerSpec.name, ready).catch(() => {});
+        }
+        failures = ok ? 0 : failures + 1;
+        if (failures >= threshold) {
+          failures = 0;
           await stopContainer(containerName).catch(() => {});
           await runImage(containerSpec.image, containerName, {
             expose: (containerSpec.ports || []).map((p) => p.containerPort),
           }).catch(() => {});
         }
       }, period);
-      this._probeIntervals = this._probeIntervals || [];
-      this._probeIntervals.push(interval);
+      let timers = probeTimers.get(key) || [];
+      timers.push(interval);
+      probeTimers.set(key, timers);
     });
   }
 
+  // Reflect a readiness result on the container status and on the pod's
+  // Ready / ContainersReady conditions, which is where clients look.
+  setContainerReady(containerName, ready) {
+    let searchQ = { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace };
+    let status = ready ? 'True' : 'False';
+    let lastTransitionTime = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
+    return this.patch(
+      {
+        $set: {
+          'status.containerStatuses.$[c].ready': ready,
+          'status.conditions.$[r].status': status,
+          'status.conditions.$[r].lastTransitionTime': lastTransitionTime,
+        },
+      },
+      searchQ,
+      { arrayFilters: [{ 'c.name': containerName }, { 'r.type': { $in: ['Ready', 'ContainersReady'] } }] },
+    );
+  }
+
   async runProbe(probe, containerName, podIP) {
-    if (probe.exec && probe.exec.command) {
-      let cmd = Array.isArray(probe.exec.command) ? probe.exec.command.join(' ') : probe.exec.command;
-      let res = await execInContainer(containerName, cmd);
+    if (probe.exec?.command?.length) {
+      // exec.command is argv, not a shell string. Joining it and letting
+      // execInContainer wrap the result in `sh -c` re-parses the quoting: the
+      // canonical probe `['sh','-c','exit 1']` became `sh -c "sh -c exit 1"`,
+      // where "1" is $0 rather than an argument, so it exited 0 and every exec
+      // probe passed no matter what it ran.
+      let argv = Array.isArray(probe.exec.command)
+        ? Array.from(probe.exec.command).map((part) => `${part}`)
+        : [`${probe.exec.command}`];
+      let res = await execInContainer(containerName, argv);
       return res.code === 0;
     }
     if (probe.httpGet) {
@@ -549,6 +612,8 @@ class Pod extends K8Object {
               },
             },
           }));
+          // Nothing to probe once the containers are gone.
+          stopProbes(this.metadata.generateName);
           return this.patch({
             $set: {
               'status.phase': phase,
