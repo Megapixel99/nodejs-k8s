@@ -131,6 +131,13 @@ The Deployment → ReplicationController → Pod chain, end to end:
 npm run test:workload  # requires server + mongo + docker
 ```
 
+Pod features the README claims — env from ConfigMaps and Secrets, ConfigMap
+volume mounts, logs:
+
+```bash
+npm run test:pods      # requires server + mongo + docker
+```
+
 The variable-expansion conformance test (`[sig-node] Variable Expansion
 allow almost all printable ASCII characters as environment variable names
 [Conformance]`) passes end-to-end:

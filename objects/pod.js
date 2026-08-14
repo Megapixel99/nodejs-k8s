@@ -340,7 +340,12 @@ class Pod extends K8Object {
             if (!c) return [];
             let keys = c.mapVariables().map((v) => v.name);
             let sourceDir = ConfigMap.volumeDirName(c);
-            return keys.map((key) => ({ ...m, file: key, sourceDir }));
+            // Spreading a mongoose subdocument copies its internals, not its
+            // fields, so `mountPath` came out undefined and runImage threw
+            // while building the bind mount — the container never started and
+            // the pod went to Failed with a TypeError for a message.
+            let mount = typeof m.toObject === 'function' ? m.toObject() : m;
+            return keys.map((key) => ({ ...mount, file: key, sourceDir }));
           }
           return [];
         }))).flat();
@@ -380,7 +385,13 @@ class Pod extends K8Object {
         }
         if (e.envFrom) {
           let collected = await Promise.all(e.envFrom.map(async (a) => {
-            if (a.secretRef) {
+            // `a.secretRef` is a nested schema path, so mongoose materialises
+            // it as `{}` even for an entry that only sets configMapRef —
+            // truthy, with no name. Every pod using `envFrom: [{configMapRef}]`
+            // therefore looked up Secret "undefined", failed to start its
+            // container, and went to phase Failed. Test the name, not the
+            // container object.
+            if (a.secretRef?.name) {
               return this.getEnvVarsFromSecret(a.secretRef.name)
                 .catch((err) => {
                   this.patch({
@@ -405,7 +416,7 @@ class Pod extends K8Object {
                   throw err;
                 });
             }
-            if (a.configMapRef) {
+            if (a.configMapRef?.name) {
               let configMaps = await this.getEnvVarsFromConfigMaps([a.configMapRef.name]);
               return configMaps.flatMap((c) => c.variables);
             }

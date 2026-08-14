@@ -33,6 +33,21 @@ function convertData(data) {
   return obj;
 }
 
+// Merge stringData into data (base64), with stringData winning on conflicts,
+// the way the apiserver does. Returns a copy; stringData is not stored.
+function foldStringData(config) {
+  if (!config?.stringData || Object.keys(config.stringData).length === 0) {
+    return config;
+  }
+  let encoded = {};
+  Object.entries(config.stringData).forEach(([key, value]) => {
+    encoded[key] = Buffer.from(`${value}`).toString('base64');
+  });
+  let out = { ...config, data: { ...(config.data || {}), ...encoded } };
+  delete out.stringData;
+  return out;
+}
+
 class Secret extends K8Object {
   constructor(config) {
     super(config);
@@ -66,12 +81,18 @@ class Secret extends K8Object {
       if (!config.type) {
         config.type = 'Opaque';
       }
+      // stringData is write-only in Kubernetes: the server base64s it into
+      // `data` and never stores or returns it. Keeping it verbatim meant a
+      // Secret written the way most manifests write one came back with no
+      // `data` at all, so anything mounting or env-injecting it got nothing.
+      config = foldStringData(config);
       return super.create(config)
         .then((s) => new Secret(s));
     });
   }
 
   update(updateObj, searchQ) {
+    updateObj = foldStringData(updateObj);
     if (this.immutable === true) {
       let diff = null;
       if (this.immutable !== updateObj.immutable) {
@@ -170,6 +191,14 @@ class Secret extends K8Object {
   }
 
   patch(updateObj, searchQ, options = {}) {
+    if (updateObj && updateObj.stringData) {
+      updateObj = foldStringData(updateObj);
+    }
+    if (updateObj && updateObj.$set?.stringData) {
+      let folded = foldStringData({ data: updateObj.$set.data, stringData: updateObj.$set.stringData });
+      updateObj = { ...updateObj, $set: { ...updateObj.$set, data: folded.data } };
+      delete updateObj.$set.stringData;
+    }
     if (updateObj && updateObj.data) {
       updateObj = { ...updateObj, data: convertData(updateObj.data) };
     }

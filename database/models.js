@@ -1107,9 +1107,17 @@ const pod = {
       topologyKey: String,
       whenUnsatisfiable: String,
     }],
+    // Kubernetes puts the volume source inline on the volume — `configMap`,
+    // `secret`, `emptyDir` and friends sit next to `name`. Declaring only a
+    // `volumeSource` wrapper meant mongoose dropped the source on save: a pod
+    // with a configMap volume stored `{name: 'cfg'}` and nothing else, so the
+    // mount resolved to nothing and the file never appeared in the container.
+    // `volumeSource` stays declared so anything already written that way still
+    // reads back.
     volumes: [{
+      ...volumeSchema.obj,
       name: String,
-      volumeSource: volumeSchema
+      volumeSource: volumeSchema,
     }],
   },
   status: {

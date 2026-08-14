@@ -12,7 +12,8 @@
     "test:proto": "node ./test/proto-roundtrip.js",
     "test:wire": "node ./test/wire-matrix.js",
     "test:rv": "node ./test/resource-version.js",
-    "test:workload": "node ./test/workload.js"
+    "test:workload": "node ./test/workload.js",
+    "test:pods": "node ./test/pod-features.js"
   },
   "author": "",
   "license": "ISC",
