@@ -192,10 +192,25 @@ async function testWatchFraming() {
     fails.push('watch: no complete frame decoded from the protobuf stream');
     return;
   }
-  let outer = decode(frames[0], 'WatchEvent');
-  check('watch: frame is a WatchEvent', outer.typeMeta.kind === 'WatchEvent', outer.typeMeta);
-  check('watch: event type is set', typeof outer.object.type === 'string' && outer.object.type.length > 0, outer.object.type);
-  let inner = decode(Buffer.from(outer.object.object.raw, 'base64'), 'ConfigMap');
+  // A watch frame is not an object on the wire: Kubernetes negotiates a
+  // separate stream serializer, so the frame is a *bare* WatchEvent -- no
+  // magic prefix, no Unknown envelope. Framing it like an object put `k8s\0`
+  // at the front and client-go rejected the stream with
+  // "proto: WatchEvent: wiretype end group for non-group".
+  check('watch: frame is not object-framed',
+    frames[0].subarray(0, 4).toString('hex') !== '6b387300', frames[0].subarray(0, 4).toString('hex'));
+  let event;
+  try {
+    event = protobufTypes.lookup('WatchEvent').decode(frames[0]).toJSON();
+  } catch (e) {
+    fails.push(`watch: frame does not decode as a bare WatchEvent (${e.message})`);
+    return;
+  }
+  check('watch: event type is set', typeof event.type === 'string' && event.type.length > 0, event.type);
+  // The object inside keeps the full encoding: `object` is a RawExtension and
+  // its bytes are what the client hands to the object decoder, prefix and all.
+  let inner = decode(Buffer.from(event.object.raw, 'base64'), 'ConfigMap');
+  check('watch: nested object is object-framed', inner.typeMeta.kind === 'ConfigMap', inner.typeMeta);
   check('watch: nested object decodes', inner.object?.metadata?.name?.length > 0, inner.object?.metadata);
 }
 
