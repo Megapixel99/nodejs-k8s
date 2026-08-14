@@ -88,14 +88,30 @@ const mine = (list, name) => (list.body?.items || []).filter((i) => `${i.metadat
   check('scale subresource accepts a write', scale.status === 200, scale.status);
   check('scale reports the new count', scale.body?.spec?.replicas === 1, scale.body?.spec);
 
+  // A pod nobody owns must survive the deployment's cleanup. The owner query
+  // degenerated into "every pod without an owner" when the controller itself
+  // had no uid, which the raw-insert fallback in create() can produce.
+  let bystander = `${name}-bystander`;
+  await req('POST', pods, {
+    apiVersion: 'v1',
+    kind: 'Pod',
+    metadata: { name: bystander, namespace: 'default' },
+    spec: { containers: [{ name: 'c', image: 'busybox', command: ['sh', '-c', 'sleep 60'] }] },
+  });
+
   // Deleting the deployment must take its pods with it. The cleanup used to
   // bail out on a stale in-memory replica count, and the pod lookup passed its
   // options into find()'s projection slot, so the pods (and their containers)
   // were left running.
   await req('DELETE', `${deployments}/${name}`);
   await new Promise((resolve) => setTimeout(resolve, 4000));
-  let leftovers = mine(await req('GET', pods), name);
+  let remaining = await req('GET', pods);
+  let leftovers = mine(remaining, `${name}-1`);
   check('deleting the deployment deletes its pods', leftovers.length === 0, leftovers.map((p) => p.metadata.name));
+  check('a pod it does not own is left alone',
+    (remaining.body?.items || []).some((p) => p.metadata?.name === bystander),
+    (remaining.body?.items || []).map((p) => p.metadata?.name));
+  await req('DELETE', `${pods}/${bystander}`);
   for (const pod of leftovers) {
     await req('DELETE', `${pods}/${pod.metadata.name}`);
   }

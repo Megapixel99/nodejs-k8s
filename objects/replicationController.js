@@ -12,11 +12,20 @@ const { duration, isContainerRunning, age, randomBytes } = require('../functions
 // before the owner reference existed.
 function ownedPods(rc) {
   let escaped = `${rc.metadata.name}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  let byName = { 'metadata.name': { $regex: `^${escaped}-[0-9a-f]{6}$` } };
+  // Only ask about the owner when there is one to ask about. A controller
+  // stored without a uid — the raw-insert fallback in create() bypasses the
+  // schema defaults — turns `ownerReferences.uid: undefined` into a match for
+  // every pod that has no owner at all, so deleting it would take unrelated
+  // pods with it.
+  if (!rc.metadata?.uid) {
+    return { 'metadata.namespace': rc.metadata.namespace, ...byName };
+  }
   return {
     'metadata.namespace': rc.metadata.namespace,
     $or: [
       { 'metadata.ownerReferences.uid': rc.metadata.uid },
-      { 'metadata.name': { $regex: `^${escaped}-[0-9a-f]{6}$` } },
+      byName,
     ],
   };
 }
