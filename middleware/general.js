@@ -85,12 +85,42 @@ function readVarint(buf, start) {
 // Flatten a merge-patch body into Mongo dot-path $set/$unset so merges don't
 // replace entire nested objects (e.g., patching metadata.labels.foo must not
 // wipe metadata.labels.bar).
-function flattenMergePatch(body) {
+// Maps whose keys are label keys or file names, so they can contain dots and
+// cannot be addressed by a dot-path: flattening `{labels: {'app.k8s.io/x': 1}}`
+// produced `metadata.labels.app.k8s.io/x`, which mongo reads as four nested
+// fields and stores as `{app: {k8s: {'io/x': 1}}}`. These merge in memory
+// against the stored object and get written whole.
+function isOpaqueMapPath(path) {
+  return /(^|\.)(labels|annotations|nodeSelector|matchLabels|selector)$/.test(path)
+    || /^(data|binaryData|stringData)$/.test(path);
+}
+
+function valueAtDotPath(obj, path) {
+  return path.split('.').reduce((cursor, key) => (
+    cursor === undefined || cursor === null ? undefined : cursor[key]
+  ), obj);
+}
+
+function flattenMergePatch(body, current = {}) {
   let $set = {};
   let $unset = {};
   function walk(obj, prefix) {
     for (const [k, v] of Object.entries(obj || {})) {
       let path = prefix ? `${prefix}.${k}` : k;
+      if (v && typeof v === 'object' && !Array.isArray(v) && isOpaqueMapPath(path)
+          && !('matchLabels' in v) && !('matchExpressions' in v)) {
+        let existing = valueAtDotPath(current, path);
+        let merged = { ...(existing instanceof Map ? Object.fromEntries(existing) : (existing || {})) };
+        for (const [key, value] of Object.entries(v)) {
+          if (value === null) {
+            delete merged[key];
+          } else {
+            merged[key] = value;
+          }
+        }
+        $set[path] = merged;
+        continue;
+      }
       if (v === null) {
         $unset[path] = '';
       } else if (v && typeof v === 'object' && !Array.isArray(v)) {
@@ -111,7 +141,7 @@ function flattenMergePatch(body) {
 // the mongoose doc, returning a flattened Mongo-style update.
 function applyJsonPatch(ops, doc) {
   let work = applyJsonPatchToDoc(ops, doc);
-  return flattenMergePatch({ metadata: work.metadata, spec: work.spec, status: work.status, data: work.data, stringData: work.stringData, type: work.type, rules: work.rules });
+  return flattenMergePatch({ metadata: work.metadata, spec: work.spec, status: work.status, data: work.data, stringData: work.stringData, type: work.type, rules: work.rules }, doc);
 }
 
 function applyJsonPatchToDoc(ops, doc) {
@@ -310,8 +340,52 @@ function valueAtPath(obj, path) {
   ), obj);
 }
 
+// The label clauses genFindQuery emits are aggregation expressions, because a
+// dotted label key can't be addressed by a dot-path. Evaluate the handful of
+// shapes we generate rather than pretending a watch has no selector.
+function evaluateExpr(obj, expr) {
+  let resolve = (operand) => {
+    if (operand && typeof operand === 'object' && operand.$getField) {
+      let input = `${operand.$getField.input}`.replace(/^\$/, '');
+      let field = operand.$getField.field?.$literal ?? operand.$getField.field;
+      let container = valueAtPath(obj, input);
+      return container ? container[field] : undefined;
+    }
+    return operand;
+  };
+  let [operator] = Object.keys(expr || {});
+  let args = expr?.[operator];
+  switch (operator) {
+    case '$eq': {
+      let [a, b] = args.map(resolve);
+      return b === null ? (a === undefined || a === null) : `${a}` === `${b}`;
+    }
+    case '$ne': {
+      let [a, b] = args.map(resolve);
+      return b === null ? !(a === undefined || a === null) : `${a}` !== `${b}`;
+    }
+    case '$in': {
+      let [a, list] = args;
+      let value = resolve(a);
+      return (list || []).map(String).includes(`${value}`);
+    }
+    case '$not':
+      return !evaluateExpr(obj, args);
+    default:
+      return true;
+  }
+}
+
 function matchesQuery(obj, params) {
   for (const [path, condition] of Object.entries(params || {})) {
+    if (path === '$and') {
+      if (!(condition || []).every((clause) => matchesQuery(obj, clause))) return false;
+      continue;
+    }
+    if (path === '$expr') {
+      if (!evaluateExpr(obj, condition)) return false;
+      continue;
+    }
     let value = valueAtPath(obj, path);
     if (condition && typeof condition === 'object' && !Array.isArray(condition)) {
       if ('$ne' in condition && `${value}` === `${condition.$ne}`) return false;
@@ -712,16 +786,18 @@ module.exports = {
       // replaces the whole subdocument: an apply-patch carrying only
       // metadata.name + labels wiped namespace, uid and creationTimestamp off
       // the stored object, after which every namespaced lookup 404'd.
-      if (req.body && typeof req.body === 'object' && !Array.isArray(req.body)) {
-        update = flattenMergePatch(req.body);
-      }
-      if (Object.keys(update || {}).length > 0) {
+      if (Object.keys(req.body || {}).length > 0) {
         Model.findOne(query)
         .then((item) => {
           if (!item) return undefined;
           if (conflictsOnResourceVersion(Model, req, res, item)) return null;
           if (rejectsImmutableChange(Model, req, res, item)) return null;
           if (isDryRun(req)) return projectedWrite(item, req);
+          // Flattened here, not before the lookup: merging a map of dotted
+          // keys needs the stored value to merge into.
+          if (req.body && typeof req.body === 'object' && !Array.isArray(req.body)) {
+            update = flattenMergePatch(req.body, item.toJSON ? item.toJSON() : item);
+          }
           return item.patch(update, query);
         })
         .then((item) => {

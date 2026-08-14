@@ -54,10 +54,9 @@ const metadata = {
     type: String,
     default: "1"
   },
-  annotations: {
-    type: Map,
-    of: String
-  },
+  // Same as labels: annotation keys are dotted by convention
+  // (kubectl.kubernetes.io/last-applied-configuration, for one).
+  annotations: Schema.Types.Mixed,
   deletionGracePeriodSeconds: Number,
   deletionTimestamp: {
     type: String,
@@ -84,10 +83,11 @@ const metadata = {
   }],
   ownerReferences: [ownerReference],
   selfLink: String,
-  labels: {
-    type: Map,
-    of: String
-  },
+  // Mixed, not Map: mongoose rejects Map keys containing dots, and it does it
+  // by dropping the whole map rather than erroring. Every Kubernetes object
+  // labelled the conventional way — app.kubernetes.io/name and friends —
+  // stored no labels at all, so nothing matched a label selector.
+  labels: Schema.Types.Mixed,
 };
 
 const glusterfs = {
@@ -110,10 +110,8 @@ const labelSelector = {
       default: undefined
     },
   }],
-  matchLabels: {
-    type: Map,
-    of: String,
-  },
+  // Label keys again — dotted, so Map drops them.
+  matchLabels: Schema.Types.Mixed,
 }
 
 const objectFieldSelector = {
@@ -1001,10 +999,8 @@ const pod = {
     }],
     initContainers: [container],
     nodeName: String,
-    nodeSelector: {
-      type: Map,
-      of: String,
-    },
+    // Node selectors are matched against node labels, which are dotted.
+    nodeSelector: Schema.Types.Mixed,
     os: {
       name: String,
     },
@@ -1097,10 +1093,7 @@ const pod = {
           operator: String,
           values: [String],
         }],
-        matchLabels: {
-          type: Map,
-          of: String,
-        },
+        matchLabels: Schema.Types.Mixed,
       },
       matchLabelKeys: [String],
       maxSkew: {
@@ -1571,15 +1564,11 @@ const secretSchema = Schema({
     default: 'Secret',
   },
   metadata,
-  data: {
-    type: Map,
-    of: String
-  },
+  // Mixed, not Map: secret keys are file names and dotted identifiers, and a
+  // mongoose Map drops any key containing a dot — the whole map, silently.
+  data: Schema.Types.Mixed,
   immutable: Boolean,
-  stringData: {
-    type: Map,
-    of: String
-  },
+  stringData: Schema.Types.Mixed,
   type: {
     type: String,
     default: "Opaque",
@@ -1606,15 +1595,12 @@ const configMapSchema = Schema({
     default: 'ConfigMap',
   },
   metadata,
-  data: {
-    type: Map,
-    of: String
-  },
+  // ConfigMap keys are file names as often as not — "app.properties",
+  // "nginx.conf" — and a Map silently dropped every one of them, storing a
+  // ConfigMap with no data at all.
+  data: Schema.Types.Mixed,
   immutable: Boolean,
-  binaryData: {
-    type: Map,
-    of: model.Binary
-  }
+  binaryData: Schema.Types.Mixed
 })
 
 const endpointsSchema = Schema({

@@ -594,21 +594,28 @@ class K8Object {
       }
     }
     if (reqQuery.labelSelector) {
+      // A label key is dotted by convention, and a dotted key can't be
+      // addressed by a dot-path — `metadata.labels.app.kubernetes.io/name`
+      // reads as four nested fields. $getField names the field literally.
+      let clauses = [];
+      let label = (key) => ({ $getField: { field: { $literal: key }, input: '$metadata.labels' } });
       for (const [key, op, value] of parseSelector(reqQuery.labelSelector)) {
-        let path = `metadata.labels.${key}`;
         if (op === '=') {
-          params[path] = value;
+          clauses.push({ $expr: { $eq: [label(key), value] } });
         } else if (op === '!=') {
-          params[path] = { $ne: value };
+          clauses.push({ $expr: { $ne: [label(key), value] } });
         } else if (op === 'in') {
-          params[path] = { $in: value };
+          clauses.push({ $expr: { $in: [label(key), value] } });
         } else if (op === 'notin') {
-          params[path] = { $nin: value };
+          clauses.push({ $expr: { $not: { $in: [label(key), value] } } });
         } else if (op === 'exists') {
-          params[path] = { $exists: true };
+          clauses.push({ $expr: { $ne: [label(key), null] } });
         } else if (op === '!exists') {
-          params[path] = { $exists: false };
+          clauses.push({ $expr: { $eq: [label(key), null] } });
         }
+      }
+      if (clauses.length) {
+        params.$and = [...(params.$and || []), ...clauses];
       }
     }
     let options = {};
