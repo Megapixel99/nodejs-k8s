@@ -3,3 +3,6 @@
 _artifacts
 _rundir
 /volumes
+
+# Raft log, snapshots and term state for the local store.
+.store/

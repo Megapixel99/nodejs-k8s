@@ -14,7 +14,8 @@
     "test:rv": "node ./test/resource-version.js",
     "test:workload": "node ./test/workload.js",
     "test:pods": "node ./test/pod-features.js",
-    "test:sched": "node ./test/scheduling.js"
+    "test:sched": "node ./test/scheduling.js",
+    "test:store": "node ./test/store.js"
   },
   "author": "",
   "license": "ISC",

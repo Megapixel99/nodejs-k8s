@@ -78,6 +78,7 @@ const Object = require('./objects/object.js');
 const nodeCleanup = require('node-cleanup');
 const scheduler = require('./controllers/scheduler.js');
 const nodes = require('./controllers/nodes.js');
+const store = require('./store/index.js');
 
 let dbNameIndex = process.argv.indexOf('-dbName');
 
@@ -262,9 +263,22 @@ app.use((err, req, res, next) => {
 app.listen(8080);
 app.listen(6443);
 
-// Bring up the simulated fleet before the scheduler starts looking for
-// somewhere to put things.
-nodes.ensure()
+// The store hands out resourceVersions, so it comes up before anything that
+// writes an object. If it can't -- a taken port, an unreadable directory --
+// the server keeps working off the database counter rather than refusing to
+// boot, and says which one it ended up on, because "which thing is ordering my
+// writes" is not something to leave ambiguous.
+store.start()
+  .then(() => Object.adoptResourceVersion())
+  .then((revision) => {
+    if (store.get()) {
+      console.log(`store: raft-backed, resourceVersion continues from ${revision}`);
+    }
+  })
+  .catch((err) => console.warn('[store]', err?.message || err))
+  // Bring up the simulated fleet before the scheduler starts looking for
+  // somewhere to put things.
+  .then(() => nodes.ensure())
   .catch((err) => console.warn('[nodes]', err?.message || err))
   .finally(() => scheduler.start());
 

@@ -3,6 +3,7 @@ const EventEmitter = require('events');
 const Status = require('./status.js');
 const { ResourceVersion } = require('../database/models.js');
 const { busFor, keyFor } = require('./bus.js');
+const store = require('../store/index.js');
 
 // Parse a label or field selector into [key, op, value] triples. Splitting the
 // whole string on ',' is wrong for the set-based forms — `app in (x,y)` becomes
@@ -542,7 +543,19 @@ class K8Object {
   // object's own JSON, recomputed on every read: two unrelated objects could
   // not be ordered against each other, a client couldn't tell newer from
   // older, and there was nothing for a watch to resume from.
+  //
+  // When the store is running, the number *is* the store's revision, the same
+  // way a real API server's resourceVersion is etcd's. That is worth more than
+  // it sounds: the revision is assigned by the Raft log, so two writes racing
+  // on different objects are still ordered against each other by something
+  // that survives a restart and that every replica agrees on. Bumping a
+  // counter in a database gives a number; this gives a position.
   static nextResourceVersion() {
+    let node = store.get();
+    if (node) {
+      return node.put('/registry/.meta/resourceVersion', `${Date.now()}`)
+        .then((result) => `${result.revision}`);
+    }
     return ResourceVersion.findOneAndUpdate(
       { _id: 'global' },
       { $inc: { value: 1 } },
@@ -550,10 +563,31 @@ class K8Object {
     ).then((doc) => `${doc.value}`);
   }
 
+  // The store starts empty on a keyspace whose versions were handed out by the
+  // old counter, so it has to adopt the highest number already issued before
+  // serving any: restarting the sequence would reissue versions clients have
+  // seen, and a watch resuming from one of them would skip everything between.
+  static async adoptResourceVersion() {
+    let node = store.get();
+    if (!node) {
+      return null;
+    }
+    let doc = await ResourceVersion.findOne({ _id: 'global' }).catch(() => null);
+    let issued = Number(doc?.value ?? 0);
+    if (issued > node.store.revision) {
+      await node.seed(issued);
+    }
+    return `${node.store.revision}`;
+  }
+
   // The version as of now, without consuming one. This is what a list reports:
   // "these are the contents at version N", so a watch started at N doesn't
   // replay what the list already returned.
   static currentResourceVersion() {
+    let node = store.get();
+    if (node) {
+      return Promise.resolve(`${node.store.revision}`);
+    }
     return ResourceVersion.findOne({ _id: 'global' })
       .then((doc) => `${doc?.value ?? 0}`);
   }
