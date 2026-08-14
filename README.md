@@ -1,11 +1,15 @@
-# k8s-sim — a Kubernetes API-compatible sandbox in Node.js
+# Kubernetes in Node.js
+
+> A from-scratch reimplementation of Kubernetes' core APIs in pure Node.js — compatible with the real `kubectl` CLI and standard Kubernetes YAML.
 
 [![tests](https://github.com/Megapixel99/nodejs-k8s/actions/workflows/tests.yml/badge.svg)](https://github.com/Megapixel99/nodejs-k8s/actions/workflows/tests.yml)
 
-A simulator of the Kubernetes API. Speaks the same HTTP/JSON/protobuf surface
-as a real `kube-apiserver`, schedules pods onto a fleet of simulated nodes,
-orders its writes through a Raft log behind an etcd-compatible store, keeps
-objects in MongoDB, and runs "pods" as sibling Docker containers on the host.
+An attempt to recreate the core functionality of
+[Kubernetes v1.29](https://v1-29.docs.kubernetes.io/) in Node.js. It speaks the
+same HTTP/JSON/protobuf surface as a real `kube-apiserver`, schedules pods onto
+a fleet of simulated nodes, orders its writes through a Raft log behind an
+etcd-compatible store, keeps objects in MongoDB, and runs "pods" as sibling
+Docker containers on the host.
 
 **What it's for.** Learning `kubectl`, testing operators or controllers
 against a lightweight fake apiserver, and quick demos without a real cluster
@@ -16,8 +20,11 @@ limitations](#scope--limitations) for the honest list of gaps.
 
 ## Quick start
 
-Prerequisites: Node.js ≥ 18, Docker Desktop (or a reachable `docker` daemon),
-and `kubectl`.
+Prerequisites: [Node.js](https://nodejs.org) ≥ 20,
+[Docker Engine](https://docs.docker.com/engine/install/) ≥ 25.0.3 (Docker
+Desktop, or any reachable `docker` daemon), and
+[`kubectl`](https://kubernetes.io/docs/tasks/tools/) — recommended, though the
+API is plain HTTP and works from anything.
 
 ```bash
 npm run setup    # installs deps, brings up MongoDB, builds helper images, writes ./kubeconfig
@@ -35,6 +42,9 @@ kubectl get pods -A
 
 `npm run setup` writes `./kubeconfig`; it isn't checked in, since it is
 generated.
+
+`npm run setup` also brings up MongoDB in Docker. To point at your own instance
+instead, set `DB_URL` in a `.env` file (see `.env.example`) and skip that part.
 
 The server logs one line per request — method, path, status, duration. When you
 need to see what a client actually sent, `DEBUG_BODIES=1 npm start` adds the
@@ -307,6 +317,12 @@ scripts/
   setup.sh                one-command setup (npm run setup)
   start.sh                start server with mongo up (npm start)
 ```
+
+## Contributing
+
+Open an issue or a PR if something is broken. `npm run test:all` is the fastest
+way to find out whether a change holds up — it needs the server and Docker
+running for the full set, and nothing at all for `portability` and `store`.
 
 ## License
 

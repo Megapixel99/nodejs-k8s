@@ -32,8 +32,8 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 NODE_MAJOR=$(node -e 'console.log(process.versions.node.split(".")[0])')
-if (( NODE_MAJOR < 18 )); then
-  err "Node.js 18+ required; you have $(node --version)"
+if (( NODE_MAJOR < 20 )); then
+  err "Node.js 20+ required; you have $(node --version)"
   exit 1
 fi
 ok "prerequisites present"
