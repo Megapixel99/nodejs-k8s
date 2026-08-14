@@ -199,12 +199,65 @@ async function testWatchFraming() {
   check('watch: nested object decodes', inner.object?.metadata?.name?.length > 0, inner.object?.metadata);
 }
 
+// Creating an object the way client-go does: protobuf in, protobuf out.
+//
+// proto3 has no absent scalar -- every field the client left unset decodes as
+// its zero value -- so a Pod arrives carrying metadata.uid: "" and
+// status.phase: "". Those read as values, which meant the schema defaults
+// never fired: a protobuf-created pod got no uid, every status write keyed on
+// uid went nowhere, and the scheduler skipped it for having no identity. It
+// sat inert forever while the identical pod created as JSON ran fine. The
+// upstream e2e suite creates every pod this way, which is why nothing in it
+// could get past the first spec.
+async function testProtoCreateDefaults() {
+  let name = `proto-create-${Date.now().toString(36)}`;
+  let pod = {
+    apiVersion: 'v1',
+    kind: 'Pod',
+    metadata: { name, namespace: 'default' },
+    spec: {
+      containers: [{ name: 'c', image: 'busybox', command: ['sh', '-c', 'sleep 30'] }],
+      restartPolicy: 'Never',
+    },
+  };
+  let podType = protobufTypes.lookup('Pod');
+  let raw = podType.encode(podType.fromObject(pod)).finish();
+  let envelope = protobufTypes.lookup('Unknown').encode({
+    typeMeta: { kind: 'Pod', apiVersion: 'v1' }, raw, contentEncoding: '', contentType: '',
+  }).finish();
+
+  let res = await fetch(`${base}/api/v1/namespaces/default/pods`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/vnd.kubernetes.protobuf', Accept: 'application/json' },
+    body: Buffer.concat([Buffer.from([107, 56, 115, 0]), envelope]),
+  });
+  let created = await res.json();
+  check('a protobuf create is accepted', res.status === 201, res.status);
+  check('a protobuf-created object gets a uid', /^[0-9a-f-]{36}$/.test(`${created?.metadata?.uid}`), created?.metadata?.uid);
+  check('a protobuf-created pod gets a phase', Boolean(created?.status?.phase), created?.status?.phase);
+  check('a protobuf create keeps what the client sent',
+    created?.spec?.containers?.[0]?.image === 'busybox', created?.spec?.containers?.[0]);
+
+  // Identity is what the rest of the lifecycle hangs off: without a uid the
+  // scheduler leaves the pod alone and it never runs.
+  let placed;
+  let deadline = Date.now() + 15000;
+  while (Date.now() < deadline) {
+    placed = await fetch(`${base}/api/v1/namespaces/default/pods/${name}`).then((r) => r.json());
+    if (placed?.spec?.nodeName) break;
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
+  check('a protobuf-created pod gets scheduled', Boolean(placed?.spec?.nodeName), placed?.spec?.nodeName);
+  await fetch(`${base}/api/v1/namespaces/default/pods/${name}`, { method: 'DELETE' });
+}
+
 (async () => {
   testEvent();
   testEventList();
   testBareArrayList();
   await testWire();
   await testWatchFraming();
+  await testProtoCreateDefaults();
 
   console.log('---FAILS---');
   fails.forEach((f) => console.log(f));

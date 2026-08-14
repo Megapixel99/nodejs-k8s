@@ -4,6 +4,33 @@ const K8Object = require('../objects/object.js');
 // values ({string: "..."}) back to the JSON scalars Mongoose / our JSON
 // handlers expect. Protobuf decoding surfaces them as objects but the schema
 // (and the test client) round-trips them as strings.
+// proto3 has no concept of an absent scalar: every field a client left unset
+// decodes as its zero value, so a Pod created by client-go arrives carrying
+// `metadata.uid: ""`, `status.phase: ""`, `spec.schedulerName: ""` and dozens
+// more. Those look like values, which means the schema's defaults never fire --
+// so a protobuf-created pod got no uid, and every write keyed on uid (its
+// phase, its conditions) went nowhere, and the scheduler skipped it for having
+// no identity. A pod that JSON clients got right sat inert for client-go ones.
+//
+// Empty strings are dropped so the defaults apply. Empty arrays are kept: on an
+// update, `[]` is how a client clears a list, and that is a real instruction.
+function stripProtoZeroStrings(v) {
+  if (Array.isArray(v)) {
+    return v.map(stripProtoZeroStrings);
+  }
+  if (v && typeof v === 'object' && !(v instanceof Date)) {
+    let out = {};
+    for (const [key, value] of Object.entries(v)) {
+      if (value === '') {
+        continue;
+      }
+      out[key] = stripProtoZeroStrings(value);
+    }
+    return out;
+  }
+  return v;
+}
+
 function normalizeDecoded(v) {
   if (v === null || v === undefined) return v;
   if (Array.isArray(v)) return v.map(normalizeDecoded);
@@ -78,7 +105,7 @@ module.exports = {
     let { typeMeta, raw } = unknownType.decode(b);
     let dataType = protobufTypes.lookup(operationId);
     let dataInfo = dataType.decode(raw);
-    data = normalizeDecoded({ ...typeMeta, ...dataInfo });
+    data = stripProtoZeroStrings(normalizeDecoded({ ...typeMeta, ...dataInfo }));
     return data;
   },
   prepareForProto,
