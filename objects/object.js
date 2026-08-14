@@ -241,7 +241,10 @@ class K8Object {
     if (!config.metadata) {
       return Promise.reject(this.unprocessableContentStatus());
     }
-    K8Object.applyGenerateName(config.metadata);
+    // `this`, not K8Object: called on the base class the helper sees
+    // K8Object.kind (undefined), so the nameless review kinds never matched
+    // and an internal create with empty metadata was rejected.
+    this.applyGenerateName(config.metadata);
     if (!config.metadata.name) {
       return Promise.reject(this.unprocessableContentStatus(
         this.kind, undefined, undefined,
@@ -490,9 +493,14 @@ class K8Object {
   }
 
   static listByReq (reqQuery = {}, reqParams = {}, queryOptions = {}) {
-    let q = this.genFindQuery(reqQuery, reqParams);
+    // Passing an empty queryOptions straight through as findAllSortedByReq's
+    // sortOptions overrode its default, so the list path ran with no sort at
+    // all — and the _id tie-break that makes offset paging stable never
+    // applied on the one path that pages.
+    let sortOptions = Object.keys(queryOptions).length > 0 ? queryOptions : { 'created_at': 1 };
+    let q = this.genFindQuery(reqQuery, reqParams, sortOptions);
     return Promise.all([
-      this.findAllSortedByReq(reqQuery, reqParams, queryOptions),
+      this.findAllSortedByReq(reqQuery, reqParams, sortOptions),
       q.options.limit ? this.Model.countDocuments(q.params) : Promise.resolve(undefined),
     ]).then(([arr, total]) => this.list({
       ...queryOptions,

@@ -201,24 +201,37 @@ function conflictsOnResourceVersion(Model, req, res, item) {
 // metadata is frozen, and the flag itself can't be cleared. Nothing enforced
 // it on the patch path, so an immutable ConfigMap accepted data changes and
 // answered 200.
+function sameValue(a, b) {
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+}
+
+function canonical(value) {
+  if (Array.isArray(value)) {
+    return value.map(canonical);
+  }
+  if (value && typeof value === 'object') {
+    return Object.keys(value).sort().reduce((out, key) => {
+      out[key] = canonical(value[key]);
+      return out;
+    }, {});
+  }
+  return value;
+}
+
 function rejectsImmutableChange(Model, req, res, item) {
   let stored = item?.toJSON ? item.toJSON() : item;
   if (stored?.immutable !== true) {
     return false;
   }
-  let body = req.body;
-  let touched = [];
-  if (Array.isArray(body)) {
-    // RFC 6902: any op outside /metadata changes the frozen part.
-    touched = body
-      .map((op) => `${op?.path || ''}`)
-      .filter((path) => path && !path.startsWith('/metadata'));
-  } else if (body && typeof body === 'object') {
-    touched = Object.keys(body).filter((key) => !['metadata', 'apiVersion', 'kind'].includes(key));
-    if (body.immutable === true) {
-      touched = touched.filter((key) => key !== 'immutable');
-    }
-  }
+  // Compare what the write would leave behind against what is there now.
+  // Listing the fields the body mentions isn't the same question: re-applying
+  // an object's own contents mentions `data` and changes nothing, and
+  // Kubernetes accepts it. A PUT replaces, so a field the body omits counts as
+  // a removal; a patch merges, so compare the merged result.
+  let projected = req.method === 'PUT' ? { ...(req.body || {}) } : projectedWrite(item, req);
+  let frozen = new Set([...Object.keys(stored || {}), ...Object.keys(projected || {})]
+    .filter((key) => !['metadata', 'apiVersion', 'kind'].includes(key)));
+  let touched = [...frozen].filter((key) => !sameValue(stored?.[key], projected?.[key]));
   if (!touched.length) {
     return false;
   }
@@ -285,6 +298,32 @@ function mergeDeep(target, source) {
     }
   }
   return out;
+}
+
+// A watch is scoped by the same namespace and selectors as the equivalent
+// list, but live events arrive on a process-wide per-kind bus that knows
+// nothing about the request. Without re-checking them here, a watch on one
+// namespace received every object of that kind in the cluster.
+function valueAtPath(obj, path) {
+  return path.split('.').reduce((cursor, key) => (
+    cursor === undefined || cursor === null ? undefined : cursor[key]
+  ), obj);
+}
+
+function matchesQuery(obj, params) {
+  for (const [path, condition] of Object.entries(params || {})) {
+    let value = valueAtPath(obj, path);
+    if (condition && typeof condition === 'object' && !Array.isArray(condition)) {
+      if ('$ne' in condition && `${value}` === `${condition.$ne}`) return false;
+      if ('$in' in condition && !condition.$in.map(String).includes(`${value}`)) return false;
+      if ('$nin' in condition && condition.$nin.map(String).includes(`${value}`)) return false;
+      if ('$exists' in condition && (value !== undefined && value !== null) !== condition.$exists) return false;
+      if ('$regex' in condition && !new RegExp(condition.$regex).test(`${value}`)) return false;
+      continue;
+    }
+    if (`${value}` !== `${condition}`) return false;
+  }
+  return true;
 }
 
 // `patch` resolves the raw mongo document, whose toJSON carries `_id`/`__v` and
@@ -368,6 +407,11 @@ module.exports = {
           if (conflictsOnResourceVersion(Model, req, res, item)) {
             return undefined;
           }
+          if (isDryRun(req)) {
+            let projected = item.toJSON ? item.toJSON() : { ...item };
+            projected.spec = { ...(projected.spec || {}), replicas: Number(replicas) };
+            return negotiate(req, res.status(200), toScale(projected), 'Scale');
+          }
           return item.patch({ $set: { 'spec.replicas': Number(replicas) } }, query)
             .then((updated) => negotiate(req, res.status(200), toScale(asApiObject(Model, updated)), 'Scale'));
         })
@@ -415,8 +459,14 @@ module.exports = {
         // response headers that never came.
         res.flushHeaders();
         let toJson = (x) => (x && typeof x.toJSON === 'function') ? x.toJSON() : x;
+        // The scope of this watch, as mongo query params — namespace from the
+        // URL plus any label/field selector.
+        let scope = Model.genFindQuery(req.query || {}, req.params || {}).params || {};
         let pushToEventStream = (elem, eventType) => {
           let asJson = toJson(elem);
+          if (!matchesQuery(asJson, scope)) {
+            return;
+          }
           if (req.headers?.accept?.includes('protobuf')) {
             // Same fallback as the non-watch path: without it a group with no
             // operationId produced a protobuf stream that never emitted an
@@ -596,7 +646,9 @@ module.exports = {
           if (item === null) return undefined;
           if (item) {
             res.status(200);
-            res.data = (item.toJSON ? item.toJSON() : item);
+            // The raw mongoose document carries _id/__v; every other write
+            // path goes through asApiObject for exactly this reason.
+            res.data = asApiObject(Model, item);
             return next();
           }
           return sendNotFound(Model, req, res);
@@ -710,9 +762,18 @@ module.exports = {
       })
       .then((pair) => {
         if (pair) {
-          let [item] = pair;
+          let [item, result] = pair;
           res.status(200);
-          res.data = Model.successfulStatus(item?.kind?.toLowerCase(), item?.metadata?.name, item?.metadata?.uid);
+          // A finalizer holds the object: `delete` only stamped
+          // deletionTimestamp. Reporting Success tells the client it is gone
+          // when it is still there, so answer with the object instead — which
+          // is what Kubernetes returns while a deletion is pending.
+          let plain = result?.toJSON ? result.toJSON() : result;
+          let pending = plain?.metadata?.deletionTimestamp
+            && (plain?.metadata?.finalizers || []).length > 0;
+          res.data = pending
+            ? asApiObject(Model, result)
+            : Model.successfulStatus(item?.kind?.toLowerCase(), item?.metadata?.name, item?.metadata?.uid);
           return next();
         }
         return sendNotFound(Model, req, res);

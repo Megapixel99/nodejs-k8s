@@ -94,6 +94,57 @@ function checkTable(label, res) {
   }
 }
 
+// Open a watch scoped to `default`, create the same kind in another namespace,
+// and report anything that arrives from outside the watched namespace.
+async function watchLeaksOtherNamespace(resource) {
+  let other = 'wire-other-ns';
+  await req('POST', '/api/v1/namespaces', {
+    body: { apiVersion: 'v1', kind: 'Namespace', metadata: { name: other } },
+  });
+  let controller = new AbortController();
+  let foreign = null;
+  let res;
+  try {
+    res = await fetch(`${base}${resource.path}?watch=true`, { signal: controller.signal });
+  } catch (e) {
+    return null;
+  }
+  let reader = res.body.getReader();
+  let buffer = '';
+  let pump = (async () => {
+    try {
+      while (true) {
+        let { value, done } = await reader.read();
+        if (done) break;
+        buffer += Buffer.from(value).toString();
+        let index;
+        while ((index = buffer.indexOf('\n')) >= 0) {
+          let line = buffer.slice(0, index);
+          buffer = buffer.slice(index + 1);
+          if (!line.trim()) continue;
+          try {
+            let event = JSON.parse(line);
+            if (event.object?.metadata?.namespace === other) {
+              foreign = event.object.metadata.name;
+            }
+          } catch (e) { /* partial frame */ }
+        }
+      }
+    } catch (e) { /* aborted */ }
+  })();
+
+  let foreignPath = resource.path.replace(/\/namespaces\/[^/]+/, `/namespaces/${other}`);
+  let name = `${resource.body.metadata.name}-foreign`;
+  await req('POST', foreignPath, {
+    body: { ...resource.body, metadata: { ...resource.body.metadata, name, namespace: other } },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 700));
+  controller.abort();
+  await pump;
+  await req('DELETE', `${foreignPath}/${name}`);
+  return foreign;
+}
+
 (async () => {
   for (const resource of resources) {
     let kind = resource.body.kind;
@@ -219,6 +270,15 @@ function checkTable(label, res) {
       let shouldStillExist = await req('GET', single);
       if (shouldStillExist.status !== 200) {
         fails.push(`DELETE ${single}?dryRun=All: object was actually deleted`);
+      }
+    }
+
+    // A namespaced watch must not receive objects from other namespaces. Live
+    // events come off a process-wide bus that knows nothing about the request.
+    if (!CREATE_ONLY.has(kind) && resource.path.includes('/namespaces/')) {
+      let leaked = await watchLeaksOtherNamespace(resource);
+      if (leaked) {
+        fails.push(`WATCH ${resource.path}: delivered ${leaked} from another namespace`);
       }
     }
 
