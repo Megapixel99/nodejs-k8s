@@ -79,6 +79,7 @@ const nodeCleanup = require('node-cleanup');
 const scheduler = require('./controllers/scheduler.js');
 const nodes = require('./controllers/nodes.js');
 const endpointsController = require('./controllers/endpoints.js');
+const replicationControllers = require('./controllers/replicationcontrollers.js');
 const store = require('./store/index.js');
 
 let dbNameIndex = process.argv.indexOf('-dbName');
@@ -307,6 +308,7 @@ store.start()
   .finally(() => {
     scheduler.start();
     endpointsController.start();
+    replicationControllers.start();
   });
 
 nodeCleanup(async (exitCode, signal) => {

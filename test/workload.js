@@ -121,6 +121,59 @@ const mine = (list, name) => (list.body?.items || []).filter((i) => `${i.metadat
     await req('DELETE', `${pods}/${pod.metadata.name}`);
   }
 
+  // A ReplicationController on its own. Pods used to exist only because the
+  // Deployment path asked its RC to make them, so the oldest workload API in
+  // Kubernetes worked purely as a Deployment's implementation detail: `kubectl
+  // create -f rc.yaml` stored the object, spec.replicas said 2, and no pod
+  // ever appeared. Anything driving an RC directly waited forever on replicas
+  // that were never coming.
+  let rcName = `standalone-rc-${Date.now().toString(36)}`;
+  await req('POST', `/api/v1/namespaces/default/replicationcontrollers`, {
+    apiVersion: 'v1',
+    kind: 'ReplicationController',
+    metadata: { name: rcName, namespace: 'default' },
+    spec: {
+      replicas: 2,
+      selector: { app: rcName },
+      template: {
+        metadata: { name: rcName, labels: { app: rcName } },
+        spec: { containers: [{ name: 'c', image: 'busybox', command: ['sh', '-c', 'sleep 60'] }] },
+      },
+    },
+  });
+  let rcPods = [];
+  let rcState;
+  let rcDeadline = Date.now() + 25000;
+  while (Date.now() < rcDeadline) {
+    rcState = (await req('GET', `/api/v1/namespaces/default/replicationcontrollers/${rcName}`)).body;
+    rcPods = ((await req('GET', pods)).body?.items || []).filter((p) => p.metadata?.name?.startsWith(rcName));
+    if (rcPods.length === 2 && rcState?.status?.replicas === 2) break;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  check('a standalone RC creates its pods', rcPods.length === 2, rcPods.map((p) => p.metadata.name));
+  // status.replicas is what a client polls while waiting for an RC to come up;
+  // an RC that never updates it reads as one that never started.
+  check('a standalone RC reports its replica count', rcState?.status?.replicas === 2, rcState?.status);
+  check('the pods are owned by the RC',
+    rcPods.every((p) => (p.metadata?.ownerReferences || []).some((r) => r.kind === 'ReplicationController' && r.name === rcName)),
+    rcPods.map((p) => p.metadata?.ownerReferences));
+
+  await fetch(`${base}/api/v1/namespaces/default/replicationcontrollers/${rcName}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/merge-patch+json' },
+    body: JSON.stringify({ spec: { replicas: 1 } }),
+  });
+  let scaledPods = rcPods;
+  let scaleDeadline = Date.now() + 25000;
+  while (Date.now() < scaleDeadline) {
+    scaledPods = ((await req('GET', pods)).body?.items || [])
+      .filter((p) => p.metadata?.name?.startsWith(rcName) && !p.metadata?.deletionTimestamp);
+    if (scaledPods.length === 1) break;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  check('scaling an RC down removes the extra pod', scaledPods.length === 1, scaledPods.map((p) => p.metadata.name));
+  await req('DELETE', `/api/v1/namespaces/default/replicationcontrollers/${rcName}`);
+
   console.log('---FAILS---');
   fails.forEach((f) => console.log(f));
   console.log(`\n${fails.length} fails, ${passes} passes.`);
