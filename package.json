@@ -15,7 +15,9 @@
     "test:workload": "node ./test/workload.js",
     "test:pods": "node ./test/pod-features.js",
     "test:sched": "node ./test/scheduling.js",
-    "test:store": "node ./test/store.js"
+    "test:store": "node ./test/store.js",
+    "test:services": "node ./test/services.js",
+    "test:all": "node ./test/all.js"
   },
   "author": "",
   "license": "ISC",

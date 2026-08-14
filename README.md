@@ -42,22 +42,23 @@ docker rm -f $(docker ps -aq --filter "label=k8s-sim") 2>/dev/null || true
 ## How it works
 
 ```
-┌──────────────┐      HTTP (kube API)      ┌──────────────────────────┐
-│   kubectl    │ ─────────────────────────▶│ Express on :8080         │
-│  (your CLI)  │                            │  routes/  middleware/    │
-└──────────────┘                            │  objects/                │
-                                            └───┬──────────────┬───────┘
-                                                │              │
-                                   Mongoose ▼   │        ▼         ▼ docker CLI
-                                     ┌──────────┴┐  ┌──────────┐ ┌─────────────┐
-                                     │ Mongo     │  │ store/   │ │ Docker (host│
-                                     │ (objects) │  │ MVCC +   │ │ daemon)     │
-                                     │           │  │ Raft log │ │ — spawns    │
-                                     │           │  │ :2379    │ │   "pods"    │
-                                     └───────────┘  └──────────┘ └─────────────┘
-                                                          ▲
-                                                          │ etcd v3 JSON API
-                                                       curl / your tooling
+┌──────────────┐      HTTP (kube API)     ┌───────────────────────────┐
+│   kubectl    │ ────────────────────────▶│ Express on :8080          │
+│  (your CLI)  │                          │  routes/ middleware/      │
+└──────────────┘                          │  objects/ controllers/    │
+                                          └──┬───────────┬──────────┬─┘
+                                             │           │          │
+                                    Mongoose │           │          │ docker CLI
+                                             ▼           ▼          ▼
+                                    ┌───────────┐ ┌──────────┐ ┌─────────────┐
+                                    │ Mongo     │ │ store/   │ │ Docker (host│
+                                    │ (objects) │ │ MVCC +   │ │ daemon)     │
+                                    │           │ │ Raft log │ │ — spawns    │
+                                    │           │ │ :2379    │ │   "pods"    │
+                                    └───────────┘ └──────────┘ └─────────────┘
+                                                       ▲
+                                                       │ etcd v3 JSON API
+                                                  curl / your tooling
 ```
 
 - Every API resource has an object class in `objects/`, a Mongoose schema in
@@ -68,6 +69,9 @@ docker rm -f $(docker ps -aq --filter "label=k8s-sim") 2>/dev/null || true
   clients see `ADDED`/`MODIFIED`/`DELETED` events in real time.
 - `controllers/nodes.js` creates the simulated fleet at boot; `sim-node-1..N`
   carry capacity, allocatable and the usual topology labels.
+- `controllers/endpoints.js` keeps each Service's `Endpoints` in step with the
+  pods its selector matches. Level-triggered: it recomputes the set rather than
+  patching it incrementally.
 - `controllers/scheduler.js` places pods on it: filter (readiness, cordons,
   taints, `nodeSelector`, node affinity, cpu/memory/pod fit) then score
   (least-allocated, plus preferred-affinity weight). It's the only controller
@@ -77,7 +81,9 @@ docker rm -f $(docker ps -aq --filter "label=k8s-sim") 2>/dev/null || true
   `resourceVersion` is that store's revision, the way a real API server's is
   etcd's. It also serves etcd's v3 JSON API on `:2379`.
 - Pods are real Docker containers spawned as siblings on the host Docker
-  daemon, named `<generateName>-<containerName>`. Volume mounts for
+  daemon, named `<generateName>-<containerName>`. Containers start only once
+  the pod is bound to a node, so a pod the scheduler refused doesn't quietly
+  run anyway. Volume mounts for
   ConfigMaps are bind-mounted from `./volumes/<ns>_<name>/`.
 
 ### The store
@@ -120,9 +126,15 @@ API-level (verified against `kubetest2` Conformance):
 - Pod create with `env`, `envFrom: configMapRef` / `secretRef`, `command`,
   `args`, and ConfigMap `volumeMounts`. Phase transitions
   `Pending → Running → Succeeded/Failed` via `docker wait`.
-- Init containers (sequential, wait-for-exit-0)
+- Init containers: sequential, each with its own `command`, reported in
+  `status.initContainerStatuses` (waiting → running → terminated with an exit
+  code), and a non-zero exit fails the pod without starting the main
+  containers
 - Liveness / readiness / startup probes (exec, httpGet, tcpSocket)
-- Services with a synthetic ClusterIP (no real routing, see below)
+- Services with a synthetic ClusterIP (no real routing, see below), and the
+  `Endpoints` behind them: a Service with a selector gets its matching pods,
+  split into ready and not-ready addresses, with `targetPort` resolved to the
+  container's port. A Service with no selector is left alone for you to fill in
 - Watch streams over HTTP with newline-delimited JSON, plus protobuf support
   for clients that negotiate it (`client-go`'s default; `kubectl` asks for JSON)
 - Scheduling onto simulated nodes, with the refusals a controller has to
@@ -147,60 +159,45 @@ API-level (verified against `kubetest2` Conformance):
   Namespace, Event) have lifecycle behavior; the rest are API stubs —
   they round-trip correctly but don't have a controller.
 
-Smoke test covering all 42 wired resources:
+## Tests
+
+Everything, in one command. Suites run in their own processes, and the table is
+the whole output unless something fails:
 
 ```bash
-npm run test:smoke   # requires server + mongo running
+npm run test:all
 ```
 
-Protobuf round-trip test — asserts on what a client actually decodes, since a
-wrong field name or an unwrapped `Quantity` encodes without erroring:
+```
+store      ok    0 fails, 84 passes. (7.1s)
+proto      ok    0 fails, 25 passes. (2.5s)
+smoke      ok    0 fails, 0 warns, out of 41 resources tested. (3.9s)
+wire       ok    0 fails, out of 41 resources tested. (37.4s)
+rv         ok    0 fails, 14 passes. (3.6s)
+sched      ok    0 fails, 38 passes. (34.6s)
+pods       ok    0 fails, 28 passes. (45.6s)
+workload   ok    0 fails, 16 passes. (16.7s)
+services   ok    0 fails, 19 passes. (22.3s)
 
-```bash
-npm run test:proto   # encoder checks run offline; wire checks need the server
+9/9 suites clean, 0 failing assertions.
 ```
 
-Content-type / verb matrix across every wired resource — JSON, YAML, protobuf
-and Table, plus all four patch types, asserting on the decoded response:
+Individually, or a subset (`npm run test:all -- store rv`):
 
-```bash
-npm run test:wire    # requires server + mongo running
-```
+| Suite | Command | Needs | Covers |
+|---|---|---|---|
+| store | `npm run test:store` | nothing | MVCC and revision semantics, compare-and-swap, compaction, watches, lease expiry, crash recovery, and a three-node Raft cluster that survives losing its leader |
+| proto | `npm run test:proto` | server | protobuf round-trips — a wrong field name or an unwrapped `Quantity` encodes without erroring, so this asserts on what a client decodes |
+| smoke | `npm run test:smoke` | server | POST/GET/DELETE for every wired resource |
+| wire | `npm run test:wire` | server | JSON, YAML, protobuf and Table across every resource, plus all four patch types |
+| rv | `npm run test:rv` | server | `resourceVersion` allocation, watch resume, optimistic concurrency |
+| sched | `npm run test:sched` | server | placement, every predicate's refusal message, the events and conditions that report it, and the binding endpoints |
+| pods | `npm run test:pods` | server + docker | env from ConfigMaps and Secrets, ConfigMap volume mounts, probes, logs, init containers |
+| workload | `npm run test:workload` | server + docker | the Deployment → ReplicationController → Pod chain |
+| services | `npm run test:services` | server + docker | Service selectors and the Endpoints behind them |
 
-resourceVersion semantics — allocation, watch resume and optimistic
-concurrency:
-
-```bash
-npm run test:rv      # requires server + mongo running
-```
-
-The Deployment → ReplicationController → Pod chain, end to end:
-
-```bash
-npm run test:workload  # requires server + mongo + docker
-```
-
-Pod features the README claims — env from ConfigMaps and Secrets, ConfigMap
-volume mounts, logs:
-
-```bash
-npm run test:pods      # requires server + mongo + docker
-```
-
-Scheduling — placement, every predicate's refusal message, the events and
-conditions that report it, and the binding endpoints:
-
-```bash
-npm run test:sched     # requires server + mongo
-```
-
-The store on its own — MVCC and revision semantics, compare-and-swap,
-compaction, watches, lease expiry, crash recovery, and a three-node Raft
-cluster that survives losing its leader:
-
-```bash
-npm run test:store     # needs neither the server nor mongo
-```
+Assertions are written against what a client ends up with, not against status
+codes. Almost every bug these have caught returned 200 with the wrong body.
 
 The variable-expansion conformance test (`[sig-node] Variable Expansion
 allow almost all printable ASCII characters as environment variable names
@@ -220,6 +217,7 @@ out of scope and won't ever work here:
 | Multi-node / HA control plane | Partial. The store that orders writes runs as a Raft cluster and survives losing its leader, but the API server is still one Express process and objects still live in one MongoDB. |
 | etcd gRPC | No. The store serves etcd's v3 **JSON** API, so `curl` works and `etcdctl` — which speaks gRPC — does not attach. |
 | The store as the object store | Not yet. It hands out `resourceVersion` and is durable and replicated; the ~55 object classes still read and write through Mongoose. |
+| EndpointSlice | No. `Endpoints` is populated from Service selectors, but the `discovery.k8s.io/v1` EndpointSlices that newer clients prefer are not — they round-trip as API objects only. |
 | Real nodes | No. `sim-node-*` are simulated: they have capacity, labels and taints that scheduling honours, but no kubelet — every pod's container runs on the host's Docker daemon regardless of which node it was placed on. |
 | Pod-to-pod networking (CNI) | No. Pods are sibling containers on Docker's default bridge; no overlay, no kube-proxy, no iptables rules. |
 | DNS resolution for services | No. Services get a synthetic ClusterIP but it isn't routed. `CoreDNS` isn't deployed. |
@@ -270,6 +268,7 @@ store/
   transport.js            peer RPC over HTTP
   gateway.js              etcd's v3 JSON API on :2379
   node.js                 one node: store + raft + transport
+  endpoints.js            keeps Service Endpoints in step with matching pods
 functions.js              Docker CLI helpers (spawn-based, shell-safe)
 proto/                    Kubernetes .proto files the server loads at boot
 openApiSpecs/             OpenAPI v3 schemas
@@ -279,6 +278,8 @@ test/
   boot-clean.js           smoke test, hits POST/GET/DELETE for every resource type
   scheduling.js           placement, refusal messages, binding endpoints
   store.js                MVCC, raft, recovery and the etcd endpoint (no server needed)
+  services.js             Service selectors and the Endpoints behind them
+  all.js                  runs every suite and prints one table (npm run test:all)
 scripts/
   setup.sh                one-command setup (npm run setup)
   start.sh                start server with mongo up (npm start)
