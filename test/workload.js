@@ -74,6 +74,11 @@ const mine = (list, name) => (list.body?.items || []).filter((i) => `${i.metadat
   let ours = mine(podList, name);
   check('one pod per replica', ours.length === 2, ours.map((p) => p.metadata.name));
   check('pods have distinct names', new Set(ours.map((p) => p.metadata.name)).size === ours.length, ours.map((p) => p.metadata.name));
+  // Distinct names aren't enough: the replicas once shared a uid, inherited
+  // from the template metadata the controller copied. Every status write is
+  // keyed on uid, so one pod's phase update landed on its sibling and a pod
+  // with a running container reported Pending forever.
+  check('pods have distinct uids', new Set(ours.map((p) => p.metadata.uid)).size === ours.length, ours.map((p) => p.metadata.uid));
   check('pods are running', ours.every((p) => ['Running', 'Succeeded'].includes(p.status?.phase)), ours.map((p) => p.status?.phase));
 
   let table = await fetch(`${base}${deployments}`, { headers: { Accept: 'application/json;as=Table;v=v1;g=meta.k8s.io' } });

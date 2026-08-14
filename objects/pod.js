@@ -307,6 +307,21 @@ class Pod extends K8Object {
     }
   }
 
+  // Upsert conditions by type. Every writer here used $push, so repeated
+  // transitions appended duplicates of the same condition type rather than
+  // updating the one that was already there.
+  setConditions(conditions, extraSet = {}) {
+    let types = conditions.map((c) => c.type);
+    let searchQ = { 'metadata.uid': this.metadata.uid };
+    return this.Model.findOneAndUpdate(
+      searchQ,
+      { $pull: { 'status.conditions': { type: { $in: types } } } },
+    ).then(() => this.patch({
+      $push: { 'status.conditions': { $each: conditions } },
+      ...(Object.keys(extraSet).length ? { $set: extraSet } : {}),
+    }, searchQ));
+  }
+
   scheduleProbes(containerSpec, containerName, podIP) {
     let checks = [];
     if (isConfiguredProbe(containerSpec.readinessProbe)) checks.push(['readiness', containerSpec.readinessProbe]);
@@ -595,22 +610,15 @@ class Pod extends K8Object {
     .then(() => {
       this.events().emit('Ready', this);
       this.events().emit('PodScheduled', this);
-      return this.patch({
-        $push: {
-          'status.conditions': [{
-            type: "Ready",
-            status: 'True',
-            lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
-          }, {
-            type: "PodScheduled",
-            status: 'True',
-            lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
-          }],
-        },
-        $set: {
-          'status.phase': 'Running'
-        }
-      });
+      // Conditions are keyed by type: pushing a second PodScheduled left the
+      // pod carrying two of them, and a client reading "the" condition got
+      // whichever came first. The kubelet side owns Ready; the scheduler owns
+      // PodScheduled, so don't restate it here.
+      return this.setConditions([{
+        type: 'Ready',
+        status: 'True',
+        lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+      }], { 'status.phase': 'Running' });
     })
     .then(() => {
       // Background watcher: patch phase to Succeeded/Failed when containers exit.

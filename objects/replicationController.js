@@ -87,10 +87,19 @@ class ReplicationController extends K8Object {
   }
 
   async createPods(numPods) {
-    if (!this.spec?.template?.metadata?.labels) {
-      this.spec.template.metadata.labels = new Map();
+    // labels is a plain object now that dotted keys have to survive, so `.set`
+    // is gone. Assign through whichever shape is in hand.
+    let templateMeta = this.spec?.template?.metadata;
+    if (templateMeta) {
+      if (!templateMeta.labels) {
+        templateMeta.labels = {};
+      }
+      if (typeof templateMeta.labels.set === 'function') {
+        templateMeta.labels.set('app', templateMeta.name);
+      } else {
+        templateMeta.labels.app = templateMeta.name;
+      }
     }
-    this.spec?.template.metadata.labels.set('app', this.spec?.template.metadata.name);
     if (!this.spec?.template?.metadata?.namespace) {
       this.spec.template.metadata.namespace = this.metadata.namespace
     }
@@ -104,6 +113,18 @@ class ReplicationController extends K8Object {
     let podTemplate = () => {
       let template = JSON.parse(JSON.stringify(this.spec.template));
       template.metadata = template.metadata || {};
+      // The template's metadata is stored through the same schema as a real
+      // object's, so saving the controller stamped a uid (and friends) onto
+      // spec.template.metadata. Copying that verbatim gave every replica the
+      // *same* uid, and since the pod's own writes are keyed on uid, one pod's
+      // status updates landed on its sibling: a pod whose container was
+      // running would sit at Pending forever because its phase write had gone
+      // to the other document. A controller only carries labels and
+      // annotations out of a template; identity belongs to the new object.
+      for (const field of ['uid', 'resourceVersion', 'creationTimestamp',
+        'deletionTimestamp', 'generation', 'selfLink', 'managedFields']) {
+        delete template.metadata[field];
+      }
       // Pod.create treats generateName as its own container-name prefix and
       // falls back to the literal name "default" when there is no name, so the
       // controller has to hand each replica a distinct name itself.
