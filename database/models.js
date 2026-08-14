@@ -127,6 +127,11 @@ const resourceFieldSelector = {
   divisor: String,
 }
 
+// httpGet and tcpSocket are siblings of exec in Kubernetes, not fields inside
+// it. Nesting them meant a probe declaring `httpGet` had it dropped on save, so
+// only exec probes could ever run — and `runProbe` looked for them at the top
+// level, where they never were. The nested copies stay declared so anything
+// already stored in that shape still reads back.
 const lifecycleHandler = {
   exec: {
     command: {
@@ -147,7 +152,11 @@ const lifecycleHandler = {
       port: Schema.Types.Mixed,
       host: String,
     }
-  }
+  },
+  // Mixed, so a probe that doesn't use them doesn't come back carrying an
+  // empty `httpGet: {httpHeaders: []}` it never asked for.
+  httpGet: Schema.Types.Mixed,
+  tcpSocket: Schema.Types.Mixed,
 }
 
 const configMapInfo = {

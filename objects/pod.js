@@ -48,8 +48,27 @@ function stopProbes(key) {
 // A probe only counts if it actually says how to check. Every container has a
 // defaulted `readinessProbe` object courtesy of the schema, so testing the
 // field itself schedules a timer for containers that have no probe at all.
+function probeHandler(probe) {
+  if (!probe) {
+    return undefined;
+  }
+  // Older data nests httpGet/tcpSocket under `exec`; accept either shape.
+  if (probe.exec?.command?.length) {
+    return { exec: probe.exec };
+  }
+  let httpGet = probe.httpGet?.port ? probe.httpGet : (probe.exec?.httpGet?.port ? probe.exec.httpGet : undefined);
+  if (httpGet) {
+    return { httpGet };
+  }
+  let tcpSocket = probe.tcpSocket?.port ? probe.tcpSocket : (probe.exec?.tcpSocket?.port ? probe.exec.tcpSocket : undefined);
+  if (tcpSocket) {
+    return { tcpSocket };
+  }
+  return undefined;
+}
+
 function isConfiguredProbe(probe) {
-  return Boolean(probe?.exec?.command?.length || probe?.httpGet?.port || probe?.tcpSocket?.port);
+  return Boolean(probeHandler(probe));
 }
 
 class Pod extends K8Object {
@@ -299,6 +318,7 @@ class Pod extends K8Object {
     checks.forEach(([kind, probe]) => {
       let period = (probe.periodSeconds || 10) * 1000;
       let failures = 0;
+      let lastReady = true;
       let threshold = probe.failureThreshold || 3;
       let interval = setInterval(async () => {
         let ok = await this.runProbe(probe, containerName, podIP).catch(() => false);
@@ -308,6 +328,13 @@ class Pod extends K8Object {
           // pod still reported Ready — the one thing the probe exists to say.
           failures = ok ? 0 : failures + 1;
           let ready = ok || failures < threshold;
+          // Only write on a transition. Patching every period bumped the
+          // resourceVersion and pushed a MODIFIED event to every watcher once
+          // per probe interval, for a status that hadn't changed.
+          if (ready === lastReady) {
+            return undefined;
+          }
+          lastReady = ready;
           return this.setContainerReady(containerSpec.name, ready).catch(() => {});
         }
         failures = ok ? 0 : failures + 1;
@@ -344,7 +371,8 @@ class Pod extends K8Object {
     );
   }
 
-  async runProbe(probe, containerName, podIP) {
+  async runProbe(rawProbe, containerName, podIP) {
+    let probe = probeHandler(rawProbe) || rawProbe;
     if (probe.exec?.command?.length) {
       // exec.command is argv, not a shell string. Joining it and letting
       // execInContainer wrap the result in `sh -c` re-parses the quoting: the

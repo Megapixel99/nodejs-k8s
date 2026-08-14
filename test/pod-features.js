@@ -155,6 +155,38 @@ const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     ready.body?.status?.containerStatuses?.[0]?.ready === true,
     ready.body?.status?.containerStatuses?.[0]);
 
+  // httpGet and tcpSocket were nested under `exec` in the schema, so a probe
+  // declaring one had it dropped on save and could never run.
+  let httpProbe = `pf-http-${suffix}`;
+  await req('POST', `${ns}/pods`, {
+    apiVersion: 'v1', kind: 'Pod',
+    metadata: { name: httpProbe, namespace: 'default' },
+    spec: {
+      containers: [{
+        name: 'c', image: 'busybox', command: ['sh', '-c', 'sleep 40'],
+        readinessProbe: { httpGet: { path: '/', port: 9999 }, periodSeconds: 1, failureThreshold: 1 },
+      }],
+    },
+  });
+  await settle(11000);
+  let http = await req('GET', `${ns}/pods/${httpProbe}`);
+  check('an httpGet probe survives the round trip', http.body?.spec?.containers?.[0]?.readinessProbe?.httpGet?.port === 9999, http.body?.spec?.containers?.[0]?.readinessProbe);
+  check('an httpGet probe against a dead port is not ready', http.body?.status?.containerStatuses?.[0]?.ready === false, http.body?.status?.containerStatuses?.[0]);
+  // A probe should not report a handler it never declared.
+  check('a probe carries only its own handler',
+    http.body?.spec?.containers?.[0]?.readinessProbe?.exec === undefined,
+    http.body?.spec?.containers?.[0]?.readinessProbe?.exec);
+
+  // Readiness is written on transition, not on every tick — otherwise every
+  // watcher gets a MODIFIED event per probe period for an unchanged status.
+  let first = await req('GET', `${ns}/pods/${failing}`);
+  await settle(4000);
+  let second = await req('GET', `${ns}/pods/${failing}`);
+  check('a settled readiness state stops rewriting the object',
+    first.body?.metadata?.resourceVersion === second.body?.metadata?.resourceVersion,
+    [first.body?.metadata?.resourceVersion, second.body?.metadata?.resourceVersion]);
+  await req('DELETE', `${ns}/pods/${httpProbe}`);
+
   for (const pod of [...pods, failing, passing]) {
     await req('DELETE', `${ns}/pods/${pod}`);
   }
