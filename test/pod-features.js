@@ -187,6 +187,75 @@ const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     [first.body?.metadata?.resourceVersion, second.body?.metadata?.resourceVersion]);
   await req('DELETE', `${ns}/pods/${httpProbe}`);
 
+  // Init containers. They ran already, but nothing reported that they had:
+  // status.initContainerStatuses stayed empty, so `kubectl describe` showed no
+  // Init Containers section and a controller waiting on its init step had
+  // nothing to wait on. A pod whose setup work is invisible looks identical to
+  // one that never did it.
+  let initPod = `pf-init-${suffix}`;
+  await req('POST', `${ns}/pods`, {
+    apiVersion: 'v1',
+    kind: 'Pod',
+    metadata: { name: initPod, namespace: 'default' },
+    spec: {
+      initContainers: [{ name: 'setup', image: 'busybox', command: ['sh', '-c', 'echo initialised'] }],
+      containers: [{ name: 'main', image: 'busybox', command: ['sh', '-c', 'sleep 60'] }],
+    },
+  });
+  let initStatuses = [];
+  let initDeadline = Date.now() + 25000;
+  let initBody;
+  while (Date.now() < initDeadline) {
+    initBody = (await req('GET', `${ns}/pods/${initPod}`)).body;
+    initStatuses = initBody?.status?.initContainerStatuses || [];
+    if (initStatuses.some((s) => s.state?.terminated)) {
+      break;
+    }
+    await settle(500);
+  }
+  check('an init container is reported at all', initStatuses.length === 1, initStatuses);
+  check('the init status names the container', initStatuses[0]?.name === 'setup', initStatuses[0]?.name);
+  check('a finished init container reports terminated', Boolean(initStatuses[0]?.state?.terminated), initStatuses[0]?.state);
+  check('a successful init container exits 0', initStatuses[0]?.state?.terminated?.exitCode === 0, initStatuses[0]?.state?.terminated);
+  check('the terminated state says Completed', initStatuses[0]?.state?.terminated?.reason === 'Completed', initStatuses[0]?.state?.terminated);
+  check('the init container has an id to fetch logs by', Boolean(initStatuses[0]?.containerID), initStatuses[0]?.containerID);
+  // The main container's status is separate: an init container must not
+  // appear in containerStatuses, or `kubectl get` counts it towards READY.
+  check('init containers stay out of containerStatuses',
+    (initBody?.status?.containerStatuses || []).every((s) => s.name !== 'setup'),
+    (initBody?.status?.containerStatuses || []).map((s) => s.name));
+  await req('DELETE', `${ns}/pods/${initPod}`);
+
+  // A pod that fails its init container must not go on to run the main one --
+  // that is the entire contract of an init container.
+  let failedInit = `pf-init-fail-${suffix}`;
+  await req('POST', `${ns}/pods`, {
+    apiVersion: 'v1',
+    kind: 'Pod',
+    metadata: { name: failedInit, namespace: 'default' },
+    spec: {
+      initContainers: [{ name: 'setup', image: 'busybox', command: ['sh', '-c', 'exit 3'] }],
+      containers: [{ name: 'main', image: 'busybox', command: ['sh', '-c', 'sleep 60'] }],
+    },
+  });
+  let failedBody;
+  let failDeadline = Date.now() + 25000;
+  while (Date.now() < failDeadline) {
+    failedBody = (await req('GET', `${ns}/pods/${failedInit}`)).body;
+    if (failedBody?.status?.phase === 'Failed') {
+      break;
+    }
+    await settle(500);
+  }
+  check('a failing init container fails the pod', failedBody?.status?.phase === 'Failed', failedBody?.status?.phase);
+  check('the failed init container reports its exit code',
+    failedBody?.status?.initContainerStatuses?.[0]?.state?.terminated?.exitCode === 3,
+    failedBody?.status?.initContainerStatuses?.[0]?.state);
+  check('the main container never started',
+    (failedBody?.status?.containerStatuses || []).length === 0,
+    failedBody?.status?.containerStatuses);
+  await req('DELETE', `${ns}/pods/${failedInit}`);
+
   for (const pod of [...pods, failing, passing]) {
     await req('DELETE', `${ns}/pods/${pod}`);
   }

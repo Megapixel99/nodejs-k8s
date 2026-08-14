@@ -114,14 +114,14 @@ class Pod extends K8Object {
     return super.create(config)
     .then((pod) => new Pod(pod))
     .then((newPod) => {
-      // Kick off container startup in the background. A real kubelet would
-      // return the Pod object immediately and let the node start containers
-      // asynchronously; blocking here means POST /pods stalls past the test's
-      // RESTClient timeout.
-      newPod.start().catch((err) => {
-        console.warn(`[pod ${newPod.metadata.generateName}] start failed:`, err?.message || err);
-        newPod.patch({ $set: { 'status.phase': 'Failed', 'status.message': String(err?.message || err) } }).catch(() => {});
-      });
+      // Containers belong to a node. Starting them here regardless meant a pod
+      // that the scheduler had refused -- no node could satisfy its selector,
+      // its resources didn't fit anywhere -- still ran, went Running, got an
+      // IP, and turned up in a Service's endpoints: unschedulable in the API
+      // and serving traffic at the same time. `startWhenBound` starts them
+      // once something binds the pod, which is the only moment a real kubelet
+      // would hear about it.
+      newPod.startWhenBound();
       return newPod;
     });
   }
@@ -131,6 +131,49 @@ class Pod extends K8Object {
       this._emitter = new EventEmitter(this);
     }
     return this._emitter;
+  }
+
+  // Wait for spec.nodeName, then run the containers. A real kubelet learns
+  // about a pod by watching for ones assigned to it, so "bound" is the trigger
+  // -- and it doesn't matter whether the built-in scheduler or somebody
+  // else's Binding did the assigning.
+  //
+  // Polling rather than listening to the bus: binding is a direct write to the
+  // pod document, and a pod that is already bound when it gets here (a client
+  // that set nodeName itself, which is legal) must start immediately rather
+  // than wait for an event that already happened.
+  startWhenBound({ interval = 250, timeout = 5 * 60 * 1000 } = {}) {
+    let began = Date.now();
+    let launch = () => {
+      this.start().catch((err) => {
+        console.warn(`[pod ${this.metadata.generateName}] start failed:`, err?.message || err);
+        this.patch({ $set: { 'status.phase': 'Failed', 'status.message': String(err?.message || err) } }).catch(() => {});
+      });
+    };
+    if (this.spec?.nodeName) {
+      launch();
+      return this;
+    }
+    let poll = async () => {
+      if (Date.now() - began > timeout) {
+        return;
+      }
+      let current = await Pod.findOne({ 'metadata.uid': this.metadata.uid }).catch(() => undefined);
+      if (!current) {
+        // The pod was deleted while it waited for a node; there is nothing
+        // left to start.
+        return;
+      }
+      if (current.spec?.nodeName) {
+        this.spec.nodeName = current.spec.nodeName;
+        return launch();
+      }
+      let timer = setTimeout(poll, interval);
+      timer.unref?.();
+    };
+    let timer = setTimeout(poll, interval);
+    timer.unref?.();
+    return this;
   }
 
   async logs(container) {
@@ -290,14 +333,61 @@ class Pod extends K8Object {
       });
   }
 
+  // Init containers ran, but nothing recorded that they had: status.
+  // initContainerStatuses stayed empty, so `kubectl describe` showed no Init
+  // Containers section, `kubectl logs -c <init>` had no container to point at,
+  // and a controller waiting for its init step to finish had nothing to read.
+  // The pod's phase said Running and the work that produced it was invisible.
   async runInitContainers() {
     if (!Array.isArray(this.spec.initContainers) || this.spec.initContainers.length === 0) {
       return;
     }
-    for (const init of this.spec.initContainers) {
+    let statuses = this.spec.initContainers.map((init) => ({
+      name: init.name,
+      image: init.image,
+      imageID: '',
+      containerID: `${this.metadata.generateName}-init-${init.name}`,
+      restartCount: 0,
+      ready: false,
+      started: false,
+      state: { waiting: { reason: 'PodInitializing' } },
+    }));
+    await this.patch({ $set: { 'status.initContainerStatuses': statuses } });
+
+    for (let i = 0; i < this.spec.initContainers.length; i++) {
+      let init = this.spec.initContainers[i];
       let name = `${this.metadata.generateName}-init-${init.name}`;
-      await runImage(init.image, name, { expose: (init.ports || []).map((p) => p.containerPort) });
+      let startedAt = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
+      statuses[i].state = { running: { startedAt } };
+      statuses[i].started = true;
+      await this.patch({ $set: { [`status.initContainerStatuses.${i}`]: statuses[i] } });
+
+      // command and args were never passed, so every init container ran its
+      // image's default entrypoint and exited 0 — the step "succeeded"
+      // without doing the work, and an init container written to fail
+      // couldn't.
+      await runImage(init.image, name, {
+        expose: (init.ports || []).map((p) => p.containerPort),
+        command: init.command,
+        args: init.args,
+        env: (init.env || []).filter((v) => v?.value),
+      });
       let exitCode = await waitContainer(name).catch(() => 1);
+      statuses[i].state = {
+        terminated: {
+          exitCode,
+          reason: exitCode === 0 ? 'Completed' : 'Error',
+          startedAt,
+          finishedAt: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+          containerID: name,
+        },
+      };
+      statuses[i].started = false;
+      // An init container that finished successfully is "ready" in the sense
+      // the field means here: it is done and the pod may proceed.
+      statuses[i].ready = exitCode === 0;
+      await this.patch({ $set: { [`status.initContainerStatuses.${i}`]: statuses[i] } });
+
       if (exitCode !== 0) {
         await this.patch({
           $set: { 'status.phase': 'Failed', 'status.message': `init container ${init.name} exited ${exitCode}` },
