@@ -14,6 +14,7 @@ const path = require('path');
 const base = process.env.K8S_SIM_BASE || 'http://localhost:8080';
 
 const SUITES = [
+  { name: 'portability', file: 'portability.js', needs: [] },
   { name: 'store', file: 'store.js', needs: [] },
   { name: 'proto', file: 'proto-roundtrip.js', needs: ['server'] },
   { name: 'smoke', file: 'boot-clean.js', needs: ['server'] },

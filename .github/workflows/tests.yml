@@ -12,11 +12,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # The store needs neither the API server nor a database, so it can answer in
-  # seconds while the heavier job is still pulling images. It is also the job
-  # most likely to catch a genuine logic error rather than an environment one.
-  store:
-    name: store (no server, no mongo)
+  # Neither of these needs the API server or a database, so they answer in
+  # seconds while the heavier job is still pulling images -- and between them
+  # they catch the two failures worth knowing about early: a logic error in the
+  # store, and a require that only resolves on the filesystem it was written on.
+  standalone:
+    name: store and portability (no server, no mongo)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -26,7 +27,9 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run test:all -- store
+      # Case-sensitivity is exactly what this job is for: the runner is Linux
+      # and the people writing the code are usually not.
+      - run: npm run test:all -- portability store
 
   suites:
     name: api suites

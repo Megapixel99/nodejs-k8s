@@ -183,6 +183,7 @@ npm run test:all
 ```
 
 ```
+portability ok   0 fails, 500 passes. (0.2s)
 store      ok    0 fails, 84 passes. (7.1s)
 proto      ok    0 fails, 25 passes. (2.5s)
 smoke      ok    0 fails, 0 warns, out of 41 resources tested. (3.9s)
@@ -193,13 +194,14 @@ pods       ok    0 fails, 28 passes. (45.6s)
 workload   ok    0 fails, 16 passes. (16.7s)
 services   ok    0 fails, 19 passes. (22.3s)
 
-9/9 suites clean, 0 failing assertions.
+10/10 suites clean, 0 failing assertions.
 ```
 
 Individually, or a subset (`npm run test:all -- store rv`):
 
 | Suite | Command | Needs | Covers |
 |---|---|---|---|
+| portability | `npm run test:portability` | nothing | that every relative `require` matches a real file with the exact case — a mismatch loads fine on macOS and throws `MODULE_NOT_FOUND` on Linux |
 | store | `npm run test:store` | nothing | MVCC and revision semantics, compare-and-swap, compaction, watches, lease expiry, crash recovery, and a three-node Raft cluster that survives losing its leader |
 | proto | `npm run test:proto` | server | protobuf round-trips — a wrong field name or an unwrapped `Quantity` encodes without erroring, so this asserts on what a client decodes |
 | smoke | `npm run test:smoke` | server | POST/GET/DELETE for every wired resource |
@@ -214,8 +216,9 @@ Assertions are written against what a client ends up with, not against status
 codes. Almost every bug these have caught returned 200 with the wrong body.
 
 CI runs the same thing on every push and pull request
-(`.github/workflows/tests.yml`): one job for the store, which needs neither the
-server nor a database and answers in seconds, and one that brings up MongoDB,
+(`.github/workflows/tests.yml`): one job for the store and the portability
+check, which need neither the server nor a database and answer in seconds, and
+one that brings up MongoDB,
 starts the API server and runs `npm run test:all` against the runner's own
 Docker daemon — the same arrangement as a laptop, so a failure there is a real
 failure rather than an artefact of the environment.
