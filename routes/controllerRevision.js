@@ -1,0 +1,26 @@
+const router = require('express').Router();
+const { ControllerRevision } = require('../objects');
+const { general, openapi } = require('../middleware');
+
+const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
+
+const routes = [`/apis/apps/v1/namespaces/:namespace/controllerrevisions`];
+// `kubectl get <kind> -A` asks for the cluster-wide collection path; only
+// the namespaced one was registered, so --all-namespaces 404'd.
+const clusterRoutes = routes.map((e) => e.replace('/namespaces/:namespace', ''));
+
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(ControllerRevision), general.format(ControllerRevision), general.sendObj(ControllerRevision));
+
+router.get([...clusterRoutes, '/api/v1/controllerrevisions', ...routes], validSchema(apiV1OpenApiV3), general.find(ControllerRevision), general.format(ControllerRevision), general.list(ControllerRevision));
+
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(ControllerRevision), general.sendObj(ControllerRevision));
+
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(ControllerRevision), general.sendObj(ControllerRevision));
+
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(ControllerRevision), general.sendObj(ControllerRevision));
+
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(ControllerRevision), general.sendObj(ControllerRevision));
+
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(ControllerRevision), general.sendObj(ControllerRevision));
+
+module.exports = router;

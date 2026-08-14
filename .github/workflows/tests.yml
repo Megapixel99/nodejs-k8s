@@ -1,0 +1,101 @@
+name: tests
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+# A second push to the same branch makes the first run's answer irrelevant.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Neither of these needs the API server or a database, so they answer in
+  # seconds while the heavier job is still pulling images -- and between them
+  # they catch the two failures worth knowing about early: a logic error in the
+  # store, and a require that only resolves on the filesystem it was written on.
+  standalone:
+    name: store and portability (no server, no mongo)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # Case-sensitivity is exactly what this job is for: the runner is Linux
+      # and the people writing the code are usually not.
+      - run: npm run test:all -- portability store
+
+  suites:
+    name: api suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      mongo:
+        image: mongo:7
+        ports: ['27017:27017']
+        # Without a health check the server can start before mongo is
+        # listening, and every suite fails on a connection error that has
+        # nothing to do with the change under test.
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1}).ok'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DB_URL: mongodb://localhost:27017
+      # The runner's own Docker daemon plays the part of the node: pods are
+      # sibling containers on it, exactly as they are on a laptop.
+      STORE_DIR: ${{ github.workspace }}/.store/ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Pulled up front so a slow registry shows up as a slow pull rather than
+      # as a pod that took too long to start.
+      - name: Pre-pull the image the pod suites run
+        run: docker pull busybox:latest
+
+      - name: Start the API server
+        run: |
+          node index.js > "${{ runner.temp }}/server.log" 2>&1 &
+          echo $! > "${{ runner.temp }}/server.pid"
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8080/api > /dev/null; then
+              echo "server up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "server never became ready" >&2
+          tail -50 "${{ runner.temp }}/server.log" >&2
+          exit 1
+
+      - name: Run every suite
+        run: npm run test:all
+
+      # The server log is where the answer lives when a suite fails for a
+      # reason the assertion can't see -- an unhandled rejection, a container
+      # that wouldn't start. Only on failure: it is large and noisy.
+      - name: Server log
+        if: failure()
+        run: tail -300 "${{ runner.temp }}/server.log"
+
+      - name: Container state
+        if: failure()
+        run: docker ps -a
+
+      - name: Stop the API server
+        if: always()
+        run: kill "$(cat "${{ runner.temp }}/server.pid")" 2>/dev/null || true

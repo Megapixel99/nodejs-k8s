@@ -1,0 +1,30 @@
+const router = require('express').Router();
+const { ReplicaSet } = require('../objects');
+const { general, openapi } = require('../middleware');
+
+const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
+
+const route = `/apis/${ReplicaSet.apiVersion}/namespaces/:namespace/replicasets`;
+
+router.get(`${route}/:name`, validSchema(apiV1OpenApiV3), general.findOne(ReplicaSet), general.format(ReplicaSet), general.sendObj(ReplicaSet));
+
+router.get([`/apis/${ReplicaSet.apiVersion}/replicasets`, route], validSchema(apiV1OpenApiV3), general.find(ReplicaSet), general.format(ReplicaSet), general.list(ReplicaSet));
+
+router.post(route, validSchema(apiV1OpenApiV3), general.save(ReplicaSet), general.sendObj(ReplicaSet));
+
+router.put([`${route}/:name`, route], validSchema(apiV1OpenApiV3), general.update(ReplicaSet), general.sendObj(ReplicaSet));
+
+router.put(`${route}/:name/status`, validSchema(apiV1OpenApiV3), general.patch(ReplicaSet), general.sendObj(ReplicaSet));
+
+router.patch(`${route}/:name`, validSchema(apiV1OpenApiV3), general.patch(ReplicaSet), general.sendObj(ReplicaSet));
+
+router.delete(`${route}/:name`, validSchema(apiV1OpenApiV3), general.deleteOne(ReplicaSet), general.sendObj(ReplicaSet));
+
+router.delete(route, validSchema(apiV1OpenApiV3), general.delete(ReplicaSet), general.sendObj(ReplicaSet));
+
+// `kubectl scale` reads and writes the scale subresource, not the object.
+router.get(`${route}/:name/scale`, general.getScale(ReplicaSet));
+router.put(`${route}/:name/scale`, general.setScale(ReplicaSet));
+router.patch(`${route}/:name/scale`, general.setScale(ReplicaSet));
+
+module.exports = router;

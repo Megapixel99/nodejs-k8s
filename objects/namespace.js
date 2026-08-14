@@ -1,94 +1,189 @@
+const { DateTime } = require('luxon');
+const selfsigned = require('selfsigned');
 const K8Object = require('./object.js');
 const { Namespace: Model } = require('../database/models.js');
-const { duration } = require('../functions.js');
+const Models = require('../database/models.js');
+const CertificateSigningRequest = require('./certificateSigningRequest.js');
+const ClusterRole = require('./clusterRole.js');
+const ClusterRoleBinding = require('./clusterRoleBinding.js');
+const ConfigMap = require('./configMap.js');
+const ControllerRevision = require('./controllerRevision.js');
+const CronJob = require('./cronJob.js');
+const Csidriver = require('./csiDriver.js');
+const CsiNode = require('./csiNode.js');
+const CsiStorageCapacity = require('./csiStorageCapacity.js');
+const Daemonset = require('./daemonSet.js');
+const Deployment = require('./deployment.js');
+const Endpoints = require('./endpoints.js');
+const EndpointSlice = require('./endpointSlice.js');
+const Event = require('./event.js');
+const HorizontalPodAutoscaler = require('./horizontalPodAutoscaler.js');
+const IngressClass = require('./ingressClass.js');
+const Job = require('./job.js');
+const LimitRange = require('./limitRange.js');
+const LocalSubjectAccessReview = require('./localSubjectAccessReview.js');
+const MutatingWebhookConfiguration = require('./mutatingWebhookConfiguration.js');
+const NetworkPolicy = require('./networkPolicy.js');
+const PersistentVolume = require('./persistentVolume.js');
+const PersistentVolumeClaim = require('./persistentVolumeClaim.js');
+const Pod = require('./pod.js');
+const PodDisruptionBudget = require('./podDisruptionBudget.js');
+const PodTemplate = require('./podTemplate.js');
+const PriorityClass = require('./priorityClass.js');
+const Replicaset = require('./replicaSet.js');
+const ReplicationController = require('./replicationController.js');
+const ResourceQuota = require('./resourceQuota.js');
+const Role = require('./role.js');
+const RoleBinding = require('./roleBinding.js');
+const Secret = require('./secret.js');
+const SelfSubjectReview = require('./selfSubjectReview.js');
+const SelfSubjectAccessReview = require('./selfSubjectAccessReview.js');
+const SelfSubjectRulesReview = require('./selfSubjectRulesReview.js');
+const Service = require('./service.js');
+const ServiceAccount = require('./serviceAccount.js');
+const StatefulSet = require('./statefulSet.js');
+const StorageClass = require('./storageClass.js');
+const SubjectAccessReview = require('./subjectAccessReview.js');
+const TokenRequest = require('./tokenRequest.js');
+const TokenReview = require('./tokenReview.js');
+const ValidatingWebhookConfiguration = require('./validatingWebhookConfiguration.js');
+const VolumeAttachment = require('./volumeAttachment.js');
+const { duration, age } = require('../functions.js');
+
+const objects = {
+  CertificateSigningRequest,
+  ClusterRole,
+  ClusterRoleBinding,
+  ConfigMap,
+  ControllerRevision,
+  CronJob,
+  Csidriver,
+  CsiNode,
+  CsiStorageCapacity,
+  Daemonset,
+  Deployment,
+  Endpoints,
+  EndpointSlice,
+  Event,
+  HorizontalPodAutoscaler,
+  IngressClass,
+  Job,
+  LimitRange,
+  LocalSubjectAccessReview,
+  MutatingWebhookConfiguration,
+  NetworkPolicy,
+  PersistentVolume,
+  PersistentVolumeClaim,
+  Pod,
+  PodDisruptionBudget,
+  PodTemplate,
+  PriorityClass,
+  Replicaset,
+  ReplicationController,
+  ResourceQuota,
+  Role,
+  RoleBinding,
+  Secret,
+  SelfSubjectReview,
+  SelfSubjectAccessReview,
+  SelfSubjectRulesReview,
+  Service,
+  ServiceAccount,
+  StatefulSet,
+  StorageClass,
+  SubjectAccessReview,
+  TokenRequest,
+  TokenReview,
+  ValidatingWebhookConfiguration,
+  VolumeAttachment,
+}
+
+delete Models.Namespace;
 
 class Namespace extends K8Object {
   constructor(config) {
     super(config);
     this.spec = config.spec;
     this.status = config.status;
+    this.apiVersion = Namespace.apiVersion;
+    this.kind = Namespace.kind;
+    this.Model = Namespace.Model;
   }
 
   static apiVersion = 'v1';
   static kind = 'Namespace';
+  static Model = Model;
 
-
-  static findOne(params = {}, options = {}) {
-    return Model.findOne(params, options)
-      .then((namespace) => {
-        console.log(namespace);
-        if (namespace) {
-          return new Namespace(namespace).setResourceVersion();
-        }
-      });
-  }
-
-  static find(params = {}, options = {}) {
-    return Model.find(params, options)
-      .then((namespaces) => {
-        if (namespaces) {
-          return Promise.all(namespaces.map((namespace) => new Namespace(namespace).setResourceVersion()));
-        }
-      });
-  }
-
-  static create(config) {
-    return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
-    .then((existingNamespace) => {
-      if (existingNamespace) {
-        throw this.alreadyExistsStatus(config.metadata.name);
-      }
-      return new Model(config).save();
+  static create (config) {
+    if (!config.metadata) {
+      return Promise.reject(super.unprocessableContentStatus());
+    }
+    if (!config.metadata.name) {
+      config.metadata.name = 'default'
+    }
+    if (!config.metadata.labels) {
+      config.metadata.labels = new Map([['name', config.metadata.name]]);
+    }
+    return super.create(config, { 'metadata.name': config.metadata.name }, { validateBeforeSave: false })
+    .then((n) => {
+      let genCert = (attrs) => selfsigned.generate(attrs, { keySize: 2048, days: 3650, extensions: [{ name: 'subjectAltName', altNames: [] }] }).cert.trim().replaceAll('\r', '');
+      let certs = [
+        genCert([{ name: 'commonName', value: 'kube-apiserver-lb-signer' }]),
+        genCert([{ name: 'commonName', value: 'kube-apiserver-localhost-signer' }]),
+        genCert([{ name: 'commonName', value: 'kube-apiserver-service-network-signer' }]),
+      ];
+      return Promise.all([
+        ...['builder', 'default', 'deployer']
+          .map((name) => ServiceAccount.create({
+            metadata: {
+              name,
+              namespace: config.metadata.name,
+            }
+          })),
+        ConfigMap.create({
+          metadata: {
+            name: 'kube-root-ca.crt',
+            namespace: config.metadata.name,
+          },
+          data: new Map([['ca.crt', certs.join('\n')]])
+        })
+      ])
+      .then(() => new Namespace(n))
     })
-    .then((namespace) => new Namespace(namespace));
   }
 
-  delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name })
-    .then((namespace) => {
+  async delete () {
+    return Promise.all(Object.keys(Models).map((m) => Models[m].find({ 'metadata.namespace': this.metadata.name }).catch(() => [])))
+    .then(async (resources) => {
+      let deletions = [];
+      for (const resource of resources.flat()) {
+        let ctor = objects[resource.kind];
+        if (ctor) {
+          deletions.push(new ctor(resource).delete().catch(() => {}));
+        } else {
+          // Fallback: model-level delete when we don't have a class for this kind.
+          let modelKey = Object.keys(Models).find((k) => k.toLowerCase() === (resource.kind || '').toLowerCase());
+          if (modelKey) {
+            deletions.push(Models[modelKey].deleteOne({ 'metadata.uid': resource.metadata?.uid }).catch(() => {}));
+          }
+        }
+      }
+      return Promise.all([...deletions, super.delete({ 'metadata.name': this.metadata.name })]);
+    })
+    .then((promises) => {
+      let namespace = promises.at(-1);
       if (namespace) {
         return this.setConfig(namespace);
       }
     });
   }
 
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
-    if (!([...new Set(Object.values(params))].find((e) => undefined))) {
-      params = {};
-    }
-    let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
-    return this.find(params, projection, options);
-  }
-
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (namespaces) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: false,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < namespaces.length ? namespaces.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${namespaces.length}${JSON.stringify(namespaces[0])}`)}`
-        },
-        items: namespaces
-      }));
-  }
-
-  static table (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (namespaces) => ({
+  static async table (items = []) {
+    return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${namespaces.length}${JSON.stringify(namespaces[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
         "columnDefinitions": [
           {
@@ -99,6 +194,13 @@ class Namespace extends K8Object {
             "priority": 0
           },
           {
+            "name": "Status",
+            "type": "string",
+            "format": "",
+            "description": "The status of the namespace",
+            "priority": 0
+          },
+          {
             "name": "Age",
             "type": "string",
             "format": "",
@@ -106,10 +208,11 @@ class Namespace extends K8Object {
             "priority": 0
           },
         ],
-        "rows": namespaces.map((e) => ({
+        "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
-            duration(new Date() - e.metadata.creationTimestamp),
+            e.status?.phase ?? 'Active',
+            age(e.metadata.creationTimestamp),
           ],
           object: {
             "kind": "PartialObjectMetadata",
@@ -117,49 +220,13 @@ class Namespace extends K8Object {
             metadata: e.metadata,
           }
         })),
-      }));
-  }
-
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
-  }
-
-  update(updateObj, options = {}) {
-    return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name },
-      updateObj,
-      {
-        new: true,
-        ...options,
-      }
-    )
-    .then((namespace) => {
-      if (namespace) {
-        return this.setConfig(namespace);
-      }
-    });
-  }
-
-  async setResourceVersion() {
-    await super.setResourceVersion();
-    return this;
+    }
   }
 
   async setConfig(config) {
     await super.setResourceVersion();
-    this.data = config.data;
+    this.spec = config.spec;
+    this.status = config.status;
     return this;
   }
 }

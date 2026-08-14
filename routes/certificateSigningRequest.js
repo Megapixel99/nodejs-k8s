@@ -2,22 +2,24 @@ const router = require('express').Router();
 const { CertificateSigningRequest } = require('../objects');
 const { general, openapi } = require('../middleware');
 
-const { apiCertificatesK8sIoApiV3, apiV1OpenapiV3, validSchema } = openapi;
+const { apiCertificatesK8sIoApiV3, apiV1OpenApiV3, validSchema } = openapi;
 
-let routes = ['/apis/certificates.k8s.io/v1/certificatesigningrequests'];
+// Canonical path first; the model's apiVersion is bare 'v1'.
+// Second entry is the legacy un-grouped path this server used to serve.
+let routes = [`/apis/${CertificateSigningRequest.apiVersion}/certificatesigningrequests`, `/apis/v1/certificatesigningrequests`];
 
-router.get(routes.map((e) => `${e}/:name`), validSchema(apiCertificatesK8sIoApiV3), general.findOne(CertificateSigningRequest));
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiCertificatesK8sIoApiV3), general.findOne(CertificateSigningRequest), general.format(CertificateSigningRequest), general.sendObj(CertificateSigningRequest));
 
-router.get(['/api/v1/certificatesigningrequests', ...routes], validSchema(apiV1OpenapiV3), general.list(CertificateSigningRequest));
+router.get(['/api/v1/certificatesigningrequests', ...routes], validSchema(apiV1OpenApiV3), general.find(CertificateSigningRequest), general.format(CertificateSigningRequest), general.list(CertificateSigningRequest));
 
-router.post(routes, validSchema(apiCertificatesK8sIoApiV3), general.save(CertificateSigningRequest));
+router.post(routes, validSchema(apiCertificatesK8sIoApiV3), general.save(CertificateSigningRequest), general.sendObj(CertificateSigningRequest));
 
-router.put(routes, validSchema(apiCertificatesK8sIoApiV3), general.update(CertificateSigningRequest));
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiCertificatesK8sIoApiV3), general.update(CertificateSigningRequest), general.sendObj(CertificateSigningRequest));
 
-router.patch(routes.map((e) => `${e}/:name`), validSchema(apiCertificatesK8sIoApiV3), general.patch(CertificateSigningRequest));
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiCertificatesK8sIoApiV3), general.patch(CertificateSigningRequest), general.sendObj(CertificateSigningRequest));
 
-router.delete(routes.map((e) => `${e}/:name`), validSchema(apiCertificatesK8sIoApiV3), general.deleteOne(CertificateSigningRequest));
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiCertificatesK8sIoApiV3), general.deleteOne(CertificateSigningRequest), general.sendObj(CertificateSigningRequest));
 
-router.delete(routes, validSchema(apiCertificatesK8sIoApiV3), general.delete(CertificateSigningRequest));
+router.delete(routes, validSchema(apiCertificatesK8sIoApiV3), general.delete(CertificateSigningRequest), general.sendObj(CertificateSigningRequest));
 
 module.exports = router;

@@ -1,68 +1,743 @@
+const { DateTime } = require('luxon');
+const { Readable } = require('stream');
+const yaml = require('yaml');
+const Event = require('../objects/event.js');
+const Status = require('../objects/status.js');
+const { busFor, keyFor } = require('../objects/bus.js');
+const { toProtoBuf, fromProtoBuf, toWatchEvent, normalizeDecoded } = require('./protoBuf.js');
+
+function convertFromProtoBuff(req) {
+  if (Buffer.isBuffer(req.body) && req.headers['content-type']?.includes('protobuf')) {
+    let tryDecode = (opId) => {
+      try {
+        return fromProtoBuf(req.body, opId, req.protobufTypes);
+      } catch (e) {
+        return null;
+      }
+    };
+    if (req.operationId) {
+      let decoded = tryDecode(req.operationId);
+      if (decoded) return decoded;
+    }
+    try {
+      let b = req.body.subarray(4, req.body.length);
+      let unknownType = req.protobufTypes.lookup('Unknown');
+      let { typeMeta, raw } = unknownType.decode(b);
+      if (typeMeta?.kind) {
+        let decoded = tryDecode(typeMeta.kind);
+        if (decoded) return decoded;
+      }
+      // Last-resort partial decode for resources whose full proto isn't
+      // loaded (e.g., policy/v1 PodDisruptionBudget). The wire format of most
+      // k8s resources starts with field 1 = ObjectMeta; parse that manually
+      // so at least metadata.name / namespace reach the save path.
+      let meta = tryDecodeObjectMeta(raw, req.protobufTypes);
+      return meta ? { ...typeMeta, metadata: meta } : { ...typeMeta };
+    } catch (e) {
+      return {};
+    }
+  } else {
+    return req.body;
+  }
+}
+
+function tryDecodeObjectMeta(raw, protobufTypes) {
+  if (!Buffer.isBuffer(raw) || raw.length === 0) return null;
+  // Find the ObjectMeta message type (any of its fully-qualified registrations will do).
+  let ObjectMeta;
+  try { ObjectMeta = protobufTypes.lookup('k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta'); } catch (_) {}
+  if (!ObjectMeta) try { ObjectMeta = protobufTypes.lookup('ObjectMeta'); } catch (_) {}
+  if (!ObjectMeta) return null;
+  // Scan the raw bytes for field 1 (metadata), wire type 2 (length-delimited).
+  // Tag byte = (field_number << 3) | wire_type = (1 << 3) | 2 = 0x0A.
+  let i = 0;
+  while (i < raw.length) {
+    let tag = raw[i];
+    if (tag === 0x0A) {
+      i += 1;
+      let [len, consumed] = readVarint(raw, i);
+      i += consumed;
+      let metaBytes = raw.subarray(i, i + len);
+      try {
+        return normalizeDecoded(ObjectMeta.decode(metaBytes).toJSON?.() ?? ObjectMeta.decode(metaBytes));
+      } catch (e) {
+        return null;
+      }
+    }
+    // Skip unknown fields (crude; full skipping would require type inspection).
+    return null;
+  }
+  return null;
+}
+
+function readVarint(buf, start) {
+  let result = 0, shift = 0, consumed = 0;
+  for (let i = start; i < buf.length && consumed < 10; i++) {
+    let byte = buf[i];
+    result |= (byte & 0x7F) << shift;
+    shift += 7;
+    consumed++;
+    if ((byte & 0x80) === 0) break;
+  }
+  return [result, consumed];
+}
+
+// Flatten a merge-patch body into Mongo dot-path $set/$unset so merges don't
+// replace entire nested objects (e.g., patching metadata.labels.foo must not
+// wipe metadata.labels.bar).
+// Maps whose keys are label keys or file names, so they can contain dots and
+// cannot be addressed by a dot-path: flattening `{labels: {'app.k8s.io/x': 1}}`
+// produced `metadata.labels.app.k8s.io/x`, which mongo reads as four nested
+// fields and stores as `{app: {k8s: {'io/x': 1}}}`. These merge in memory
+// against the stored object and get written whole.
+function isOpaqueMapPath(path) {
+  return /(^|\.)(labels|annotations|nodeSelector|matchLabels|selector)$/.test(path)
+    || /^(data|binaryData|stringData)$/.test(path);
+}
+
+function valueAtDotPath(obj, path) {
+  return path.split('.').reduce((cursor, key) => (
+    cursor === undefined || cursor === null ? undefined : cursor[key]
+  ), obj);
+}
+
+function flattenMergePatch(body, current = {}) {
+  let $set = {};
+  let $unset = {};
+  function walk(obj, prefix) {
+    for (const [k, v] of Object.entries(obj || {})) {
+      let path = prefix ? `${prefix}.${k}` : k;
+      if (v && typeof v === 'object' && !Array.isArray(v) && isOpaqueMapPath(path)
+          && !('matchLabels' in v) && !('matchExpressions' in v)) {
+        let existing = valueAtDotPath(current, path);
+        let merged = { ...(existing instanceof Map ? Object.fromEntries(existing) : (existing || {})) };
+        for (const [key, value] of Object.entries(v)) {
+          if (value === null) {
+            delete merged[key];
+          } else {
+            merged[key] = value;
+          }
+        }
+        $set[path] = merged;
+        continue;
+      }
+      if (v === null) {
+        $unset[path] = '';
+      } else if (v && typeof v === 'object' && !Array.isArray(v)) {
+        walk(v, path);
+      } else {
+        $set[path] = v;
+      }
+    }
+  }
+  walk(body, '');
+  let update = {};
+  if (Object.keys($set).length) update.$set = $set;
+  if (Object.keys($unset).length) update.$unset = $unset;
+  return update;
+}
+
+// Apply a RFC 6902 JSON Patch (array of ops) against a plain-object copy of
+// the mongoose doc, returning a flattened Mongo-style update.
+function applyJsonPatch(ops, doc) {
+  let work = applyJsonPatchToDoc(ops, doc);
+  return flattenMergePatch({ metadata: work.metadata, spec: work.spec, status: work.status, data: work.data, stringData: work.stringData, type: work.type, rules: work.rules }, doc);
+}
+
+function applyJsonPatchToDoc(ops, doc) {
+  let work = JSON.parse(JSON.stringify(doc));
+  for (const op of ops) {
+    let tokens = op.path.split('/').slice(1).map((t) => t.replace(/~1/g, '/').replace(/~0/g, '~'));
+    let cursor = work;
+    for (let i = 0; i < tokens.length - 1; i++) {
+      cursor = cursor[tokens[i]];
+      if (cursor === undefined) break;
+    }
+    let leaf = tokens.at(-1);
+    if (cursor === undefined) continue;
+    if (op.op === 'add' || op.op === 'replace') cursor[leaf] = op.value;
+    else if (op.op === 'remove') {
+      if (Array.isArray(cursor)) cursor.splice(Number(leaf), 1);
+      else delete cursor[leaf];
+    }
+  }
+  return work;
+}
+
+// Content negotiation for a response body. Lists used to bypass this and
+// always send JSON, so a protobuf-only client got JSON for every `list` call.
+function negotiate(req, res, payload, operationId = res.operationId) {
+  let data = payload;
+  if (data && typeof data.toJSON === 'function') {
+    data = data.toJSON();
+  }
+  // Not every route resolves an operationId — the OpenAPI docs only cover some
+  // groups — and without one the response silently downgraded to JSON even for
+  // kinds we have a .proto for. The payload's own kind is the same name the
+  // envelope's typeMeta carries, so use it as the fallback; an unknown name
+  // just throws below and lands on JSON anyway.
+  operationId = operationId || data?.kind;
+  if (req.headers?.accept?.includes('protobuf') && operationId) {
+    try {
+      let encoded = toProtoBuf(data, operationId, req.protobufTypes);
+      res.set('Content-Type', 'application/vnd.kubernetes.protobuf');
+      return res.send(encoded);
+    } catch (e) {
+      // Fall through to JSON so we don't 500 on clients that accept both — but
+      // say so. A protobuf-only client gets a body it can't read, and one
+      // unencodable item in a list silently downgrades the whole response.
+      console.warn(`[protobuf] falling back to JSON for ${operationId}: ${e.message}`);
+    }
+  }
+  if (req.headers?.accept?.includes('yaml')) {
+    res.set('Content-Type', 'application/yaml');
+    return res.send(yaml.stringify(data));
+  }
+  res.set('Content-Type', 'application/json');
+  return res.json(data);
+}
+
+// A 404 body is a Status, not the resource, so it needs its own message type —
+// encoding it with the route's operationId would produce a garbage object.
+function sendNotFound(Model, req, res, name = req.params?.name) {
+  return negotiate(req, res.status(404), Model.notFoundStatus(name), 'Status');
+}
+
+// Optimistic concurrency. A write that carries metadata.resourceVersion is
+// saying "apply this only if the object is still at that version" — read,
+// modify, write is only safe if a stale version is rejected. Nothing checked
+// it, so the last writer silently won.
+function conflictsOnResourceVersion(Model, req, res, item) {
+  let sent = req.body?.metadata?.resourceVersion;
+  if (!sent) {
+    return false;
+  }
+  let current = item?.metadata?.resourceVersion;
+  if (`${sent}` === `${current}`) {
+    return false;
+  }
+  let name = req.params?.name || req.body?.metadata?.name;
+  negotiate(req, res.status(409), new Status({
+    status: 'Failure',
+    reason: 'Conflict',
+    code: 409,
+    message: `Operation cannot be fulfilled on ${`${Model.kind}`.toLowerCase()} "${name}": the object has been modified; please apply your changes to the latest version and try again`,
+    details: { name, kind: `${Model.kind}`.toLowerCase() },
+  }), 'Status');
+  return true;
+}
+
+// ConfigMap and Secret honour `immutable: true` — once set, everything but
+// metadata is frozen, and the flag itself can't be cleared. Nothing enforced
+// it on the patch path, so an immutable ConfigMap accepted data changes and
+// answered 200.
+function sameValue(a, b) {
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+}
+
+function canonical(value) {
+  if (Array.isArray(value)) {
+    return value.map(canonical);
+  }
+  if (value && typeof value === 'object') {
+    return Object.keys(value).sort().reduce((out, key) => {
+      out[key] = canonical(value[key]);
+      return out;
+    }, {});
+  }
+  return value;
+}
+
+function rejectsImmutableChange(Model, req, res, item) {
+  let stored = item?.toJSON ? item.toJSON() : item;
+  if (stored?.immutable !== true) {
+    return false;
+  }
+  // Compare what the write would leave behind against what is there now.
+  // Listing the fields the body mentions isn't the same question: re-applying
+  // an object's own contents mentions `data` and changes nothing, and
+  // Kubernetes accepts it. A PUT replaces, so a field the body omits counts as
+  // a removal; a patch merges, so compare the merged result.
+  let projected = req.method === 'PUT' ? { ...(req.body || {}) } : projectedWrite(item, req);
+  let frozen = new Set([...Object.keys(stored || {}), ...Object.keys(projected || {})]
+    .filter((key) => !['metadata', 'apiVersion', 'kind'].includes(key)));
+  let touched = [...frozen].filter((key) => !sameValue(stored?.[key], projected?.[key]));
+  if (!touched.length) {
+    return false;
+  }
+  let name = req.params?.name || stored?.metadata?.name;
+  negotiate(req, res.status(422), Model.unprocessableContentStatus(
+    Model.kind,
+    name,
+    undefined,
+    `${Model.kind} "${name}" is invalid: ${touched[0].replace(/^\//, '')}: Forbidden: field is immutable when \`immutable\` is set`,
+    'Invalid',
+  ), 'Status');
+  return true;
+}
+
+// `?dryRun=All` means: validate and tell me what would happen, but change
+// nothing. It was ignored, so `kubectl apply --dry-run=server` printed
+// "(server dry run)" and created the object anyway — the one outcome a dry run
+// exists to prevent.
+function isDryRun(req) {
+  // Creates and patches carry it in the query string; a delete carries it in
+  // a DeleteOptions body instead, which is why checking only the query still
+  // let `kubectl delete --dry-run=server` delete the object.
+  for (const value of [req.query?.dryRun, req.body?.dryRun]) {
+    if (Array.isArray(value) ? value.includes('All') : value === 'All') {
+      return true;
+    }
+  }
+  return false;
+}
+
+// The object a create would have produced, without storing it.
+function projectedCreate(Model, req) {
+  let body = req.body || {};
+  let metadata = { ...(body.metadata || {}) };
+  metadata.creationTimestamp = metadata.creationTimestamp
+    || DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
+  return {
+    apiVersion: body.apiVersion || Model.apiVersion,
+    kind: body.kind || Model.kind,
+    ...body,
+    metadata,
+  };
+}
+
+// The object a patch or replace would have produced, without storing it.
+function projectedWrite(item, req) {
+  let current = item?.toJSON ? item.toJSON() : { ...item };
+  let body = req.body;
+  if (Array.isArray(body)) {
+    return applyJsonPatchToDoc(body, current);
+  }
+  return mergeDeep(current, body || {});
+}
+
+function mergeDeep(target, source) {
+  let out = Array.isArray(target) ? [...target] : { ...target };
+  for (const [key, value] of Object.entries(source || {})) {
+    if (value === null) {
+      delete out[key];
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      out[key] = mergeDeep(out[key] && typeof out[key] === 'object' ? out[key] : {}, value);
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+// A watch is scoped by the same namespace and selectors as the equivalent
+// list, but live events arrive on a process-wide per-kind bus that knows
+// nothing about the request. Without re-checking them here, a watch on one
+// namespace received every object of that kind in the cluster.
+function valueAtPath(obj, path) {
+  return path.split('.').reduce((cursor, key) => (
+    cursor === undefined || cursor === null ? undefined : cursor[key]
+  ), obj);
+}
+
+// The label clauses genFindQuery emits are aggregation expressions, because a
+// dotted label key can't be addressed by a dot-path. Evaluate the handful of
+// shapes we generate rather than pretending a watch has no selector.
+function evaluateExpr(obj, expr) {
+  let resolve = (operand) => {
+    if (operand && typeof operand === 'object' && operand.$getField) {
+      let input = `${operand.$getField.input}`.replace(/^\$/, '');
+      let field = operand.$getField.field?.$literal ?? operand.$getField.field;
+      let container = valueAtPath(obj, input);
+      return container ? container[field] : undefined;
+    }
+    return operand;
+  };
+  let [operator] = Object.keys(expr || {});
+  let args = expr?.[operator];
+  switch (operator) {
+    case '$eq': {
+      let [a, b] = args.map(resolve);
+      return b === null ? (a === undefined || a === null) : `${a}` === `${b}`;
+    }
+    case '$ne': {
+      let [a, b] = args.map(resolve);
+      return b === null ? !(a === undefined || a === null) : `${a}` !== `${b}`;
+    }
+    case '$in': {
+      let [a, list] = args;
+      let value = resolve(a);
+      return (list || []).map(String).includes(`${value}`);
+    }
+    case '$not':
+      return !evaluateExpr(obj, args);
+    default:
+      return true;
+  }
+}
+
+function matchesQuery(obj, params) {
+  for (const [path, condition] of Object.entries(params || {})) {
+    if (path === '$and') {
+      if (!(condition || []).every((clause) => matchesQuery(obj, clause))) return false;
+      continue;
+    }
+    if (path === '$expr') {
+      if (!evaluateExpr(obj, condition)) return false;
+      continue;
+    }
+    let value = valueAtPath(obj, path);
+    if (condition && typeof condition === 'object' && !Array.isArray(condition)) {
+      if ('$ne' in condition && `${value}` === `${condition.$ne}`) return false;
+      if ('$in' in condition && !condition.$in.map(String).includes(`${value}`)) return false;
+      if ('$nin' in condition && condition.$nin.map(String).includes(`${value}`)) return false;
+      if ('$exists' in condition && (value !== undefined && value !== null) !== condition.$exists) return false;
+      if ('$regex' in condition && !new RegExp(condition.$regex).test(`${value}`)) return false;
+      continue;
+    }
+    if (`${value}` !== `${condition}`) return false;
+  }
+  return true;
+}
+
+// `patch` resolves the raw mongo document, whose toJSON carries `_id`/`__v` and
+// skips whatever the model derives on construction. Re-wrap it so a patched
+// object looks like the same object fetched any other way.
+function asApiObject(Model, doc) {
+  if (!doc) {
+    return doc;
+  }
+  let plain = typeof doc.toJSON === 'function' ? doc.toJSON() : { ...doc };
+  delete plain._id;
+  delete plain.__v;
+  try {
+    return new Model(plain).toJSON();
+  } catch (e) {
+    return plain;
+  }
+}
+
+// The scale subresource. `kubectl scale` reads and writes this, not the parent
+// object, so without it the command fails with a 404 no matter how well the
+// controller handles spec.replicas.
+function toScale(item) {
+  let obj = item?.toJSON ? item.toJSON() : item;
+  let selector = obj?.spec?.selector?.matchLabels || obj?.spec?.selector || {};
+  return {
+    kind: 'Scale',
+    apiVersion: 'autoscaling/v1',
+    metadata: {
+      name: obj?.metadata?.name,
+      namespace: obj?.metadata?.namespace,
+      uid: obj?.metadata?.uid,
+      resourceVersion: obj?.metadata?.resourceVersion,
+      creationTimestamp: obj?.metadata?.creationTimestamp,
+    },
+    spec: { replicas: obj?.spec?.replicas ?? 0 },
+    status: {
+      replicas: obj?.status?.replicas ?? obj?.spec?.replicas ?? 0,
+      selector: Object.entries(selector).map(([k, v]) => `${k}=${v}`).join(','),
+    },
+  };
+}
+
 module.exports = {
-  findOne(Model) {
+  notFound: sendNotFound,
+  getScale(Model) {
     return (req, res, next) => {
       let query = { 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace };
-      if (!req.params.namespace) {
-        query = { 'metadata.name': req.params.name };
-      }
       Model.findOne(query)
         .then((item) => {
-          if (item) {
-            return res.status(200).send(item);
+          if (!item) {
+            return sendNotFound(Model, req, res);
           }
-          return res.status(404).send(Model.notFoundStatus(req.params.name));
+          return negotiate(req, res.status(200), toScale(item), 'Scale');
         })
         .catch(next);
     };
   },
-  list(Model) {
+  setScale(Model) {
     return (req, res, next) => {
+      try {
+        req.body = convertFromProtoBuff(req);
+      } catch (e) {
+        return next(e);
+      }
+      let replicas = req.body?.spec?.replicas;
+      if (replicas === undefined || replicas === null) {
+        return next(new Status({
+          status: 'Failure',
+          reason: 'BadRequest',
+          code: 400,
+          message: 'Scale body must set spec.replicas',
+        }));
+      }
+      let query = { 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace };
+      Model.findOne(query)
+        .then((item) => {
+          if (!item) {
+            return sendNotFound(Model, req, res);
+          }
+          if (conflictsOnResourceVersion(Model, req, res, item)) {
+            return undefined;
+          }
+          if (isDryRun(req)) {
+            let projected = item.toJSON ? item.toJSON() : { ...item };
+            projected.spec = { ...(projected.spec || {}), replicas: Number(replicas) };
+            return negotiate(req, res.status(200), toScale(projected), 'Scale');
+          }
+          return item.patch({ $set: { 'spec.replicas': Number(replicas) } }, query)
+            .then((updated) => negotiate(req, res.status(200), toScale(asApiObject(Model, updated)), 'Scale'));
+        })
+        .catch(next);
+    };
+  },
+  find(Model) {
+    return (req, res, next) => {
+      Model.findAllSortedByReq(req.query, req.params)
+        .then((items) => {
+          res.data = items;
+          next();
+        })
+        .catch(next);
+    };
+  },
+  findOne(Model) {
+    return (req, res, next) => {
+      Model.findOneByReq(req.query, req.params)
+        .then((item) => {
+          if (!item) {
+            return sendNotFound(Model, req, res);
+          }
+          res.data = item;
+          next();
+        })
+        .catch(next);
+    };
+  },
+  format(Model) {
+    return (req, res, next) => {
+      if (req.query?.watch === 'true') {
+        let eventStream = new Readable({ read() {} });
+        eventStream.pipe(res);
+        // `;stream=watch` is what a real apiserver sends, and it's how a client
+        // knows the body is a frame stream rather than one object.
+        if (req.headers?.accept?.includes('protobuf')) {
+          res.set('Content-Type', 'application/vnd.kubernetes.protobuf;stream=watch');
+        } else {
+          res.set('Content-Type', 'application/json;stream=watch');
+        }
+        // Send the headers before any event exists. Express holds them until
+        // the first write, so a watch on an empty collection — or one resuming
+        // from a version, which replays nothing — left the client waiting on
+        // response headers that never came.
+        res.flushHeaders();
+        let toJson = (x) => (x && typeof x.toJSON === 'function') ? x.toJSON() : x;
+        // The scope of this watch, as mongo query params — namespace from the
+        // URL plus any label/field selector.
+        let scope = Model.genFindQuery(req.query || {}, req.params || {}).params || {};
+        let pushToEventStream = (elem, eventType) => {
+          let asJson = toJson(elem);
+          if (!matchesQuery(asJson, scope)) {
+            return;
+          }
+          if (req.headers?.accept?.includes('protobuf')) {
+            // Same fallback as the non-watch path: without it a group with no
+            // operationId produced a protobuf stream that never emitted an
+            // event, and the client just hung.
+            let operationId = res.operationId || asJson?.kind;
+            if (!operationId) return;
+            let proto = toProtoBuf(asJson, operationId, req.protobufTypes);
+            eventStream.push(toWatchEvent(proto, eventType, req.protobufTypes));
+            return;
+          }
+          if (req.headers?.accept?.split(';').find((e) => e === 'as=Table')) {
+            Model.table([asJson]).then((table) => {
+              if (eventType !== 'ADDED') table.columnDefinitions = null;
+              eventStream.push(`${JSON.stringify({ type: eventType, object: table })}\n`);
+            });
+            return;
+          }
+          eventStream.push(`${JSON.stringify({ type: eventType, object: asJson })}\n`);
+        };
+
+        // `resourceVersion` was ignored entirely, so a client that listed and
+        // then watched from the list's version was re-sent the whole
+        // collection as ADDED — the standard informer sequence produced a
+        // duplicate of everything it already had. Absent or 0 still means
+        // "send me current state first"; anything else means "only what
+        // happened after that version".
+        let fromVersion = Number(req.query?.resourceVersion);
+        let resumeFrom = Number.isFinite(fromVersion) && fromVersion > 0 ? fromVersion : null;
+        let isNewerThanResume = (obj) => {
+          if (resumeFrom === null) return true;
+          let version = Number(toJson(obj)?.metadata?.resourceVersion);
+          return !Number.isFinite(version) || version > resumeFrom;
+        };
+
+        let seen = new Set();
+        if (resumeFrom === null) {
+          Model.findAllSortedByReq(req.query, req.params)
+            .then((items) => {
+              items.forEach((elem) => {
+                seen.add(keyFor(elem));
+                pushToEventStream(elem, 'ADDED');
+              });
+            })
+            .catch(() => {});
+        }
+
+        let bus = busFor(Model.kind);
+        let onCreated = (obj) => {
+          let k = keyFor(obj);
+          if (seen.has(k)) return;
+          if (!isNewerThanResume(obj)) return;
+          seen.add(k);
+          pushToEventStream(obj, 'ADDED');
+        };
+        let onUpdated = (obj) => {
+          let k = keyFor(obj);
+          if (!isNewerThanResume(obj)) return;
+          if (!seen.has(k)) seen.add(k);
+          pushToEventStream(obj, 'MODIFIED');
+        };
+        let onDeleted = (obj) => {
+          seen.delete(keyFor(obj));
+          pushToEventStream(obj, 'DELETED');
+        };
+        bus.on('created', onCreated);
+        bus.on('updated', onUpdated);
+        bus.on('deleted', onDeleted);
+
+        let cleanup = () => {
+          bus.off('created', onCreated);
+          bus.off('updated', onUpdated);
+          bus.off('deleted', onDeleted);
+          try { eventStream.push(null); } catch (e) {}
+        };
+        res.on('close', cleanup);
+        res.on('finish', cleanup);
+        return;
+      }
       if (req.headers?.accept?.split(';').find((e) => e === 'as=Table')) {
-        return Model.table(req.query)
+        return Model.table([res.data].flat())
           .then((table) => res.status(200).send(table))
           .catch(next);
       }
-      Model.list(req.query)
-      .then((list) => res.status(200).send(list))
+      return next();
+    };
+  },
+  list(Model) {
+    return (req, res, next) => {
+      return Model.listByReq(req.query, req.params)
+      .then((list) => negotiate(req, res.status(200), list))
       .catch(next);
+    }
+  },
+  sendObj(Model) {
+    return (req, res, next) => {
+      if (res.writableEnded === false) {
+        return negotiate(req, res, res.data);
+      }
+      next();
     };
   },
   save(Model) {
     return (req, res, next) => {
-      if (!req.body?.metadata?.creationTimestamp) {
-        req.body.metadata.creationTimestamp = new Date();
+      try {
+        req.body = convertFromProtoBuff(req);
+      } catch (e) {
+        next(e);
       }
-      if (!req.body?.metadata?.namespace) {
-        req.body.metadata.namespace = (req.params.namespace || "default");
+      if (!req.body?.metadata) {
+        req.body.metadata = {};
       }
-      Model.create(req.body)
-      .then((item) => res.status(201).send(item))
+      // Generate the name before anything builds a query out of it — several
+      // models construct their own uniqueness query in `create`, and an
+      // undefined name silently drops that clause.
+      Model.applyGenerateName(req.body.metadata);
+      let query = { 'metadata.namespace': req.body.metadata.namespace };
+      if (['Node', 'APIService', 'Binding', 'ComponentStatus', 'Lease', 'RuntimeClass', 'Namespace'].includes(Model.kind)) {
+        if (!req.body.metadata?.name) {
+          req.body.metadata.name = (req.params.name || "default");
+        }
+        query = { 'metadata.name': req.body.metadata.name };
+      } else {
+        if (!req.body.metadata?.namespace) {
+          req.body.metadata.namespace = (req.params.namespace || "default");
+        }
+        // A collection POST has no :name param, so this query used to be just
+        // the namespace — and `create` treats a match as AlreadyExists. The
+        // second object of any kind in a namespace 409'd against the first.
+        // Uniqueness is per name + namespace. Objects created with
+        // generateName have no name yet and are always new.
+        let name = req.params.name || req.body.metadata?.name;
+        if (name) {
+          query['metadata.name'] = name;
+        } else {
+          // No name yet — the server is about to generate one from
+          // generateName. A namespace-only query would match some unrelated
+          // object and report AlreadyExists, so let create build the query
+          // once the name exists.
+          query = undefined;
+        }
+      }
+      if (isDryRun(req)) {
+        res.status(201);
+        res.data = projectedCreate(Model, req);
+        return next();
+      }
+      return Model.create(req.body, query)
+      .then((item) => {
+        res.status(201);
+        res.data = item;
+        return next();
+      })
       .catch(next);
     };
   },
   update(Model) {
     return (req, res, next) => {
+      try {
+        req.body = convertFromProtoBuff(req);
+      } catch (e) {
+        next(e);
+      }
       let query = { 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace };
       if (!req.params.namespace) {
         query = { 'metadata.name': req.params.name };
       }
       if (Object.keys(req.body).length > 0) {
         Model.findOne(query)
-        .then((item) => item ? item.update(req.body) : Promise.resolve())
         .then((item) => {
+          if (!item) return undefined;
+          if (conflictsOnResourceVersion(Model, req, res, item)) return null;
+          if (rejectsImmutableChange(Model, req, res, item)) return null;
+          if (isDryRun(req)) return projectedWrite(item, req);
+          return item.update(req.body, query);
+        })
+        .then((item) => {
+          if (item === null) return undefined;
           if (item) {
-            return res.status(201).send(item);
+            res.status(200);
+            // The raw mongoose document carries _id/__v; every other write
+            // path goes through asApiObject for exactly this reason.
+            res.data = asApiObject(Model, item);
+            return next();
           }
-          return res.status(404).send(Model.notFoundStatus(req.params.name));
+          return sendNotFound(Model, req, res);
         })
         .catch(next);
       } else {
         Model.findOne(query)
         .then((item) => {
           if (item) {
-            return res.status(200).send(item);
+            // req.headers.accept = 'application/json';
+            res.status(200);
+            res.data = item.toJSON();
+            return next();
           }
-          return res.status(404).send(Model.notFoundStatus(req.params.name));
+          return sendNotFound(Model, req, res);
         })
         .catch(next);
       }
@@ -70,23 +745,81 @@ module.exports = {
   },
   patch(Model) {
     return (req, res, next) => {
+      try {
+        req.body = convertFromProtoBuff(req);
+      } catch (e) {
+        next(e);
+      }
       let query = { 'metadata.name': req.params.name, 'metadata.namespace': req.params.namespace };
       if (!req.params.namespace) {
         query = { 'metadata.name': req.params.name };
       }
-      if (Object.keys(req.body).length > 0) {
+      let contentType = req.headers['content-type'] || '';
+      let update = req.body;
+      if (Array.isArray(req.body) && contentType.includes('json-patch+json')) {
+        // Need the current doc to apply RFC 6902 ops; findOne first.
+        return Model.findOne(query)
+          .then((item) => {
+            if (!item) return sendNotFound(Model, req, res);
+            if (conflictsOnResourceVersion(Model, req, res, item)) return undefined;
+            if (rejectsImmutableChange(Model, req, res, item)) return undefined;
+            if (isDryRun(req)) {
+              res.status(200);
+              res.data = projectedWrite(item, req);
+              return next();
+            }
+            let doc = item.toJSON ? item.toJSON() : item;
+            let flat = applyJsonPatch(req.body, doc);
+            return item.patch(flat, query).then((updated) => {
+              if (updated) {
+                res.status(200);
+                res.data = asApiObject(Model, updated);
+                return next();
+              }
+              return sendNotFound(Model, req, res);
+            });
+          })
+          .catch(next);
+      }
+      // Everything that reaches here is an object body (json-patch returned
+      // above), so flatten it to dot-paths. Handing mongoose a nested object
+      // replaces the whole subdocument: an apply-patch carrying only
+      // metadata.name + labels wiped namespace, uid and creationTimestamp off
+      // the stored object, after which every namespaced lookup 404'd.
+      if (Object.keys(req.body || {}).length > 0) {
         Model.findOne(query)
-        .then((item) => item ? item.update(req.body) : Promise.resolve())
         .then((item) => {
-          if (item) {
-            return res.status(201).send(item);
+          if (!item) return undefined;
+          if (conflictsOnResourceVersion(Model, req, res, item)) return null;
+          if (rejectsImmutableChange(Model, req, res, item)) return null;
+          if (isDryRun(req)) return projectedWrite(item, req);
+          // Flattened here, not before the lookup: merging a map of dotted
+          // keys needs the stored value to merge into.
+          if (req.body && typeof req.body === 'object' && !Array.isArray(req.body)) {
+            update = flattenMergePatch(req.body, item.toJSON ? item.toJSON() : item);
           }
-          return res.status(404).send(Model.notFoundStatus(req.params.name));
+          return item.patch(update, query);
+        })
+        .then((item) => {
+          if (item === null) return undefined;
+          if (item) {
+            res.status(200);
+            res.data = asApiObject(Model, item);
+            return next();
+          }
+          return sendNotFound(Model, req, res);
         })
         .catch(next);
       } else {
         Model.findOne(query)
-        .then((item) => item ? res.status(200).send(item) : res.status(200).send({}))
+        .then((item) => {
+          if (!item) {
+            return sendNotFound(Model, req, res);
+          }
+          res.status(200);
+          res.data = item.toJSON();
+          return next();
+        })
         .catch(next);
       }
     };
@@ -98,21 +831,53 @@ module.exports = {
         query = { 'metadata.name': req.params.name };
       }
       Model.findOne(query)
-      .then((item) => item ? item.delete() : Promise.resolve())
       .then((item) => {
-        if (item) {
-          return res.status(200).send(item.successfulStatus());
+        if (!item) return undefined;
+        if (isDryRun(req)) return [item, item];
+        return Promise.all([item, item.delete()]);
+      })
+      .then((pair) => {
+        if (pair) {
+          let [item, result] = pair;
+          res.status(200);
+          // A finalizer holds the object: `delete` only stamped
+          // deletionTimestamp. Reporting Success tells the client it is gone
+          // when it is still there, so answer with the object instead — which
+          // is what Kubernetes returns while a deletion is pending.
+          let plain = result?.toJSON ? result.toJSON() : result;
+          let pending = plain?.metadata?.deletionTimestamp
+            && (plain?.metadata?.finalizers || []).length > 0;
+          res.data = pending
+            ? asApiObject(Model, result)
+            : Model.successfulStatus(item?.kind?.toLowerCase(), item?.metadata?.name, item?.metadata?.uid);
+          return next();
         }
-        return res.status(404).send(Model.notFoundStatus(req.params.name));
+        return sendNotFound(Model, req, res);
       })
       .catch(next);
     };
   },
-  delete(Model) {
+  delete(Model, sendRes = true) {
     return (req, res, next) => {
-      Model.find(req.body)
-      .then((items) => Promise.all(items.map((item) => item.delete())))
-      .then((item) => items ? res.status(200).send(item) : res.status(200).send({}))
+      // Scope the delete to the URL namespace (if any) plus any labelSelector
+      // / fieldSelector the client sent, so collection-deletes don't wipe
+      // every row in the DB.
+      let q = Model.genFindQuery(req.query || {}, req.params || {}).params || {};
+      return Model.find(q)
+      .then((items) => (isDryRun(req) ? items : Promise.all(items.map((item) => item.delete()))))
+      .then((items) => (items || []).filter(Boolean))
+      // A bare array isn't a Kubernetes response object — it has no kind, so a
+      // client can't tell what came back and the protobuf encoder had nothing
+      // to route on. Answer with the same List envelope a GET would produce.
+      .then((items) => Model.list({}, items.map((item) => new Model(item))))
+      .then((list) => {
+        if (res.writableEnded === false && sendRes) {
+          res.status(200);
+          res.data = list;
+          return next();
+        }
+        return next();
+      })
       .catch(next);
     };
   }

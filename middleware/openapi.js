@@ -18,22 +18,42 @@ const openapi = new OpenApi({
 
 module.exports = {
   openapiv3: OpenApiV3(openApiV3Spec),
-  apiV1OpenapiV3: ApiV1OpenApiV3(apiV1OpenApiV3Spec),
+  apiV1OpenApiV3: ApiV1OpenApiV3(apiV1OpenApiV3Spec),
   apiNetworkingK8sIoV1OpenApiV3: ApiNetworkingK8sIoV1OpenApiV3(apiNetworkingK8sIoV1OpenApiV3Spec),
   apiAppsV1OpenApiV3: ApiAppsV1OpenApiV3(apiAppsV1OpenApiV3Spec),
   apiRbacAuthorizatonK8sIoV1OpenApiV3: ApiNetworkingK8sIoV1OpenApiV3(apiRbacAuthorizatonK8sIoV1OpenApiV3Spec),
   apiCertificatesK8sIoApiV3: ApiAppsV1OpenApiV3(apiCertificatesK8sIoApiV3Spec),
   validSchema: (schema) => {
     return (req, res, next) => {
-      let path = Object.keys(schema.document.paths)
-        .filter((e) => {
-          let r = new RegExp(e.replace(/\{.*?\}/ig, '.*?'));
-          if (req.baseUrl.match(r)?.length === 1) {
-            return Object.keys(schema.document.paths);
-          }
+      let paths = [req.route.path]
+        .flat(Infinity)
+        .filter((p) => typeof p === 'string')
+        .map((p) => {
+          return p
+           .split('/')
+           .map((e) => e.charAt(0) === ':' ? `{${e.substring(1, e.length)}}` : e)
+           .join('/');
         })
-        .reverse()
-        .at(0);
+      let path = Object.keys(schema.document.paths).find((key) => (req.path.match(/\//g) || []).length === (key.match(/\//g) || []).length && paths.includes(key) && schema.document.paths[key]?.[req.method.toLowerCase()]);
+      if (req.headers?.accept?.includes(';')) {
+        type = req.headers?.accept?.split(';')?.[0];
+      } else if (req.headers?.accept?.includes(',')) {
+        type = req.headers?.accept?.split(',')?.[0];
+      } else {
+        type = req.headers?.accept;
+      }
+      if (!['application/json', 'application/vnd.kubernetes.protobuf', 'application/yaml'].includes(req.headers?.accept)) {
+        type = 'application/json';
+      }
+      req.operationId = schema.document.paths?.[path]?.[req.method.toLowerCase()].requestBody?.content?.['*/*']?.schema?.['$ref']?.split('.')?.at(-1);
+      res.operationId = schema.document.paths?.[path]?.[req.method.toLowerCase()].responses?.['200']?.content?.[type?.trim()]?.schema?.['$ref']?.split('.')?.at(-1);
+      // An RFC 6902 patch body is an array of ops, but every request schema
+      // here declares body as an object, so the validator failed it — and a
+      // validation failure surfaces as a 500. The ops are validated by the
+      // patch middleware that applies them.
+      if (`${req.headers['content-type']}`.includes('json-patch+json')) {
+        return next();
+      }
       return openapi.validPath(schema.document.paths[path])(req, res, next);
     };
   }

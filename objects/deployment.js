@@ -1,5 +1,6 @@
+const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
-const Pod = require('./pod.js');
+const ReplicationController = require('./replicationController.js');
 const Service = require('./service.js');
 const { Deployment: Model } = require('../database/models.js');
 const {
@@ -7,139 +8,117 @@ const {
   getContainerIP,
   getAllContainersWithName,
   duration,
+  age,
 }  = require('../functions.js');
+
+// The ReplicationControllers a deployment owns are named
+// `<deployment>-<generation>`. Matching on the bare prefix `^<name>` also
+// matched every other deployment's controllers whose name starts with this
+// one's: deployment `web` counted (and, on delete, removed) `web-cache-1`.
+// Anchoring on the generation suffix — and escaping the name, which is
+// interpolated straight into a regex — keeps a deployment to its own.
+function ownedControllers(deployment) {
+  let escaped = `${deployment.metadata.name}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return {
+    'metadata.name': { $regex: `^${escaped}-\\d+$` },
+    'metadata.namespace': deployment.metadata.namespace,
+  };
+}
 
 class Deployment extends K8Object {
   constructor(config) {
     super(config);
     this.spec = config.spec;
     this.status = config.status;
-    this.rollingOut = false;
+    this.apiVersion = Deployment.apiVersion;
+    this.kind = Deployment.kind;
+    this.Model = Deployment.Model;
   }
 
-  static apiVersion = 'v1';
+  static apiVersion = 'apps/v1';
   static kind = 'Deployment';
-
-  static findOne(params) {
-    return Model.findOne(params)
-      .then((deployment) => {
-        if (deployment) {
-          return new Deployment(deployment).setResourceVersion();
-        }
-      });
-  }
-
-  static find(params) {
-    return Model.find(params)
-      .then((deployments) => {
-        if (deployments) {
-          return Promise.all(deployments.map((deployment) => new Deployment(deployment).setResourceVersion()));
-        }
-      });
-  }
+  static Model = Model;
 
   static create(config) {
-    return this.findOne({ 'metadata.name': config.metadata.name, 'metadata.namespace': config.metadata.namespace })
-    .then((existingDeployment) => {
-      if (existingDeployment) {
-        throw this.alreadyExistsStatus(config.metadata.name);
-      }
-      return new Model(config).save()
-    })
+    return super.create(config)
     .then((deployment) => {
       let newDeployment = new Deployment(deployment);
-      if (newDeployment.spec.paused !== true) {
-        newDeployment.rollout();
-      }
-      setInterval(() => {
-        if (newDeployment.rollingOut === false) {
-          Promise.all(
-            newDeployment.spec.template.spec.containers
-              .map((e) => getAllContainersWithName(newDeployment.spec.template.metadata.name, e.image))
+        if (newDeployment.spec.paused !== true) {
+          return ReplicationController.find(
+            ownedControllers(newDeployment),
+            { sort: { 'created_at': 1 } }
           )
-          .then((containers) => containers.map((e) => e.raw))
-          .then((raw) => raw.toString().split('\n').filter((e) => e !== ''))
-          .then((arr) => {
-            if (newDeployment.rollingOut === false) {
-              if (newDeployment.spec.replicas > arr.length) {
-                newDeployment.rollout(newDeployment.spec.replicas - arr.length);
-              } else if (newDeployment.spec.replicas < arr.length) {
-                new Array(arr.length - newDeployment.spec.replicas)
-                  .fill(0).forEach(() => newDeployment.deletePod());
-              }
-            }
-          })
+          .then((rcs) => ReplicationController.create({
+            metadata: {
+              ...newDeployment.metadata,
+              name: `${newDeployment.metadata.name}-${rcs.length + 1}`
+            },
+            spec: {
+              ...newDeployment.spec,
+              selector: {
+                app: newDeployment.metadata.name,
+                deployment: `${newDeployment.metadata.name}-${rcs.length + 1}`,
+              },
+              minReadySeconds: Infinity,
+            },
+          }))
+          .then((rc) => newDeployment.rollout(rc));
         }
-      }, 1000);
       return newDeployment;
     })
   }
 
-  delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-    .then((deployment) => {
+  update(updateObj, searchQ) {
+    return Promise.all([
+      super.patch(updateObj, searchQ),
+      ReplicationController.find(
+        ownedControllers(this),
+        { sort: { 'created_at': 1 } }
+      )
+    ])
+    .then(async (arr) => {
+      let [ deployment, rc ] = arr;
       if (deployment) {
-        return this.setConfig(deployment);
-      }
-    });
-  }
-
-  update(updateObj) {
-    return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
-      updateObj,
-      { new: true }
-    )
-    .then((deployment) => {
-      if (deployment) {
-        let newDeployment = this.setConfig(deployment);
-        if (newDeployment.spec.paused !== true &&
-          this.rollingOut === false &&
-          JSON.stringify(this.spec.template) !== JSON.stringify(deployment.spec.template)) {
-          newDeployment.rollout();
+        let newDeployment = new Deployment(deployment);
+        let previousRc = (rc || []).at(-1);
+        if (newDeployment.spec.paused !== true) {
+          return ReplicationController.create({
+            metadata: {
+              ...newDeployment.metadata,
+              name: `${newDeployment.metadata.name}-${rc.length + 1}`
+            },
+            spec: {
+              ...newDeployment.spec,
+              selector: {
+                app: newDeployment.metadata.name,
+                deployment: `${newDeployment.metadata.name}-${rc.length + 1}`,
+              },
+              minReadySeconds: Infinity,
+            },
+          })
+          .then((created) => newDeployment.rollout(created, previousRc));
         }
         return newDeployment;
       }
     });
   }
 
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
-    if (!([...new Set(Object.values(params))].find((e) => undefined))) {
-      params = {};
-    }
-    let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
-    return this.find(params, projection, options);
+  delete() {
+    return ReplicationController.find(ownedControllers(this))
+    .then((rcs) => {
+      return Promise.all([
+        ...rcs.map((rc) => rc.delete()),
+        super.delete(),
+      ]);
+    });
   }
 
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (deployments) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: false,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < deployments.length ? deployments.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${deployments.length}${JSON.stringify(deployments[0])}`)}`
-        },
-        items: deployments
-      }));
-  }
-
-  static table (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (deployments) => ({
+  static async table (items = []) {
+    return {
         "kind": "Table",
         "apiVersion": "meta.k8s.io/v1",
         "metadata": {
-          "resourceVersion": `${await super.hash(`${deployments.length}${JSON.stringify(deployments[0])}`)}`,
+          "resourceVersion": `${await super.hash(`${items.length}${JSON.stringify(items[0])}`)}`,
         },
         "columnDefinitions": [
           {
@@ -199,16 +178,19 @@ class Deployment extends K8Object {
             "priority": 1
           }
         ],
-        "rows": deployments.map((e) => ({
+        "rows": items.map((e) => ({
           "cells": [
             e.metadata.name,
-            `${e.status.availableReplicas}/${e.spec.replicas}`,
-            e.status.updatedReplicas,
-            e.status.availableReplicas,
-            duration(new Date() - e.metadata.creationTimestamp),
-            e.spec.template.spec.containers.map((e) => e.name).join(', '),
-            e.spec.template.spec.containers.map((e) => e.image).join(', '),
-            Object.values(e.spec.selector.matchLabels).join(', '),
+            `${e.status?.availableReplicas ?? 0}/${e.spec?.replicas ?? 0}`,
+            e.status?.updatedReplicas ?? 0,
+            e.status?.availableReplicas ?? 0,
+            age(e.metadata.creationTimestamp),
+            (e.spec?.template?.spec?.containers || []).map((c) => c.name).join(', '),
+            (e.spec?.template?.spec?.containers || []).map((c) => c.image).join(', '),
+            // A display cell must not be able to fail the request: a missing
+            // selector used to throw here and answer `kubectl get deployments`
+            // with a 500.
+            Object.entries(e.spec?.selector?.matchLabels || {}).map(([k, v]) => `${k}=${v}`).join(','),
           ],
           object: {
             "kind": "PartialObjectMetadata",
@@ -216,23 +198,7 @@ class Deployment extends K8Object {
             metadata: e.metadata,
           }
         })),
-      }));
-  }
-
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
+    }
   }
 
   async setConfig(config) {
@@ -250,128 +216,79 @@ class Deployment extends K8Object {
     return this.status;
   }
 
-  deletePod() {
-    return Pod.find(
-      { 'metadata.name': this.spec.template.metadata.name },
-      {},
-      {
-        sort: {
-          'created_at': 1
+  async rollout(_rc, previousRc) {
+    let rc = _rc;
+    if (!rc) {
+      // This re-declared `rc` with `let`, so the lookup's result was thrown
+      // away and the outer rc stayed undefined.
+      rc = (await ReplicationController.findAllSorted(ownedControllers(this)))[0];
+    }
+    if (!rc) {
+      return undefined;
+    }
+    // The old loop was written as if every rollout were replacing an existing
+    // generation: it created a pod, then deleted one, and adjusted the
+    // deployment's counters with a `conditions.$` positional query that never
+    // matched on a fresh object — so the +1 silently did nothing while the -1
+    // (which had no query at all) always applied. A new deployment ended up
+    // with churned pods and a negative replica count.
+    let percent = Number(`${this.spec.strategy?.rollingUpdate?.maxUnavailable ?? '25%'}`.match(/\d+/)?.[0] || 25);
+    let desired = this.spec.replicas ?? 1;
+    let batchSize = Math.max(1, Math.ceil(desired * percent / 100));
+
+    if (this.spec.strategy.type === "Recreate") {
+      if (previousRc) {
+        await previousRc.deletePods();
+      }
+      await rc.createPods(desired);
+      return this.patch({
+        $set: {
+          'status.replicas': desired,
+          'status.readyReplicas': desired,
+          'status.availableReplicas': desired,
+          'status.updatedReplicas': desired,
+        },
+      });
+    }
+
+    let created = 0;
+    while (created < desired) {
+      let batch = Math.min(batchSize, desired - created);
+      let pods = await rc.createPods(batch);
+      created += batch;
+
+      let service = await Service.findOne({
+        'metadata.name': this.metadata.name,
+        'metadata.namespace': this.metadata.namespace,
+      });
+      if (service) {
+        for (const pod of pods.flat().filter(Boolean)) {
+          await service.addPod(pod);
         }
       }
-    )
-    .then((pods) => {
-      if (pods[0]) {
-        return Promise.all([
-          pods[0].stop(),
-          pods[0].delete(),
-          Service.findOne({
-            'metadata.name': this.metadata.name
-          })
-          .then((service) => {
-            if (service) {
-              service.removePod(pod[0])
-            }
-          })
-        ])
-        .then(() => {
-          this.update({
-            $inc: {
-              'status.readyReplicas': -1,
-              'status.replicas': -1,
-              'status.availableReplicas': -1,
-            },
-          })
-        })
-      }
-    })
-  }
 
-  async createPod(config) {
-    if (!config?.metadata?.labels) {
-      config.metadata.labels = new Map();
-    }
-    config.metadata.labels.set('app', this.metadata.name);
-    if (!config?.metadata?.namespace) {
-      config.metadata.namespace = this.metadata.namespace
-    }
-    return Pod.create(config)
-    .then((newPod) => {
-      return Promise.all([
-        this.update({
-          $inc: {
-            'status.replicas': 1,
-            'status.readyReplicas': 1,
-            'status.availableReplicas': 1,
-          },
-          $set: {
-            conditions: [{
-              "type": "Progressing",
-              "status": "True",
-              "lastUpdateTime": new Date(),
-              "lastTransitionTime": new Date(),
-            },
-            {
-              "type": "Available",
-              "status": "True",
-              "lastUpdateTime": new Date(),
-              "lastTransitionTime": new Date(),
-            }]
+      // Only a previous generation gets retired. Deleting from `rc` here is
+      // deleting the replicas we just created.
+      if (previousRc) {
+        await previousRc.deletePods(batch);
+        if (service) {
+          let oldest = await service.findOldestPod();
+          if (oldest) {
+            await oldest.removePod();
           }
-        }),
-        Service.findOne({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-        .then((service) => {
-          if (service) {
-            return service.addPod(newPod);
-          }
-        })
-      ])
-    })
-    .then(() => {
-      if (this?.status?.replicas > this?.spec?.replicas) {
-        return this.deletePod();
+        }
       }
-    })
-  }
 
-  async setResourceVersion() {
-    await super.setResourceVersion();
+      await this.patch({
+        $inc: {
+          'status.replicas': batch,
+          'status.readyReplicas': batch,
+          'status.availableReplicas': batch,
+          'status.updatedReplicas': batch,
+        },
+      });
+    }
     return this;
-  }
-
-  async rollout(numPods = this.spec.replicas) {
-    if (this.rollingOut === false) {
-      this.rollingOut = true;
-      if (this.spec.strategy.type === "RollingUpdate") {
-        let percent = Number(`${this.spec.strategy.rollingUpdate.maxUnavailable}`.match(/\d*/)[0]);;
-        let newPods = 0;
-        do {
-          await Promise.all(
-            new Array(Math.ceil(numPods * percent / 100))
-            .fill(0)
-            .map(() => {
-              newPods += 1;
-              return this.createPod(this.spec.template);
-            })
-          );
-        } while (this.status.replicas < numPods);
-      } else if (this.spec.strategy.type === "Recreate") {
-        Promise.all(
-          new Array(numPods)
-          .fill(0)
-          .map(() => {
-            return this.deletePod();
-          })
-        ).then(() =>
-          new Array(numPods)
-          .fill(0)
-          .map(() => {
-            return this.createPod(this.spec.template);
-          })
-        )
-      }
-    }
-    this.rollingOut = false;
   }
 }
 

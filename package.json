@@ -4,21 +4,39 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "./start.sh"
+    "setup": "./scripts/setup.sh",
+    "start": "./scripts/start.sh",
+    "start:legacy": "./start.sh",
+    "test": "node ./test/test.js",
+    "test:smoke": "node ./test/boot-clean.js",
+    "test:proto": "node ./test/proto-roundtrip.js",
+    "test:wire": "node ./test/wire-matrix.js",
+    "test:rv": "node ./test/resource-version.js",
+    "test:workload": "node ./test/workload.js",
+    "test:pods": "node ./test/pod-features.js",
+    "test:sched": "node ./test/scheduling.js",
+    "test:store": "node ./test/store.js",
+    "test:portability": "node ./test/portability.js",
+    "test:services": "node ./test/services.js",
+    "test:all": "node ./test/all.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@wesleytodd/openapi": "^1.0.0",
+    "axios": "^1.6.8",
     "docker-cli-js": "^2.10.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.1",
     "istextorbinary": "^9.5.0",
+    "luxon": "^3.4.4",
     "mongoose": "^8.2.3",
     "node-cleanup": "^2.1.2",
     "portfinder": "^1.0.32",
+    "protobufjs": "^7.3.0",
+    "selfsigned": "^2.4.1",
+    "slashes": "^3.0.12",
     "uuid": "^9.0.1",
-    "yaml": "^2.4.1"
+    "yaml": "^2.4.2"
   }
 }

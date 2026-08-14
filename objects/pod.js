@@ -1,54 +1,104 @@
-const EventEmitter = require('events');
+const { DateTime } = require('luxon');
 const K8Object = require('./object.js');
+const EventEmitter = require('./emitter.js');
 const Secret = require('./secret.js');
 const ConfigMap = require('./configMap.js');
 const { Pod: Model } = require('../database/models.js');
-const {
-  runImage,
-  duration,
-  stopContainer,
-  getContainerIP,
-  randomBytes,
-  isContainerRunning,
-} = require('../functions.js');
+const { runImage, duration, stopContainer, getContainerIP, removeContainer, randomBytes, isContainerRunning, containerHasStarted, getContainerLogs, waitContainer, execInContainer, age } = require('../functions.js');
+const http = require('http');
+const net = require('net');
+
+// What kubectl's own pod printer puts in STATUS: the phase is only the
+// fallback. A finished pod shows the container's termination reason
+// ("Completed"), not "Succeeded", and one being deleted shows "Terminating".
+function podStatusText(pod) {
+  if (pod?.metadata?.deletionTimestamp) {
+    return 'Terminating';
+  }
+  for (const status of pod?.status?.containerStatuses || []) {
+    if (status?.state?.waiting?.reason) {
+      return status.state.waiting.reason;
+    }
+    if (status?.state?.terminated?.reason) {
+      return status.state.terminated.reason;
+    }
+    if (status?.state?.terminated?.exitCode) {
+      return `ExitCode:${status.state.terminated.exitCode}`;
+    }
+  }
+  return pod?.status?.reason || pod?.status?.phase || 'Unknown';
+}
+
+// Probe timers live longer than the object that scheduled them: `delete()`
+// stops the pod through a *new* Pod instance, whose own `_probeIntervals` is
+// empty, so the original timers kept firing `docker exec` against a container
+// that no longer exists. Keyed by the pod's container-name prefix, which is
+// unique per pod, they can be cleared from anywhere.
+const probeTimers = new Map();
+
+function stopProbes(key) {
+  let timers = probeTimers.get(key);
+  if (!timers) {
+    return;
+  }
+  timers.forEach((timer) => clearInterval(timer));
+  probeTimers.delete(key);
+}
+
+// A probe only counts if it actually says how to check. Every container has a
+// defaulted `readinessProbe` object courtesy of the schema, so testing the
+// field itself schedules a timer for containers that have no probe at all.
+function probeHandler(probe) {
+  if (!probe) {
+    return undefined;
+  }
+  // Older data nests httpGet/tcpSocket under `exec`; accept either shape.
+  if (probe.exec?.command?.length) {
+    return { exec: probe.exec };
+  }
+  let httpGet = probe.httpGet?.port ? probe.httpGet : (probe.exec?.httpGet?.port ? probe.exec.httpGet : undefined);
+  if (httpGet) {
+    return { httpGet };
+  }
+  let tcpSocket = probe.tcpSocket?.port ? probe.tcpSocket : (probe.exec?.tcpSocket?.port ? probe.exec.tcpSocket : undefined);
+  if (tcpSocket) {
+    return { tcpSocket };
+  }
+  return undefined;
+}
+
+function isConfiguredProbe(probe) {
+  return Boolean(probeHandler(probe));
+}
 
 class Pod extends K8Object {
   constructor(config) {
     super(config);
     this.spec = config.spec;
     this.status = config.status;
-    this.eventEmitter = new EventEmitter();
+    this.apiVersion = Pod.apiVersion;
+    this.kind = Pod.kind;
+    this.Model = Pod.Model;
   }
 
   static apiVersion = 'v1';
   static kind = 'Pod';
+  static Model = Model;
 
-  static findOne(params) {
-    return Model.findOne(params)
-      .then((pod) => {
-        if (pod) {
-          return new Pod(pod).setResourceVersion();
-        }
-      });
-  }
-
-  static find(params) {
-    return Model.find(params)
-      .then((pods) => {
-        if (pods) {
-          return Promise.all(pods.map((pod) => new Pod(pod).setResourceVersion()));
-        }
-      });
-  }
-
-  static async create(config) {
+  static async create(config = {}) {
     let otherPod = undefined;
+    if (!config.metadata) {
+      config.metadata = {};
+    }
+    if (!config.metadata.name) {
+      config.metadata.name = 'default';
+    }
     do {
       config.metadata.generateName = `${config.metadata.name}-${randomBytes(6).toString('hex')}`;
       otherPod = await Pod.findOne({ 'metadata.generateName': config.metadata.generateName });
     } while (otherPod);
     if (!config?.metadata?.creationTimestamp) {
-      config.metadata.creationTimestamp = new Date();
+      config.metadata.creationTimestamp = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
     }
     if (!config.status) {
       config.status = {};
@@ -59,99 +109,75 @@ class Pod extends K8Object {
     config.status.conditions.push({
       type: "Initialized",
       status: 'True',
-      lastTransitionTime: new Date(),
+      lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
     });
-    return new Model(config).save()
-    .then((pod) => {
-      let newPod = new Pod(pod);
-      return newPod.start()
-      .then(() => new Promise((resolve, reject) => {
-        let podIP = getContainerIP(newPod.metadata.generateName)
-          .then((data) => JSON.parse(data.raw)[0]?.NetworkSettings.Networks.bridge.IPAddress)
-          .then((ip) => {
-            newPod.eventEmitter.emit('NewContainer', {
-              ip,
-              nodeName: '',
-              targetRef: {
-                kind: this.kind,
-                namespace: newPod.metadata.namespace,
-                name: newPod.metadata.generateName,
-                uid: newPod.metadata.uid
-              }
-            });
-            return ip;
-          })
-        let inter = setInterval(async () => {
-          try {
-            if ((await isContainerRunning(newPod.metadata.generateName)).object === true) {
-              clearInterval(inter);
-              newPod.eventEmitter.emit('ContainersReady', newPod);
-              newPod.update({
-                $push: {
-                  'status.conditions': [{
-                    type: "ContainersReady",
-                    status: 'True',
-                    lastTransitionTime: new Date(),
-                  }]
-                }
-              })
-              .then(() => podIP.then((ip) => resolve(ip)));
-            }
-          } catch (e) {
-            reject(e);
-          }
-        }, 1000);
-      }))
-      .then((podIP) => {
-        return newPod.update({
-          $push: {
-            'status.containerStatuses': {
-              "restartCount": 0,
-              "started": true,
-              "ready": true,
-              "name": config.metadata.name,
-              "state": {
-                "running": {
-                  "startedAt": new Date(),
-                }
-              },
-              "imageID": "",
-              "image": "",
-              "lastState": {},
-              "containerID": newPod.metadata.generateName
-            },
-            'status.podIPs': {
-              ip: podIP
-            },
-          },
-          $set: {
-            'status.phase': 'Running',
-            'status.podIP': podIP,
-          }
-        })
-      })
-      .then((updatedPod) => {
-        newPod.eventEmitter.emit('Ready', updatedPod);
-        newPod.eventEmitter.emit('PodScheduled', updatedPod);
-        return updatedPod.update({
-          $push: {
-            'status.conditions': [{
-              type: "Ready",
-              status: 'True',
-              lastTransitionTime: new Date(),
-            }, {
-              type: "PodScheduled",
-              status: 'True',
-              lastTransitionTime: new Date(),
-            }],
-          }
-        });
-      });
-    })
+    return super.create(config)
+    .then((pod) => new Pod(pod))
+    .then((newPod) => {
+      // Containers belong to a node. Starting them here regardless meant a pod
+      // that the scheduler had refused -- no node could satisfy its selector,
+      // its resources didn't fit anywhere -- still ran, went Running, got an
+      // IP, and turned up in a Service's endpoints: unschedulable in the API
+      // and serving traffic at the same time. `startWhenBound` starts them
+      // once something binds the pod, which is the only moment a real kubelet
+      // would hear about it.
+      newPod.startWhenBound();
+      return newPod;
+    });
   }
 
   events() {
-    return this.eventEmitter;
+    if (!this._emitter) {
+      this._emitter = new EventEmitter(this);
+    }
+    return this._emitter;
+  }
+
+  // Wait for spec.nodeName, then run the containers. A real kubelet learns
+  // about a pod by watching for ones assigned to it, so "bound" is the trigger
+  // -- and it doesn't matter whether the built-in scheduler or somebody
+  // else's Binding did the assigning.
+  //
+  // Polling rather than listening to the bus: binding is a direct write to the
+  // pod document, and a pod that is already bound when it gets here (a client
+  // that set nodeName itself, which is legal) must start immediately rather
+  // than wait for an event that already happened.
+  startWhenBound({ interval = 250, timeout = 5 * 60 * 1000 } = {}) {
+    let began = Date.now();
+    let launch = () => {
+      this.start().catch((err) => {
+        console.warn(`[pod ${this.metadata.generateName}] start failed:`, err?.message || err);
+        this.patch({ $set: { 'status.phase': 'Failed', 'status.message': String(err?.message || err) } }).catch(() => {});
+      });
+    };
+    if (this.spec?.nodeName) {
+      launch();
+      return this;
+    }
+    let poll = async () => {
+      if (Date.now() - began > timeout) {
+        return;
+      }
+      let current = await Pod.findOne({ 'metadata.uid': this.metadata.uid }).catch(() => undefined);
+      if (!current) {
+        // The pod was deleted while it waited for a node; there is nothing
+        // left to start.
+        return;
+      }
+      if (current.spec?.nodeName) {
+        this.spec.nodeName = current.spec.nodeName;
+        return launch();
+      }
+      let timer = setTimeout(poll, interval);
+      timer.unref?.();
+    };
+    let timer = setTimeout(poll, interval);
+    timer.unref?.();
+    return this;
+  }
+
+  async logs(container) {
+    return (await getContainerLogs(`${this.metadata.generateName}-${container}`)).raw;
   }
 
   async setConfig(config) {
@@ -161,181 +187,134 @@ class Pod extends K8Object {
     return this;
   }
 
-  async setResourceVersion() {
-    await super.setResourceVersion();
-    return this;
+  static async table (pods) {
+    return {
+      "kind": "Table",
+      "apiVersion": "meta.k8s.io/v1",
+      "metadata": {
+        "resourceVersion": `${await super.hash(`${pods.length}${JSON.stringify(pods[0])}`)}`,
+      },
+      "columnDefinitions": [
+        {
+          "name": "Name",
+          "type": "string",
+          "format": "name",
+          "description": "Name must be unique within a namespace. Is required when creating resources, although some resources may allow a client to request the generation of an appropriate name automatically. Name is primarily intended for creation idempotence and configuration definition. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+          "priority": 0
+        },
+        {
+          "name": "Ready",
+          "type": "string",
+          "format": "",
+          "description": "Whether or not the pod is ready",
+          "priority": 0
+        },
+        {
+          "name": "Status",
+          "type": "string",
+          "format": "",
+          "description": "Current status of the pod.",
+          "priority": 0
+        },
+        {
+          "name": "Restarts",
+          "type": "string",
+          "format": "",
+          "description": "Number of restarts for the pod.",
+          "priority": 0
+        },
+        {
+          "name": "Age",
+          "type": "string",
+          "format": "",
+          "description": "CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.\n\nPopulated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
+          "priority": 0
+        },
+        {
+          "name": "IP",
+          "type": "string",
+          "format": "",
+          "description": "IP address of the pod.",
+          "priority": 1
+        },
+        {
+          "name": "Node",
+          "type": "string",
+          "format": "",
+          "description": "Name of the node.",
+          "priority": 1
+        },
+        {
+          "name": "Nominated Node",
+          "type": "string",
+          "format": "",
+          "description": "Name of the nominated node.",
+          "priority": 1
+        },
+        {
+          "name": "Readiness Gates",
+          "type": "string",
+          "format": "",
+          "description": "Gate info.",
+          "priority": 1
+        }
+      ],
+      "rows": pods.map((e) => ({
+        "cells": [
+          e.metadata.name,
+          `${(e.status?.containerStatuses || []).filter((c) => c.ready).length}/${(e.spec?.containers || []).length || 1}`,
+          podStatusText(e),
+          (e.status?.containerStatuses?.[0]?.restartCount || 0),
+          age(e.metadata.creationTimestamp),
+          (e.status?.podIP || '<none>'),
+          // This printed metadata.generateName — the container-name prefix —
+          // in the NODE column of `kubectl get pods -o wide`.
+          (e.spec?.nodeName || '<none>'),
+          (e.status?.nominatedNodeName || '<none>'),
+          (e.spec?.readinessGates?.[0]?.conditionType || '<none>'),
+        ],
+        object: {
+          "kind": "PartialObjectMetadata",
+          "apiVersion": "meta.k8s.io/v1",
+          metadata: e.metadata,
+        }
+      })),
+    }
   }
 
   delete () {
-    return Model.findOneAndDelete({ 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace })
-    .then((pod) => {
-      if (pod) {
-        this.eventEmitter.emit('Delete', pod);
-        return this.setConfig(pod);
-      }
-    });
-  }
-
-  update(updateObj) {
-    return Model.findOneAndUpdate(
-      { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace },
-      updateObj,
-      { new: true }
-    )
-    .then((pod) => {
-      if (pod) {
-        return this.setConfig(pod);
-      }
-    });
-  }
-
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
-    let params = {
-      'metadata.namespace': queryOptions.namespace ? queryOptions.namespace : undefined,
-      'metadata.resourceVersion': queryOptions.resourceVersionMatch ? queryOptions.resourceVersionMatch : undefined,
-    };
-    if (!([...new Set(Object.values(params))].find((e) => undefined))) {
-      params = {};
-    }
-    let projection = {};
-    let options = {
-      sort: sortOptions,
-      limit: queryOptions.limit ? Number(queryOptions.limit) : undefined,
-    };
-    return this.find(params, projection, options);
-  }
-
-  static list (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (pods) => ({
-        apiVersion: this.apiVersion,
-        kind: `${this.kind}List`,
-        metadata: {
-          continue: false,
-          remainingItemCount: queryOptions.limit && queryOptions.limit < pods.length ? pods.length - queryOptions.limit : 0,
-          resourceVersion: `${await super.hash(`${pods.length}${JSON.stringify(pods[0])}`)}`
-        },
-        items: pods
-      }));
-  }
-
-  static table (queryOptions = {}) {
-    return this.findAllSorted(queryOptions)
-      .then(async (pods) => ({
-        "kind": "Table",
-        "apiVersion": "meta.k8s.io/v1",
-        "metadata": {
-          "resourceVersion": `${await super.hash(`${pods.length}${JSON.stringify(pods[0])}`)}`,
-        },
-        "columnDefinitions": [
-          {
-            "name": "Name",
-            "type": "string",
-            "format": "name",
-            "description": "Name must be unique within a namespace. Is required when creating resources, although some resources may allow a client to request the generation of an appropriate name automatically. Name is primarily intended for creation idempotence and configuration definition. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
-            "priority": 0
-          },
-          {
-            "name": "Ready",
-            "type": "string",
-            "format": "",
-            "description": "Whether or not the pod is ready",
-            "priority": 0
-          },
-          {
-            "name": "Status",
-            "type": "string",
-            "format": "",
-            "description": "Current status of the pod.",
-            "priority": 0
-          },
-          {
-            "name": "Restarts",
-            "type": "string",
-            "format": "",
-            "description": "Number of restarts for the pod.",
-            "priority": 0
-          },
-          {
-            "name": "Age",
-            "type": "string",
-            "format": "",
-            "description": "CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.\n\nPopulated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
-            "priority": 0
-          },
-          {
-            "name": "IP",
-            "type": "string",
-            "format": "",
-            "description": "IP address of the pod.",
-            "priority": 1
-          },
-          {
-            "name": "Node",
-            "type": "string",
-            "format": "",
-            "description": "Name of the node.",
-            "priority": 1
-          },
-          {
-            "name": "Nominated Node",
-            "type": "string",
-            "format": "",
-            "description": "Name of the nominated node.",
-            "priority": 1
-          },
-          {
-            "name": "Readiness Gates",
-            "type": "string",
-            "format": "",
-            "description": "Gate info.",
-            "priority": 1
-          }
-        ],
-        "rows": pods.map((e) => ({
-          "cells": [
-            e.metadata.name,
-            `${e.status.phase === "Running" ? 1 : 0}/1`,
-            e.status.phase,
-            (e.status.containerStatuses.restartCount || 0),
-            duration(new Date() - e.metadata.creationTimestamp),
-            (e.status.podIP || '<None>'),
-            (e.metadata.generateName || '<None>'),
-            (e.status.nominatedNodeName || '<None>'),
-            (e.spec.readinessGates.conditionType || '<None>'),
-          ],
-          object: {
-            "kind": "PartialObjectMetadata",
-            "apiVersion": "meta.k8s.io/v1",
-            metadata: e.metadata,
-          }
-        })),
-      }));
-  }
-
-  static notFoundStatus(objectName = undefined) {
-    return super.notFoundStatus(this.kind, objectName);
-  }
-
-  static forbiddenStatus(objectName = undefined) {
-    return super.forbiddenStatus(this.kind, objectName);
-  }
-
-  static alreadyExistsStatus(objectName = undefined) {
-    return super.alreadyExistsStatus(this.kind, objectName);
-  }
-
-  static unprocessableContentStatus(objectName = undefined, message = undefined) {
-    return super.unprocessableContentStatus(this.kind, objectName, undefined, message);
+    return super.delete()
+    .then((pod) => pod ? new Pod(pod).stop() : Promise.resolve());
   }
 
   stop() {
-    return stopContainer(this.metadata.generateName);
+    stopProbes(this.metadata.generateName);
+    return Promise.all(this.spec.containers.map((e) => {
+      return stopContainer(`${this.metadata.generateName}-${e.name}`)
+        .catch((err) => {
+          if (!err.stderr.includes('No such container') && !err.stderr.includes('No such object')) {
+            throw err;
+          }
+        })
+        .then(() => removeContainer(`${this.metadata.generateName}-${e.name}`))
+        .catch((err) => {
+          if (!err.stderr.includes('No such container') && !err.stderr.includes('No such object')) {
+            throw err;
+          }
+        })
+    })).then(() => {
+      return this.toJSON();
+    });
   }
 
   getEnvVarsFromSecret(secretName) {
     return Secret.findOne({ 'metadata.name': secretName, 'metadata.namespace': this.metadata.namespace })
-      .then((secret) => (secret?.mapVariables() || []));
+      .then((secret) => {
+        if (secret) {
+          return secret.mapVariables()
+        }
+        throw K8Object.unprocessableContentStatus(this.kind, this.metadata.name, null, `Secret "${secretName}" not found`, 'Invalid')
+      });
   }
 
   getEnvVarsFromConfigMaps(configNames) {
@@ -354,50 +333,423 @@ class Pod extends K8Object {
       });
   }
 
-  start() {
+  // Init containers ran, but nothing recorded that they had: status.
+  // initContainerStatuses stayed empty, so `kubectl describe` showed no Init
+  // Containers section, `kubectl logs -c <init>` had no container to point at,
+  // and a controller waiting for its init step to finish had nothing to read.
+  // The pod's phase said Running and the work that produced it was invisible.
+  async runInitContainers() {
+    if (!Array.isArray(this.spec.initContainers) || this.spec.initContainers.length === 0) {
+      return;
+    }
+    let statuses = this.spec.initContainers.map((init) => ({
+      name: init.name,
+      image: init.image,
+      imageID: '',
+      containerID: `${this.metadata.generateName}-init-${init.name}`,
+      restartCount: 0,
+      ready: false,
+      started: false,
+      state: { waiting: { reason: 'PodInitializing' } },
+    }));
+    await this.patch({ $set: { 'status.initContainerStatuses': statuses } });
+
+    for (let i = 0; i < this.spec.initContainers.length; i++) {
+      let init = this.spec.initContainers[i];
+      let name = `${this.metadata.generateName}-init-${init.name}`;
+      let startedAt = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
+      statuses[i].state = { running: { startedAt } };
+      statuses[i].started = true;
+      await this.patch({ $set: { [`status.initContainerStatuses.${i}`]: statuses[i] } });
+
+      // command and args were never passed, so every init container ran its
+      // image's default entrypoint and exited 0 — the step "succeeded"
+      // without doing the work, and an init container written to fail
+      // couldn't.
+      await runImage(init.image, name, {
+        expose: (init.ports || []).map((p) => p.containerPort),
+        command: init.command,
+        args: init.args,
+        env: (init.env || []).filter((v) => v?.value),
+      });
+      let exitCode = await waitContainer(name).catch(() => 1);
+      statuses[i].state = {
+        terminated: {
+          exitCode,
+          reason: exitCode === 0 ? 'Completed' : 'Error',
+          startedAt,
+          finishedAt: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+          containerID: name,
+        },
+      };
+      statuses[i].started = false;
+      // An init container that finished successfully is "ready" in the sense
+      // the field means here: it is done and the pod may proceed.
+      statuses[i].ready = exitCode === 0;
+      await this.patch({ $set: { [`status.initContainerStatuses.${i}`]: statuses[i] } });
+
+      if (exitCode !== 0) {
+        await this.patch({
+          $set: { 'status.phase': 'Failed', 'status.message': `init container ${init.name} exited ${exitCode}` },
+        });
+        throw new Error(`init container ${init.name} failed with ${exitCode}`);
+      }
+    }
+  }
+
+  // Upsert conditions by type. Every writer here used $push, so repeated
+  // transitions appended duplicates of the same condition type rather than
+  // updating the one that was already there.
+  setConditions(conditions, extraSet = {}) {
+    let types = conditions.map((c) => c.type);
+    let searchQ = { 'metadata.uid': this.metadata.uid };
+    return this.Model.findOneAndUpdate(
+      searchQ,
+      { $pull: { 'status.conditions': { type: { $in: types } } } },
+    ).then(() => this.patch({
+      $push: { 'status.conditions': { $each: conditions } },
+      ...(Object.keys(extraSet).length ? { $set: extraSet } : {}),
+    }, searchQ));
+  }
+
+  scheduleProbes(containerSpec, containerName, podIP) {
+    let checks = [];
+    if (isConfiguredProbe(containerSpec.readinessProbe)) checks.push(['readiness', containerSpec.readinessProbe]);
+    if (isConfiguredProbe(containerSpec.livenessProbe)) checks.push(['liveness', containerSpec.livenessProbe]);
+    if (!checks.length) {
+      return;
+    }
+    let key = this.metadata.generateName;
+    checks.forEach(([kind, probe]) => {
+      let period = (probe.periodSeconds || 10) * 1000;
+      let failures = 0;
+      let lastReady = true;
+      let threshold = probe.failureThreshold || 3;
+      let interval = setInterval(async () => {
+        let ok = await this.runProbe(probe, containerName, podIP).catch(() => false);
+        if (kind === 'readiness') {
+          // The result used to be computed and thrown away, so a container
+          // whose readiness probe failed still reported ready: true and the
+          // pod still reported Ready — the one thing the probe exists to say.
+          failures = ok ? 0 : failures + 1;
+          let ready = ok || failures < threshold;
+          // Only write on a transition. Patching every period bumped the
+          // resourceVersion and pushed a MODIFIED event to every watcher once
+          // per probe interval, for a status that hadn't changed.
+          if (ready === lastReady) {
+            return undefined;
+          }
+          lastReady = ready;
+          return this.setContainerReady(containerSpec.name, ready).catch(() => {});
+        }
+        failures = ok ? 0 : failures + 1;
+        if (failures >= threshold) {
+          failures = 0;
+          await stopContainer(containerName).catch(() => {});
+          await runImage(containerSpec.image, containerName, {
+            expose: (containerSpec.ports || []).map((p) => p.containerPort),
+          }).catch(() => {});
+        }
+      }, period);
+      let timers = probeTimers.get(key) || [];
+      timers.push(interval);
+      probeTimers.set(key, timers);
+    });
+  }
+
+  // Reflect a readiness result on the container status and on the pod's
+  // Ready / ContainersReady conditions, which is where clients look.
+  setContainerReady(containerName, ready) {
+    let searchQ = { 'metadata.name': this.metadata.name, 'metadata.namespace': this.metadata.namespace };
+    let status = ready ? 'True' : 'False';
+    let lastTransitionTime = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
+    return this.patch(
+      {
+        $set: {
+          'status.containerStatuses.$[c].ready': ready,
+          'status.conditions.$[r].status': status,
+          'status.conditions.$[r].lastTransitionTime': lastTransitionTime,
+        },
+      },
+      searchQ,
+      { arrayFilters: [{ 'c.name': containerName }, { 'r.type': { $in: ['Ready', 'ContainersReady'] } }] },
+    );
+  }
+
+  async runProbe(rawProbe, containerName, podIP) {
+    let probe = probeHandler(rawProbe) || rawProbe;
+    if (probe.exec?.command?.length) {
+      // exec.command is argv, not a shell string. Joining it and letting
+      // execInContainer wrap the result in `sh -c` re-parses the quoting: the
+      // canonical probe `['sh','-c','exit 1']` became `sh -c "sh -c exit 1"`,
+      // where "1" is $0 rather than an argument, so it exited 0 and every exec
+      // probe passed no matter what it ran.
+      let argv = Array.isArray(probe.exec.command)
+        ? Array.from(probe.exec.command).map((part) => `${part}`)
+        : [`${probe.exec.command}`];
+      let res = await execInContainer(containerName, argv);
+      return res.code === 0;
+    }
+    if (probe.httpGet) {
+      return new Promise((resolve) => {
+        let req = http.request({
+          host: podIP,
+          port: probe.httpGet.port || 80,
+          path: probe.httpGet.path || '/',
+          method: 'GET',
+          timeout: 2000,
+        }, (res) => {
+          resolve(res.statusCode >= 200 && res.statusCode < 400);
+        });
+        req.on('error', () => resolve(false));
+        req.on('timeout', () => { req.destroy(); resolve(false); });
+        req.end();
+      });
+    }
+    if (probe.tcpSocket) {
+      return new Promise((resolve) => {
+        let sock = net.createConnection({ host: podIP, port: probe.tcpSocket.port, timeout: 2000 });
+        sock.on('connect', () => { sock.end(); resolve(true); });
+        sock.on('error', () => resolve(false));
+        sock.on('timeout', () => { sock.destroy(); resolve(false); });
+      });
+    }
+    return true;
+  }
+
+  async start() {
+    await this.runInitContainers();
     let p = this.spec.containers.map(async (e) => {
       let options = {
-        expose: e.ports.map((a) => a.containerPort),
+        expose: (e.ports || []).map((a) => a.containerPort),
+        command: e.command,
+        args: e.args,
+      }
+      if (e.volumeMounts) {
+        options['volumeMounts'] = (await Promise.all(e.volumeMounts.map(async (m) => {
+          let v = (this.spec.volumes || []).find((a) => a.name === m.name);
+          if (!v) return [];
+          let cmSrc = v.configMap || v.volumeSource?.configMap;
+          if (cmSrc) {
+            let cmName = cmSrc.name || cmSrc.localObjectReference?.name;
+            let c = await ConfigMap.findOne({ 'metadata.name': cmName, 'metadata.namespace': this.metadata.namespace });
+            if (!c) return [];
+            let keys = c.mapVariables().map((v) => v.name);
+            let sourceDir = ConfigMap.volumeDirName(c);
+            // Spreading a mongoose subdocument copies its internals, not its
+            // fields, so `mountPath` came out undefined and runImage threw
+            // while building the bind mount — the container never started and
+            // the pod went to Failed with a TypeError for a message.
+            let mount = typeof m.toObject === 'function' ? m.toObject() : m;
+            return keys.map((key) => ({ ...mount, file: key, sourceDir }));
+          }
+          return [];
+        }))).flat();
       }
       if (e.env || e.envFrom) {
         options['env'] = [];
         if (e.env) {
           options['env'].push(...e.env.filter((v) => v?.value));
-          if (e.env.find((v) => v?.valueFrom?.configMapKeyRef)) {
-            let configMaps = (await this.getEnvVarsFromConfigMaps(
-              e.env.map((v) => v.valueFrom.configMapKeyRef.name)
-            ));
-            e.env
-              .filter((v) => v.valueFrom?.configMapKeyRef)
-              .forEach((e) => {
-                let value = configMaps
-                  ?.find((v) => v.name === e.valueFrom.configMapKeyRef.name)
-                  ?.variables
-                  ?.find((v) => v.name === e.valueFrom.configMapKeyRef.key)
-                  ?.value
-                  if (value) {
-                    options['env'].push({
-                      name: e.name,
-                      value,
-                    });
-                  }
-              });
+          let cmRefs = e.env.filter((v) => v?.valueFrom?.configMapKeyRef);
+          if (cmRefs.length > 0) {
+            let configMaps = await this.getEnvVarsFromConfigMaps(
+              cmRefs.map((v) => v.valueFrom.configMapKeyRef.name)
+            );
+            cmRefs.forEach((entry) => {
+              let value = configMaps
+                ?.find((v) => v.name === entry.valueFrom.configMapKeyRef.name)
+                ?.variables
+                ?.find((v) => v.name === entry.valueFrom.configMapKeyRef.key)
+                ?.value;
+              if (value !== undefined) {
+                options['env'].push({ name: entry.name, value });
+              }
+            });
+          }
+          let secretRefs = e.env.filter((v) => v?.valueFrom?.secretKeyRef);
+          for (const entry of secretRefs) {
+            let secret = await Secret.findOne({
+              'metadata.name': entry.valueFrom.secretKeyRef.name,
+              'metadata.namespace': this.metadata.namespace,
+            });
+            let variables = secret?.mapVariables?.() || [];
+            let value = variables.find((v) => v.name === entry.valueFrom.secretKeyRef.key)?.value;
+            if (value !== undefined) {
+              options['env'].push({ name: entry.name, value });
+            }
           }
         }
         if (e.envFrom) {
-          await Promise.all(e.envFrom.map(async (e) => {
-            if (e.secretRef) {
-              return this.getEnvVarsFromSecret(e.secretRef.name);
+          let collected = await Promise.all(e.envFrom.map(async (a) => {
+            // `a.secretRef` is a nested schema path, so mongoose materialises
+            // it as `{}` even for an entry that only sets configMapRef —
+            // truthy, with no name. Every pod using `envFrom: [{configMapRef}]`
+            // therefore looked up Secret "undefined", failed to start its
+            // container, and went to phase Failed. Test the name, not the
+            // container object.
+            if (a.secretRef?.name) {
+              return this.getEnvVarsFromSecret(a.secretRef.name)
+                .catch((err) => {
+                  this.patch({
+                    $push: {
+                      'status.conditions': [{
+                        type: "ContainersReady",
+                        status: 'False',
+                        lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+                      }],
+                      'status.containerStatuses': [{
+                        "restartCount": 0,
+                        "started": false,
+                        "ready": false,
+                        "name": e.name,
+                        "imageID": "",
+                        "image": e.image,
+                        "lastState": {},
+                        "containerID": ""
+                      }],
+                    },
+                  })
+                  throw err;
+                });
+            }
+            if (a.configMapRef?.name) {
+              let configMaps = await this.getEnvVarsFromConfigMaps([a.configMapRef.name]);
+              return configMaps.flatMap((c) => c.variables);
             }
             return null;
-          }))
-          .then((variables) => variables.flat().filter((e) => e))
-          .then((variables) => options['env'].push(...variables));
+          }));
+          options['env'].push(...collected.flat().filter((v) => v));
         }
       }
-      return runImage(e.image, this.metadata.generateName, options);
+      await runImage(e.image, `${this.metadata.generateName}-${e.name}`, options);
+      return `${this.metadata.generateName}-${e.name}`;
     });
-    return Promise.all(p);
+    return Promise.all(p)
+    .then(async (podNames) => {
+      return Promise.all(podNames.map((podName) => {
+        return getContainerIP(podName)
+          .then((ip) => {
+            this.events().emit('NewContainer', {
+              ip,
+              nodeName: '',
+              targetRef: {
+                kind: this.kind,
+                namespace: this.metadata.namespace,
+                name: podName,
+                uid: this.metadata.uid
+              }
+            });
+            return [ip, podName];
+          });
+      }))
+    })
+    .then(async (podsInfo) => {
+      return Promise.all(podsInfo.map((podInfo, idx) => {
+        let [podIP, podName] = podInfo;
+        let containerSpec = this.spec.containers[idx];
+        return new Promise((resolve, reject) => {
+          let attempts = 0;
+          let inter = setInterval(async () => {
+            try {
+              attempts++;
+              if ((await containerHasStarted(podName)) || attempts > 30) {
+                clearInterval(inter);
+                this.events().emit('ContainersReady', this);
+                this.scheduleProbes(containerSpec, podName, podIP);
+                this.patch({
+                  $push: {
+                    'status.conditions': [{
+                      type: "ContainersReady",
+                      status: 'True',
+                      lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+                    }],
+                    'status.podIPs': [{
+                      ip: podIP
+                    }],
+                    'status.containerStatuses': [{
+                      "restartCount": 0,
+                      "started": true,
+                      "ready": true,
+                      "name": containerSpec.name,
+                      "imageID": "",
+                      "image": containerSpec.image,
+                      "lastState": {},
+                      // Without an explicit running state the only state on
+                      // the object is whatever the schema defaults produce.
+                      "state": {
+                        running: {
+                          startedAt: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+                        },
+                      },
+                      "containerID": podName
+                    }],
+                  },
+                  $set: {
+                    'status.podIP': podIP,
+                  }
+                })
+                .then(() => resolve());
+              }
+            } catch (e) {
+              reject(e);
+            }
+          }, 1000);
+        });
+      }));
+    })
+    .then(() => {
+      this.events().emit('Ready', this);
+      this.events().emit('PodScheduled', this);
+      // Conditions are keyed by type: pushing a second PodScheduled left the
+      // pod carrying two of them, and a client reading "the" condition got
+      // whichever came first. The kubelet side owns Ready; the scheduler owns
+      // PodScheduled, so don't restate it here.
+      return this.setConditions([{
+        type: 'Ready',
+        status: 'True',
+        lastTransitionTime: DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, ""),
+      }], { 'status.phase': 'Running' });
+    })
+    .then(() => {
+      // Background watcher: patch phase to Succeeded/Failed when containers exit.
+      let names = this.spec.containers.map((c) => `${this.metadata.generateName}-${c.name}`);
+      Promise.all(names.map((name) => waitContainer(name).catch(() => 1)))
+        .then((exitCodes) => {
+          let anyNonZero = exitCodes.some((c) => c !== 0);
+          let phase = anyNonZero ? 'Failed' : 'Succeeded';
+          let finishedAt = DateTime.now().toUTC().toISO().replace(/\.\d{0,3}/, "");
+          // The phase moved but the container statuses kept saying running, so
+          // `kubectl describe` on a finished pod reported a running container.
+          let containerStatuses = this.spec.containers.map((c, i) => ({
+            name: c.name,
+            image: c.image,
+            imageID: '',
+            containerID: `${this.metadata.generateName}-${c.name}`,
+            restartCount: 0,
+            started: false,
+            ready: false,
+            lastState: {},
+            state: {
+              terminated: {
+                exitCode: exitCodes[i] ?? 0,
+                reason: (exitCodes[i] ?? 0) === 0 ? 'Completed' : 'Error',
+                finishedAt,
+                containerID: `${this.metadata.generateName}-${c.name}`,
+              },
+            },
+          }));
+          // Nothing to probe once the containers are gone.
+          stopProbes(this.metadata.generateName);
+          return this.patch({
+            $set: {
+              'status.phase': phase,
+              'status.containerStatuses': containerStatuses,
+            },
+          });
+        })
+        .catch((err) => console.warn(`[pod ${this.metadata.name}] exit watcher error:`, err?.message || err));
+      return this;
+    });
   }
 
   getSpec() {

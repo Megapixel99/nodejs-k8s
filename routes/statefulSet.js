@@ -1,0 +1,31 @@
+const router = require('express').Router();
+const { StatefulSet } = require('../objects');
+const { general, openapi } = require('../middleware');
+
+const { apiAppsV1OpenApiV3, apiV1OpenApiV3, validSchema } = openapi;
+
+const routes = [`/apis/${StatefulSet.apiVersion}/namespaces/:namespace/statefulsets`];
+// `kubectl get <kind> -A` asks for the cluster-wide collection path; only
+// the namespaced one was registered, so --all-namespaces 404'd.
+const clusterRoutes = routes.map((e) => e.replace('/namespaces/:namespace', ''));
+
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.findOne(StatefulSet), general.format(StatefulSet), general.sendObj(StatefulSet));
+
+router.get([...clusterRoutes, '/api/v1/statefulsets', ...routes], validSchema(apiV1OpenApiV3), general.find(StatefulSet), general.format(StatefulSet), general.list(StatefulSet));
+
+router.post(routes, validSchema(apiAppsV1OpenApiV3), general.save(StatefulSet), general.sendObj(StatefulSet));
+
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiAppsV1OpenApiV3), general.update(StatefulSet), general.sendObj(StatefulSet));
+
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.patch(StatefulSet), general.sendObj(StatefulSet));
+
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiAppsV1OpenApiV3), general.deleteOne(StatefulSet), general.sendObj(StatefulSet));
+
+router.delete(routes, validSchema(apiAppsV1OpenApiV3), general.delete(StatefulSet), general.sendObj(StatefulSet));
+
+// `kubectl scale` reads and writes the scale subresource, not the object.
+router.get(routes.map((e) => `${e}/:name/scale`), general.getScale(StatefulSet));
+router.put(routes.map((e) => `${e}/:name/scale`), general.setScale(StatefulSet));
+router.patch(routes.map((e) => `${e}/:name/scale`), general.setScale(StatefulSet));
+
+module.exports = router;

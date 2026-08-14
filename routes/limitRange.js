@@ -1,0 +1,26 @@
+const router = require('express').Router();
+const { LimitRange } = require('../objects');
+const { general, openapi } = require('../middleware');
+
+const { apiV1OpenApiV3, validSchema } = openapi;
+
+const routes = [`/api/v1/namespaces/:namespace/limitranges`];
+// `kubectl get <kind> -A` asks for the cluster-wide collection path; only
+// the namespaced one was registered, so --all-namespaces 404'd.
+const clusterRoutes = routes.map((e) => e.replace('/namespaces/:namespace', ''));
+
+router.get(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.findOne(LimitRange), general.format(LimitRange), general.sendObj(LimitRange));
+
+router.get([...clusterRoutes, `/api/${LimitRange.apiVersion}/limitranges`, ...routes], validSchema(apiV1OpenApiV3), general.find(LimitRange), general.format(LimitRange), general.list(LimitRange));
+
+router.post(routes, validSchema(apiV1OpenApiV3), general.save(LimitRange), general.sendObj(LimitRange));
+
+router.put([...routes.map((e) => `${e}/:name`), ...routes], validSchema(apiV1OpenApiV3), general.update(LimitRange), general.sendObj(LimitRange));
+
+router.patch(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.patch(LimitRange), general.sendObj(LimitRange));
+
+router.delete(routes.map((e) => `${e}/:name`), validSchema(apiV1OpenApiV3), general.deleteOne(LimitRange), general.sendObj(LimitRange));
+
+router.delete(routes, validSchema(apiV1OpenApiV3), general.delete(LimitRange), general.sendObj(LimitRange));
+
+module.exports = router;

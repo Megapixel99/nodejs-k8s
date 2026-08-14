@@ -1,5 +1,5 @@
 {
-  "name": "loadbalancer",
+  "name": "dns",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "dns2": "^2.1.0",
+    "dotenv": "^16.4.5",
     "mongoose": "^8.3.0"
   }
 }
