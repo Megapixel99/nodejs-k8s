@@ -1,5 +1,7 @@
 # k8s-sim — a Kubernetes API-compatible sandbox in Node.js
 
+[![tests](https://github.com/Megapixel99/nodejs-k8s/actions/workflows/tests.yml/badge.svg)](https://github.com/Megapixel99/nodejs-k8s/actions/workflows/tests.yml)
+
 A simulator of the Kubernetes API. Speaks the same HTTP/JSON/protobuf surface
 as a real `kube-apiserver`, schedules pods onto a fleet of simulated nodes,
 orders its writes through a Raft log behind an etcd-compatible store, keeps
@@ -69,9 +71,9 @@ docker rm -f $(docker ps -aq --filter "label=k8s-sim") 2>/dev/null || true
   clients see `ADDED`/`MODIFIED`/`DELETED` events in real time.
 - `controllers/nodes.js` creates the simulated fleet at boot; `sim-node-1..N`
   carry capacity, allocatable and the usual topology labels.
-- `controllers/endpoints.js` keeps each Service's `Endpoints` in step with the
-  pods its selector matches. Level-triggered: it recomputes the set rather than
-  patching it incrementally.
+- `controllers/endpoints.js` keeps each Service's `Endpoints` and
+  `EndpointSlice` in step with the pods its selector matches. Level-triggered:
+  it recomputes the set rather than patching it incrementally.
 - `controllers/scheduler.js` places pods on it: filter (readiness, cordons,
   taints, `nodeSelector`, node affinity, cpu/memory/pod fit) then score
   (least-allocated, plus preferred-affinity weight). It's the only controller
@@ -81,10 +83,9 @@ docker rm -f $(docker ps -aq --filter "label=k8s-sim") 2>/dev/null || true
   `resourceVersion` is that store's revision, the way a real API server's is
   etcd's. It also serves etcd's v3 JSON API on `:2379`.
 - Pods are real Docker containers spawned as siblings on the host Docker
-  daemon, named `<generateName>-<containerName>`. Containers start only once
-  the pod is bound to a node, so a pod the scheduler refused doesn't quietly
-  run anyway. Volume mounts for
-  ConfigMaps are bind-mounted from `./volumes/<ns>_<name>/`.
+  daemon, named `<generateName>-<containerName>`, with ConfigMap volume mounts
+  bind-mounted from `./volumes/<ns>_<name>/`. They start only once the pod is
+  bound to a node, so a pod the scheduler refused doesn't quietly run anyway.
 
 ### The store
 
@@ -135,6 +136,12 @@ API-level (verified against `kubetest2` Conformance):
   `Endpoints` behind them: a Service with a selector gets its matching pods,
   split into ready and not-ready addresses, with `targetPort` resolved to the
   container's port. A Service with no selector is left alone for you to fill in
+- `EndpointSlice` (`discovery.k8s.io/v1`) alongside them, which is what
+  anything written since 1.21 actually reads: per-endpoint `ready` / `serving`
+  / `terminating` conditions, the node and zone each address is in, a
+  `targetRef` back to the pod, and the `kubernetes.io/service-name` label a
+  client selects on. One slice per service — sharding exists for a scale this
+  never reaches, and a client can't tell the difference
 - Watch streams over HTTP with newline-delimited JSON, plus protobuf support
   for clients that negotiate it (`client-go`'s default; `kubectl` asks for JSON)
 - Scheduling onto simulated nodes, with the refusals a controller has to
@@ -194,10 +201,17 @@ Individually, or a subset (`npm run test:all -- store rv`):
 | sched | `npm run test:sched` | server | placement, every predicate's refusal message, the events and conditions that report it, and the binding endpoints |
 | pods | `npm run test:pods` | server + docker | env from ConfigMaps and Secrets, ConfigMap volume mounts, probes, logs, init containers |
 | workload | `npm run test:workload` | server + docker | the Deployment → ReplicationController → Pod chain |
-| services | `npm run test:services` | server + docker | Service selectors and the Endpoints behind them |
+| services | `npm run test:services` | server + docker | Service selectors, and the Endpoints and EndpointSlices behind them |
 
 Assertions are written against what a client ends up with, not against status
 codes. Almost every bug these have caught returned 200 with the wrong body.
+
+CI runs the same thing on every push and pull request
+(`.github/workflows/tests.yml`): one job for the store, which needs neither the
+server nor a database and answers in seconds, and one that brings up MongoDB,
+starts the API server and runs `npm run test:all` against the runner's own
+Docker daemon — the same arrangement as a laptop, so a failure there is a real
+failure rather than an artefact of the environment.
 
 The variable-expansion conformance test (`[sig-node] Variable Expansion
 allow almost all printable ASCII characters as environment variable names
@@ -217,7 +231,6 @@ out of scope and won't ever work here:
 | Multi-node / HA control plane | Partial. The store that orders writes runs as a Raft cluster and survives losing its leader, but the API server is still one Express process and objects still live in one MongoDB. |
 | etcd gRPC | No. The store serves etcd's v3 **JSON** API, so `curl` works and `etcdctl` — which speaks gRPC — does not attach. |
 | The store as the object store | Not yet. It hands out `resourceVersion` and is durable and replicated; the ~55 object classes still read and write through Mongoose. |
-| EndpointSlice | No. `Endpoints` is populated from Service selectors, but the `discovery.k8s.io/v1` EndpointSlices that newer clients prefer are not — they round-trip as API objects only. |
 | Real nodes | No. `sim-node-*` are simulated: they have capacity, labels and taints that scheduling honours, but no kubelet — every pod's container runs on the host's Docker daemon regardless of which node it was placed on. |
 | Pod-to-pod networking (CNI) | No. Pods are sibling containers on Docker's default bridge; no overlay, no kube-proxy, no iptables rules. |
 | DNS resolution for services | No. Services get a synthetic ClusterIP but it isn't routed. `CoreDNS` isn't deployed. |
@@ -268,7 +281,7 @@ store/
   transport.js            peer RPC over HTTP
   gateway.js              etcd's v3 JSON API on :2379
   node.js                 one node: store + raft + transport
-  endpoints.js            keeps Service Endpoints in step with matching pods
+  endpoints.js            keeps Endpoints and EndpointSlices in step with pods
 functions.js              Docker CLI helpers (spawn-based, shell-safe)
 proto/                    Kubernetes .proto files the server loads at boot
 openApiSpecs/             OpenAPI v3 schemas
@@ -278,7 +291,7 @@ test/
   boot-clean.js           smoke test, hits POST/GET/DELETE for every resource type
   scheduling.js           placement, refusal messages, binding endpoints
   store.js                MVCC, raft, recovery and the etcd endpoint (no server needed)
-  services.js             Service selectors and the Endpoints behind them
+  services.js             Service selectors, Endpoints and EndpointSlices
   all.js                  runs every suite and prints one table (npm run test:all)
 scripts/
   setup.sh                one-command setup (npm run setup)
