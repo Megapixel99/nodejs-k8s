@@ -151,6 +151,42 @@ function watch(query, ms, during) {
     await req('DELETE', `${path}/${name}`);
   }
 
+  // List order. etcd keys objects as /registry/<resource>/<namespace>/<name>,
+  // so a real API server lists in name order and clients depend on it --
+  // upstream's chunking test walks a paged list expecting template-0000,
+  // template-0001, ... in sequence. The sort key here used to be `created_at`,
+  // a field none of these documents have, so the real order was insertion
+  // order: identical for objects created in a loop, wrong the moment a client
+  // creates them concurrently, and unstable underneath offset paging.
+  let orderNs = `rv-order-${Date.now().toString(36)}`;
+  await req('POST', '/api/v1/namespaces', { apiVersion: 'v1', kind: 'Namespace', metadata: { name: orderNs } });
+  let wanted = [5, 2, 8, 1, 9, 3, 7, 0, 6, 4].map((i) => `tmpl-${String(i).padStart(4, '0')}`);
+  await Promise.all(wanted.map((n) => req('POST', `/api/v1/namespaces/${orderNs}/podtemplates`, {
+    apiVersion: 'v1',
+    kind: 'PodTemplate',
+    metadata: { name: n, namespace: orderNs },
+    template: { metadata: {}, spec: { containers: [{ name: 'c', image: 'busybox' }] } },
+  })));
+
+  let ordered = (await req('GET', `/api/v1/namespaces/${orderNs}/podtemplates`)).body?.items || [];
+  let listedNames = ordered.map((i) => i.metadata.name);
+  check('a list comes back in name order',
+    listedNames.join() === [...listedNames].sort().join(), listedNames);
+
+  // Paging over that order has to be complete and duplicate-free: an unstable
+  // sort under offset paging silently drops and repeats items.
+  let token = '';
+  let paged = [];
+  do {
+    let page = (await req('GET', `/api/v1/namespaces/${orderNs}/podtemplates?limit=3${token ? `&continue=${encodeURIComponent(token)}` : ''}`)).body;
+    paged.push(...(page?.items || []).map((i) => i.metadata.name));
+    token = page?.metadata?.continue || '';
+  } while (token && paged.length <= 20);
+  check('paging returns every item exactly once',
+    paged.length === wanted.length && new Set(paged).size === wanted.length, paged);
+  check('paging preserves the list order', paged.join() === [...paged].sort().join(), paged);
+  await req('DELETE', `/api/v1/namespaces/${orderNs}`);
+
   console.log('---FAILS---');
   fails.forEach((f) => console.log(f));
   console.log(`\n${fails.length} fails, ${passes} passes.`);

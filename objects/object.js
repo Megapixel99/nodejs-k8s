@@ -60,6 +60,17 @@ function parseSelector(selector) {
 // applied, but the response never returned a token and reported
 // remainingItemCount 0 — after the first page a client had no way to ask for
 // the rest, and no way to know there was a rest.
+// The order a list comes back in. etcd keys objects as
+// /registry/<resource>/<namespace>/<name>, so a real API server's lists are in
+// namespace-then-name order, and clients rely on it: upstream's chunking test
+// walks a paged list expecting template-0000, template-0001, ... in sequence.
+//
+// This used to sort by `created_at`, a field none of these documents actually
+// have, so the effective order was insertion order. That looks identical for
+// anything created in a loop and falls apart the moment a client creates
+// objects concurrently -- which is exactly what that test does.
+const KEY_ORDER = { 'metadata.namespace': 1, 'metadata.name': 1 };
+
 function encodeContinue(skip) {
   return Buffer.from(JSON.stringify({ skip })).toString('base64');
 }
@@ -480,11 +491,11 @@ class K8Object {
     });
   }
 
-  static findAllSorted(queryOptions = {}, sortOptions = { 'created_at': 1 }) {
+  static findAllSorted(queryOptions = {}, sortOptions = KEY_ORDER) {
     return this.find(queryOptions, sortOptions);
   }
 
-  static findAllSortedByReq(reqQuery = {}, reqParams = {}, sortOptions = { 'created_at': 1 }) {
+  static findAllSortedByReq(reqQuery = {}, reqParams = {}, sortOptions = KEY_ORDER) {
     return this.findByReq(reqQuery, reqParams, sortOptions);
   }
 
@@ -517,7 +528,7 @@ class K8Object {
     // sortOptions overrode its default, so the list path ran with no sort at
     // all — and the _id tie-break that makes offset paging stable never
     // applied on the one path that pages.
-    let sortOptions = Object.keys(queryOptions).length > 0 ? queryOptions : { 'created_at': 1 };
+    let sortOptions = Object.keys(queryOptions).length > 0 ? queryOptions : KEY_ORDER;
     let q = this.genFindQuery(reqQuery, reqParams, sortOptions);
     return Promise.all([
       this.findAllSortedByReq(reqQuery, reqParams, sortOptions),
@@ -654,9 +665,8 @@ class K8Object {
     }
     let options = {};
     if (Object.keys(sortOptions).length > 0) {
-      // Tie-break on _id. Paging by offset only works if the order is the same
-      // between requests, and the default sort key (`created_at`) isn't a
-      // field any of these documents actually have.
+      // Tie-break on _id so the order is total: paging by offset only works
+      // if two requests see the same sequence.
       options.sort = { ...sortOptions, _id: 1 };
     }
     if (reqQuery.limit) {
@@ -673,7 +683,7 @@ class K8Object {
     };
   }
 
-  static genFindSortedQuery(reqQuery = {}, reqParams = {}, sortOptions = { 'created_at': 1 }) {
+  static genFindSortedQuery(reqQuery = {}, reqParams = {}, sortOptions = KEY_ORDER) {
     return this.genFindQuery(reqQuery, reqParams, sortOptions)
   }
 
