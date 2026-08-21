@@ -11,6 +11,12 @@ a fleet of simulated nodes, orders its writes through a Raft log behind an
 etcd-compatible store, keeps objects in MongoDB, and runs "pods" as sibling
 Docker containers on the host.
 
+**Write-up:** [Reimplementing Enough of Kubernetes to Fool
+kubectl](https://sethwheeler.dev/blog/fooling-kubectl/) — the surprise was not the
+resource schemas, it was that `kubectl` delegates its own output formatting to the
+server, and that a Quantity sent as a plain string decodes as zero on the client
+rather than erroring.
+
 **What it's for.** Learning `kubectl`, testing operators or controllers
 against a lightweight fake apiserver, and quick demos without a real cluster
 or `kind`/`minikube` boot time. Runs on a laptop in seconds.
