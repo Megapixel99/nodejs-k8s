@@ -1,7 +1,7 @@
 {
   "name": "k8s",
   "version": "1.0.0",
-  "description": "",
+  "description": "A from-scratch reimplementation of Kubernetes' core APIs in pure Node.js — compatible with the real kubectl CLI and standard Kubernetes YAML.",
   "main": "index.js",
   "scripts": {
     "setup": "./scripts/setup.sh",
@@ -20,8 +20,8 @@
     "test:services": "node ./test/services.js",
     "test:all": "node ./test/all.js"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Seth Wheeler <23089578+Megapixel99@users.noreply.github.com>",
+  "license": "MIT",
   "dependencies": {
     "@wesleytodd/openapi": "^1.0.0",
     "axios": "^1.6.8",
